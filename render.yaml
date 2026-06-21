@@ -1,0 +1,25 @@
+# Render Blueprint — deploys Royal SMM as a free Docker web service.
+# In Render: New + -> Blueprint -> connect this repo. Render reads this file,
+# then prompts you to fill the secret values (DB_HOST/DB_USER/DB_PASS) marked
+# `sync: false`. Get those from Supabase -> Settings -> Database -> Session pooler.
+services:
+  - type: web
+    name: royal-smm
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /login.php
+    autoDeploy: true
+    envVars:
+      - key: DB_DRIVER
+        value: pgsql
+      - key: DB_PORT
+        value: "5432"
+      - key: DB_NAME
+        value: postgres
+      - key: DB_HOST
+        sync: false      # e.g. aws-0-xxxx.pooler.supabase.com
+      - key: DB_USER
+        sync: false      # e.g. postgres.xxxxxxxxxxxx
+      - key: DB_PASS
+        sync: false      # your Supabase database password

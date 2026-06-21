@@ -1,0 +1,11 @@
+.git
+.gitignore
+.dockerignore
+*.md
+/data/*.db
+/data/*.sqlite
+/data/cache/
+.vscode
+.idea
+.env
+.env.*

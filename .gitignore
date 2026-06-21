@@ -1,0 +1,18 @@
+# Local SQLite database & API cache — never commit these
+/data/*.db
+/data/*.sqlite
+/data/*.sqlite3
+/data/cache/
+
+# Logs
+*.log
+
+# Environment files (secrets)
+.env
+.env.*
+
+# OS / editor junk
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
