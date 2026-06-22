@@ -17,6 +17,13 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
+// The app uses the MYSQLI_ASSOC constant with the PDO compat layer. When the
+// mysqli extension isn't loaded (e.g. the Docker image), define it ourselves so
+// fetch_all(MYSQLI_ASSOC) doesn't fatal on PHP 8.
+if (!defined('MYSQLI_ASSOC')) { define('MYSQLI_ASSOC', 1); }
+if (!defined('MYSQLI_NUM'))   { define('MYSQLI_NUM', 2); }
+if (!defined('MYSQLI_BOTH'))  { define('MYSQLI_BOTH', 3); }
+
 // ============================================
 // ENVIRONMENT & SECURITY SETTINGS
 // ============================================
