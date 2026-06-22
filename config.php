@@ -1,6 +1,21 @@
 <?php
 // Advanced config.php - SMM Platform Configuration
-session_start();
+
+// Guard: only execute once per request. Prevents "Constant already defined"
+// warnings and double session_start() if config.php is pulled in more than once
+// (some server setups resolve the include path so require_once can't dedupe).
+if (defined('ROYAL_CONFIG_LOADED')) { return; }
+define('ROYAL_CONFIG_LOADED', true);
+
+// In production, never let stray warnings/notices corrupt output or headers.
+if (!headers_sent()) {
+    ini_set('display_errors', '0');
+}
+error_reporting(E_ALL & ~E_WARNING & ~E_NOTICE & ~E_DEPRECATED);
+
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
 // ============================================
 // ENVIRONMENT & SECURITY SETTINGS
