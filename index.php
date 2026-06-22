@@ -1,5 +1,6 @@
 <?php
 require_once 'config.php';
+require_once 'includes/ui.php';
 requireLogin();
 
 $user_id = $_SESSION['user_id'];
@@ -89,7 +90,7 @@ function statusBadge($status) {
                         radial-gradient(900px 500px at -10% 10%, #e6fbfa 0%, transparent 55%),
                         var(--bg);
             color: var(--ink);
-            margin: 0 0 90px;
+            margin: 0 0 30px;
         }
         .container { max-width: 540px; }
 
@@ -195,15 +196,31 @@ function statusBadge($status) {
         .order-name { font-size: .82rem; font-weight: 600; line-height: 1.2; }
         .order-meta { font-size: .7rem; color: var(--muted); }
 
-        /* Bottom nav */
-        .bottom-nav {
-            position: fixed; bottom: 0; left: 0; width: 100%; background: rgba(255,255,255,.92); backdrop-filter: blur(10px);
-            display: flex; justify-content: space-around; padding: 10px 0 18px; box-shadow: 0 -6px 30px rgba(43,54,116,.06);
-            border-top-left-radius: 24px; border-top-right-radius: 24px; z-index: 1000; max-width: 540px; margin: 0 auto;
-        }
-        .bottom-nav a { color: var(--muted); text-align: center; font-size: .66rem; text-decoration: none; flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; font-weight: 600; }
-        .bottom-nav a.active { color: var(--primary); }
-        .bottom-nav a i { font-size: 1.4rem; }
+        /* Hamburger + slide drawer (shared look) */
+        .hamburger{position:fixed;top:14px;right:14px;z-index:1300;width:46px;height:46px;border-radius:14px;border:none;background:rgba(255,255,255,.9);backdrop-filter:blur(10px);box-shadow:0 10px 26px rgba(43,54,116,.18);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;cursor:pointer;transition:transform .2s;}
+        .hamburger:active{transform:scale(.92);}
+        .hamburger span{display:block;width:20px;height:2.4px;border-radius:3px;background:var(--ink);transition:.3s;}
+        body.drawer-open .hamburger span:nth-child(1){transform:translateY(6.4px) rotate(45deg);}
+        body.drawer-open .hamburger span:nth-child(2){opacity:0;}
+        body.drawer-open .hamburger span:nth-child(3){transform:translateY(-6.4px) rotate(-45deg);}
+        .nav-backdrop{position:fixed;inset:0;background:rgba(18,22,45,.5);backdrop-filter:blur(3px);opacity:0;visibility:hidden;transition:.3s;z-index:1400;}
+        .nav-backdrop.open{opacity:1;visibility:visible;}
+        .drawer{position:fixed;top:0;right:0;height:100%;width:300px;max-width:84vw;background:#fff;z-index:1500;transform:translateX(106%);transition:transform .38s cubic-bezier(.5,.05,.2,1);display:flex;flex-direction:column;box-shadow:-24px 0 60px rgba(18,22,45,.28);border-top-left-radius:28px;border-bottom-left-radius:28px;overflow:hidden;}
+        .drawer.open{transform:translateX(0);}
+        .drawer-head{background:linear-gradient(140deg,var(--primary),var(--primary-2));color:#fff;padding:1.7rem 1.3rem 1.5rem;position:relative;overflow:hidden;}
+        .drawer-head::after{content:'';position:absolute;right:-30px;top:-30px;width:120px;height:120px;background:rgba(255,255,255,.12);border-radius:50%;}
+        .drawer-head .dclose{position:absolute;top:14px;right:14px;width:34px;height:34px;border-radius:11px;border:none;background:rgba(255,255,255,.2);color:#fff;font-size:1.05rem;display:flex;align-items:center;justify-content:center;z-index:1;}
+        .drawer-ava{width:54px;height:54px;border-radius:16px;background:rgba(255,255,255,.22);border:2px solid rgba(255,255,255,.35);display:flex;align-items:center;justify-content:center;font-size:1.5rem;font-weight:800;}
+        .drawer-bal{margin-top:1rem;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.26);border-radius:14px;padding:.55rem .9rem;display:flex;justify-content:space-between;align-items:center;position:relative;z-index:1;}
+        .drawer-nav{flex:1;padding:1rem .8rem;overflow-y:auto;}
+        .drawer-link{display:flex;align-items:center;gap:.85rem;padding:.8rem .85rem;border-radius:15px;color:var(--ink);font-weight:600;font-size:.92rem;margin-bottom:.25rem;transition:.15s;text-decoration:none;}
+        .drawer-link .di{width:38px;height:38px;border-radius:12px;background:#f0f2fb;color:var(--primary);display:flex;align-items:center;justify-content:center;font-size:1.1rem;transition:.15s;flex:0 0 auto;}
+        .drawer-link:hover{background:#f6f7fd;}
+        .drawer-link.active{background:linear-gradient(135deg,rgba(108,92,231,.13),rgba(72,52,212,.10));color:var(--primary-2);}
+        .drawer-link.active .di{background:linear-gradient(135deg,var(--primary),var(--primary-2));color:#fff;box-shadow:0 8px 16px rgba(108,92,231,.35);}
+        .drawer-link.danger{color:var(--danger);}
+        .drawer-link.danger .di{background:#fdeee9;color:#c0392b;}
+        .drawer-foot{padding:.9rem 1.3rem;border-top:1px solid #f0f2f8;font-size:.7rem;color:var(--muted);text-align:center;}
 
         /* Select2 tweaks */
         .select2-container--bootstrap-5 .select2-selection { border-radius: 15px !important; border: 1.5px solid #e9edf7 !important; min-height: 48px; padding: .35rem .6rem; background:#fafbff; }
@@ -222,18 +239,9 @@ function statusBadge($status) {
 <div class="container">
 
     <!-- Top bar -->
-    <div class="topbar d-flex justify-content-between align-items-center">
-        <div>
-            <div class="brand"><?= strtoupper(substr(APP_NAME,0,1)) . substr(APP_NAME,1) ?> <span>SMM</span></div>
-            <div class="text-muted" style="font-size:.74rem;">Habari, <?= htmlspecialchars($username) ?> 👋</div>
-        </div>
-        <div class="d-flex gap-2">
-            <a href="howto.php" class="icon-btn"><i class="bi bi-question-lg"></i></a>
-            <a href="profile.php" class="icon-btn">
-                <i class="bi bi-bell"></i>
-                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size:.55rem;">!</span>
-            </a>
-        </div>
+    <div class="topbar">
+        <div class="brand"><?= strtoupper(substr(APP_NAME,0,1)) . substr(APP_NAME,1) ?> <span>SMM</span></div>
+        <div class="text-muted" style="font-size:.74rem;">Habari, <?= htmlspecialchars($username) ?> 👋</div>
     </div>
 
     <!-- Balance hero -->
@@ -338,13 +346,8 @@ function statusBadge($status) {
 
 </div>
 
-<!-- Bottom nav -->
-<div class="bottom-nav">
-    <a href="index.php" class="active"><i class="bi bi-house-door-fill"></i><span>Home</span></a>
-    <a href="#" data-bs-toggle="modal" data-bs-target="#topUpModal"><i class="bi bi-wallet2"></i><span>Top-Up</span></a>
-    <a href="howto.php"><i class="bi bi-journal-text"></i><span>How-To</span></a>
-    <a href="profile.php"><i class="bi bi-person-circle"></i><span>Profile</span></a>
-</div>
+<!-- Top-right hamburger + slide drawer -->
+<?php ui_nav('home', ['balance' => $tzsBalance]); ?>
 
 <!-- Top-Up Modal -->
 <div class="modal fade" id="topUpModal" tabindex="-1" aria-hidden="true">

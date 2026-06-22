@@ -39,7 +39,7 @@ a{text-decoration:none;}
 body.app{
   background:radial-gradient(1200px 600px at 100% -10%,#e8ecff 0,transparent 60%),
              radial-gradient(900px 500px at -10% 10%,#e6fbfa 0,transparent 55%),var(--bg);
-  margin-bottom:90px;
+  margin:0 0 30px;
 }
 body.app .container{max-width:540px;}
 
@@ -77,11 +77,33 @@ body.auth{
 .badge-danger{background:#fdeee9;color:#c0392b;}
 .badge-secondary{background:#eef1f8;color:#5a6a85;}
 
-/* bottom nav */
-.bottom-nav{position:fixed;bottom:0;left:0;width:100%;background:rgba(255,255,255,.92);backdrop-filter:blur(10px);display:flex;justify-content:space-around;padding:10px 0 18px;box-shadow:0 -6px 30px rgba(43,54,116,.06);border-top-left-radius:24px;border-top-right-radius:24px;z-index:1000;max-width:540px;margin:0 auto;}
-.bottom-nav a{color:var(--muted);text-align:center;font-size:.66rem;flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;font-weight:600;}
-.bottom-nav a.active{color:var(--primary);}
-.bottom-nav a i{font-size:1.4rem;}
+/* hamburger button (top-right, animated to X) */
+.hamburger{position:fixed;top:14px;right:14px;z-index:1300;width:46px;height:46px;border-radius:14px;border:none;background:rgba(255,255,255,.9);backdrop-filter:blur(10px);box-shadow:0 10px 26px rgba(43,54,116,.18);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;cursor:pointer;transition:transform .2s;}
+.hamburger:active{transform:scale(.92);}
+.hamburger span{display:block;width:20px;height:2.4px;border-radius:3px;background:var(--ink);transition:.3s;}
+body.drawer-open .hamburger span:nth-child(1){transform:translateY(6.4px) rotate(45deg);}
+body.drawer-open .hamburger span:nth-child(2){opacity:0;}
+body.drawer-open .hamburger span:nth-child(3){transform:translateY(-6.4px) rotate(-45deg);}
+
+/* slide-in drawer nav */
+.nav-backdrop{position:fixed;inset:0;background:rgba(18,22,45,.5);backdrop-filter:blur(3px);opacity:0;visibility:hidden;transition:.3s;z-index:1400;}
+.nav-backdrop.open{opacity:1;visibility:visible;}
+.drawer{position:fixed;top:0;right:0;height:100%;width:300px;max-width:84vw;background:#fff;z-index:1500;transform:translateX(106%);transition:transform .38s cubic-bezier(.5,.05,.2,1);display:flex;flex-direction:column;box-shadow:-24px 0 60px rgba(18,22,45,.28);border-top-left-radius:28px;border-bottom-left-radius:28px;overflow:hidden;}
+.drawer.open{transform:translateX(0);}
+.drawer-head{background:linear-gradient(140deg,var(--primary),var(--primary-2));color:#fff;padding:1.7rem 1.3rem 1.5rem;position:relative;overflow:hidden;}
+.drawer-head::after{content:'';position:absolute;right:-30px;top:-30px;width:120px;height:120px;background:rgba(255,255,255,.12);border-radius:50%;}
+.drawer-head .dclose{position:absolute;top:14px;right:14px;width:34px;height:34px;border-radius:11px;border:none;background:rgba(255,255,255,.2);color:#fff;font-size:1.05rem;display:flex;align-items:center;justify-content:center;z-index:1;}
+.drawer-ava{width:54px;height:54px;border-radius:16px;background:rgba(255,255,255,.22);border:2px solid rgba(255,255,255,.35);display:flex;align-items:center;justify-content:center;font-size:1.5rem;font-weight:800;}
+.drawer-bal{margin-top:1rem;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.26);border-radius:14px;padding:.55rem .9rem;display:flex;justify-content:space-between;align-items:center;position:relative;z-index:1;}
+.drawer-nav{flex:1;padding:1rem .8rem;overflow-y:auto;}
+.drawer-link{display:flex;align-items:center;gap:.85rem;padding:.8rem .85rem;border-radius:15px;color:var(--ink);font-weight:600;font-size:.92rem;margin-bottom:.25rem;transition:.15s;}
+.drawer-link .di{width:38px;height:38px;border-radius:12px;background:#f0f2fb;color:var(--primary);display:flex;align-items:center;justify-content:center;font-size:1.1rem;transition:.15s;flex:0 0 auto;}
+.drawer-link:hover{background:#f6f7fd;}
+.drawer-link.active{background:linear-gradient(135deg,rgba(108,92,231,.13),rgba(72,52,212,.10));color:var(--primary-2);}
+.drawer-link.active .di{background:linear-gradient(135deg,var(--primary),var(--primary-2));color:#fff;box-shadow:0 8px 16px rgba(108,92,231,.35);}
+.drawer-link.danger{color:var(--danger);}
+.drawer-link.danger .di{background:#fdeee9;color:#c0392b;}
+.drawer-foot{padding:.9rem 1.3rem;border-top:1px solid #f0f2f8;font-size:.7rem;color:var(--muted);text-align:center;}
 
 /* toast */
 .toast-wrap{position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:2000;width:calc(100% - 28px);max-width:512px;}
@@ -95,21 +117,74 @@ body.auth{
 HTML;
 }
 
-function ui_bottom_nav($active = 'home') {
-    $items = [
-        'home'    => ['index.php',   'bi-house-door-fill', 'Home'],
-        'topup'   => ['#',           'bi-wallet2',         'Top-Up'],
-        'howto'   => ['howto.php',   'bi-journal-text',    'How-To'],
-        'profile' => ['profile.php', 'bi-person-circle',   'Profile'],
+/**
+ * Top-right hamburger + slide-in drawer navigation (replaces the bottom nav).
+ * $opts['balance'] (optional) shows a balance pill in the drawer header.
+ */
+function ui_nav($active = 'home', $opts = []) {
+    $username = $_SESSION['username'] ?? 'Mteja';
+    $role     = $_SESSION['role'] ?? 'user';
+    $initial  = strtoupper(mb_substr($username, 0, 1));
+    $appName  = APP_NAME;
+
+    $links = [
+        'home'    => ['index.php',   'bi-grid-1x2-fill', 'Dashboard'],
+        'topup'   => ['#',           'bi-wallet2',        'Ongeza Salio'],
+        'howto'   => ['howto.php',   'bi-journal-text',   'Mwongozo'],
+        'profile' => ['profile.php', 'bi-person-fill',    'Profile'],
     ];
-    echo '<div class="bottom-nav">';
-    foreach ($items as $key => [$href, $icon, $label]) {
-        $cls = $active === $key ? ' active' : '';
-        $attr = $key === 'topup' ? ' data-bs-toggle="modal" data-bs-target="#topUpModal"' : '';
-        echo "<a href=\"{$href}\"{$attr} class=\"{$cls}\"><i class=\"bi {$icon}\"></i><span>{$label}</span></a>";
+    if ($role === 'admin') {
+        $links['admin'] = ['admin.php', 'bi-speedometer2', 'Admin Panel'];
     }
-    echo '</div>';
+
+    $linksHtml = '';
+    foreach ($links as $key => [$href, $icon, $label]) {
+        $cls  = $active === $key ? 'drawer-link active' : 'drawer-link';
+        $attr = $key === 'topup' ? ' data-bs-toggle="modal" data-bs-target="#topUpModal"' : '';
+        $linksHtml .= "<a href=\"{$href}\"{$attr} class=\"{$cls} js-nav-link\"><span class=\"di\"><i class=\"bi {$icon}\"></i></span>{$label}</a>";
+    }
+
+    $balHtml = '';
+    if (isset($opts['balance'])) {
+        $bal = number_format((float)$opts['balance']);
+        $balHtml = "<div class=\"drawer-bal\"><span style=\"font-size:.72rem;opacity:.85;\"><i class=\"bi bi-wallet2 me-1\"></i>Salio</span><strong>{$bal} TZS</strong></div>";
+    }
+
+    echo <<<HTML
+<button class="hamburger" id="navToggle" aria-label="Menu"><span></span><span></span><span></span></button>
+<div class="nav-backdrop" id="navBackdrop"></div>
+<aside class="drawer" id="appDrawer">
+  <div class="drawer-head">
+    <button class="dclose" id="navClose" aria-label="Funga"><i class="bi bi-x-lg"></i></button>
+    <div class="d-flex align-items-center gap-3">
+      <div class="drawer-ava">{$initial}</div>
+      <div>
+        <div class="fw-bold" style="font-size:1.05rem;line-height:1.15;">{$username}</div>
+        <div style="font-size:.72rem;opacity:.8;">{$appName} Member</div>
+      </div>
+    </div>
+    {$balHtml}
+  </div>
+  <nav class="drawer-nav">{$linksHtml}</nav>
+  <a href="logout.php" class="drawer-link danger js-nav-link" style="margin:0 .8rem .7rem;"><span class="di"><i class="bi bi-box-arrow-right"></i></span>Toka (Logout)</a>
+  <div class="drawer-foot">{$appName} SMM Panel &middot; v2.0</div>
+</aside>
+<script>
+(function(){
+  var t=document.getElementById('navToggle'),d=document.getElementById('appDrawer'),b=document.getElementById('navBackdrop'),c=document.getElementById('navClose');
+  function openD(){d.classList.add('open');b.classList.add('open');document.body.classList.add('drawer-open');}
+  function closeD(){d.classList.remove('open');b.classList.remove('open');document.body.classList.remove('drawer-open');}
+  t.addEventListener('click',function(){d.classList.contains('open')?closeD():openD();});
+  b.addEventListener('click',closeD); c.addEventListener('click',closeD);
+  document.querySelectorAll('.js-nav-link').forEach(function(a){a.addEventListener('click',closeD);});
+  document.addEventListener('keydown',function(e){if(e.key==='Escape')closeD();});
+})();
+</script>
+HTML;
 }
+
+// Backward-compatible alias
+function ui_bottom_nav($active = 'home') { ui_nav($active); }
 
 function ui_topup_modal() {
     echo <<<HTML

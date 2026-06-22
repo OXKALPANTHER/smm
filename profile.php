@@ -79,7 +79,6 @@ ui_head('Profile — ' . APP_NAME, 'app');
                 <p class="mb-0 small opacity-75"><?= htmlspecialchars($user['email']) ?></p>
             </div>
         </div>
-        <a href="logout.php" class="btn-logout"><i class="bi bi-box-arrow-right me-1"></i> Toka</a>
     </div>
 </div>
 
@@ -144,7 +143,7 @@ ui_head('Profile — ' . APP_NAME, 'app');
 </div>
 
 <?php
-ui_bottom_nav('profile');
+ui_nav('profile', ['balance' => $user['balance']]);
 ui_topup_modal();
 ui_foot(<<<'JS'
 <script>

@@ -47,6 +47,6 @@ ui_head('Jinsi ya Kutumia — ' . APP_NAME, 'app');
 <a href="https://wa.me/745720609" target="_blank" class="floating-btn btn-wa"><i class="bi bi-whatsapp"></i></a>
 
 <?php
-ui_bottom_nav('howto');
+ui_nav('howto');
 ui_topup_modal();
 ui_foot();
