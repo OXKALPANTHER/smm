@@ -256,16 +256,29 @@ function ensureRuntimeColumns($pdo) {
 // ============================================
 // SOCIAL MEDIA PLATFORMS
 // ============================================
+// Keys are the lowercase keyword matched against the provider's service
+// name + category (see APIHandler::getServices). Order is the display order.
 define('PLATFORMS', json_encode([
-    'instagram' => ['name' => 'Instagram', 'icon' => 'fab fa-instagram'],
-    'facebook' => ['name' => 'Facebook', 'icon' => 'fab fa-facebook'],
-    'tiktok' => ['name' => 'TikTok', 'icon' => 'fab fa-tiktok'],
-    'twitter' => ['name' => 'Twitter/X', 'icon' => 'fab fa-x-twitter'],
-    'youtube' => ['name' => 'YouTube', 'icon' => 'fab fa-youtube'],
-    'linkedin' => ['name' => 'LinkedIn', 'icon' => 'fab fa-linkedin'],
-    'telegram' => ['name' => 'Telegram', 'icon' => 'fab fa-telegram'],
-    'snapchat' => ['name' => 'Snapchat', 'icon' => 'fab fa-snapchat'],
-    'pinterest' => ['name' => 'Pinterest', 'icon' => 'fab fa-pinterest']
+    'instagram'  => ['name' => 'Instagram',  'icon' => 'fab fa-instagram'],
+    'tiktok'     => ['name' => 'TikTok',     'icon' => 'fab fa-tiktok'],
+    'facebook'   => ['name' => 'Facebook',   'icon' => 'fab fa-facebook'],
+    'youtube'    => ['name' => 'YouTube',    'icon' => 'fab fa-youtube'],
+    'twitter'    => ['name' => 'Twitter/X',  'icon' => 'fab fa-x-twitter'],
+    'telegram'   => ['name' => 'Telegram',   'icon' => 'fab fa-telegram'],
+    'whatsapp'   => ['name' => 'WhatsApp',   'icon' => 'fab fa-whatsapp'],
+    'spotify'    => ['name' => 'Spotify',    'icon' => 'fab fa-spotify'],
+    'threads'    => ['name' => 'Threads',    'icon' => 'fab fa-threads'],
+    'snapchat'   => ['name' => 'Snapchat',   'icon' => 'fab fa-snapchat'],
+    'linkedin'   => ['name' => 'LinkedIn',   'icon' => 'fab fa-linkedin'],
+    'pinterest'  => ['name' => 'Pinterest',  'icon' => 'fab fa-pinterest'],
+    'discord'    => ['name' => 'Discord',    'icon' => 'fab fa-discord'],
+    'twitch'     => ['name' => 'Twitch',     'icon' => 'fab fa-twitch'],
+    'soundcloud' => ['name' => 'SoundCloud', 'icon' => 'fab fa-soundcloud'],
+    'reddit'     => ['name' => 'Reddit',     'icon' => 'fab fa-reddit'],
+    'google'     => ['name' => 'Google',     'icon' => 'fab fa-google'],
+    'kick'       => ['name' => 'Kick',       'icon' => 'fas fa-broadcast-tower'],
+    'audiomack'  => ['name' => 'Audiomack',  'icon' => 'fas fa-music'],
+    'shazam'     => ['name' => 'Shazam',     'icon' => 'fas fa-music'],
 ]));
 
 // ============================================

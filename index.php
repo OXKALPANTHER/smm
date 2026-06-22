@@ -16,15 +16,26 @@ $username   = $user['username'] ?? 'Mteja';
 // Platforms (with bootstrap-icon mapping)
 $platformsCfg = json_decode(PLATFORMS, true);
 $platformIcons = [
-    'instagram' => 'bi-instagram',
-    'facebook'  => 'bi-facebook',
-    'tiktok'    => 'bi-tiktok',
-    'twitter'   => 'bi-twitter-x',
-    'youtube'   => 'bi-youtube',
-    'linkedin'  => 'bi-linkedin',
-    'telegram'  => 'bi-telegram',
-    'snapchat'  => 'bi-snapchat',
-    'pinterest' => 'bi-pinterest',
+    'instagram'  => 'bi-instagram',
+    'facebook'   => 'bi-facebook',
+    'tiktok'     => 'bi-tiktok',
+    'twitter'    => 'bi-twitter-x',
+    'youtube'    => 'bi-youtube',
+    'linkedin'   => 'bi-linkedin',
+    'telegram'   => 'bi-telegram',
+    'snapchat'   => 'bi-snapchat',
+    'pinterest'  => 'bi-pinterest',
+    'whatsapp'   => 'bi-whatsapp',
+    'spotify'    => 'bi-spotify',
+    'threads'    => 'bi-threads',
+    'discord'    => 'bi-discord',
+    'twitch'     => 'bi-twitch',
+    'reddit'     => 'bi-reddit',
+    'google'     => 'bi-google',
+    'soundcloud' => 'bi-cloud-fill',
+    'kick'       => 'bi-broadcast',
+    'audiomack'  => 'bi-music-note-beamed',
+    'shazam'     => 'bi-music-note',
 ];
 
 // Recent orders
@@ -147,15 +158,24 @@ function statusBadge($status) {
         }
         .form-control:focus, .form-select:focus { border-color: var(--primary); box-shadow: 0 0 0 4px rgba(108,92,231,.12); background:#fff; }
 
-        /* Platform chips */
-        .platform-row { display: flex; gap: .55rem; overflow-x: auto; padding: .2rem .1rem .6rem; scrollbar-width: none; }
-        .platform-row::-webkit-scrollbar { display: none; }
+        /* Platform chips — wrapped grid so every platform is visible at once */
+        .platform-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(70px, 1fr)); gap: .5rem; padding: .2rem 0; }
         .chip {
-            flex: 0 0 auto; border: 1.5px solid #e9edf7; background: #fafbff; border-radius: 16px;
-            padding: .6rem .85rem; display: flex; flex-direction: column; align-items: center; gap: .25rem;
-            cursor: pointer; min-width: 72px; transition: all .15s; color: var(--muted); font-size: .7rem; font-weight: 600;
+            border: 1.5px solid #e9edf7; background: #fafbff; border-radius: 16px;
+            padding: .6rem .3rem; display: flex; flex-direction: column; align-items: center; gap: .3rem;
+            cursor: pointer; transition: all .15s; color: var(--muted); font-size: .64rem; font-weight: 600; text-align: center;
         }
-        .chip i { font-size: 1.35rem; }
+        .chip span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .chip i { font-size: 1.3rem; }
+
+        /* Global service search */
+        .svc-search { position: relative; margin-bottom: .9rem; }
+        .svc-search .bi-search { position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: var(--muted); font-size: 1rem; pointer-events: none; }
+        .svc-search input { width: 100%; border-radius: 15px; border: 1.5px solid #e9edf7; background: #fafbff; padding: .85rem 1rem .85rem 2.6rem; font-size: .92rem; font-family: inherit; color: var(--ink); }
+        .svc-search input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 4px rgba(108,92,231,.12); background: #fff; }
+        .svc-search .clr { position: absolute; right: .55rem; top: 50%; transform: translateY(-50%); border: none; background: #eef1f8; color: var(--muted); width: 30px; height: 30px; border-radius: 10px; cursor: pointer; display: none; align-items: center; justify-content: center; }
+        .or-divider { display: flex; align-items: center; gap: .7rem; color: var(--muted); font-size: .68rem; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; margin: .2rem 0 .7rem; }
+        .or-divider::before, .or-divider::after { content: ''; flex: 1; height: 1px; background: #e9edf7; }
         .chip.active { border-color: var(--primary); background: linear-gradient(135deg,var(--primary),var(--primary-2)); color: #fff; box-shadow: 0 10px 20px rgba(108,92,231,.28); }
 
         /* Service detail */
@@ -347,8 +367,15 @@ function statusBadge($status) {
         </div>
 
         <form id="orderForm" autocomplete="off">
-            <!-- Platforms -->
-            <label class="form-label">1. Chagua Platform</label>
+            <!-- Platforms + global search -->
+            <label class="form-label">1. Tafuta au Chagua Platform</label>
+            <div class="svc-search">
+                <i class="bi bi-search"></i>
+                <input type="text" id="svcSearch" autocomplete="off"
+                       placeholder="Tafuta huduma yoyote (mf: WhatsApp, Google, Spotify)...">
+                <button type="button" class="clr" id="svcSearchClr" aria-label="Futa"><i class="bi bi-x-lg"></i></button>
+            </div>
+            <div class="or-divider">au chagua platform</div>
             <div class="platform-row" id="platformRow">
                 <?php foreach ($platformsCfg as $key => $p):
                     $ico = $platformIcons[$key] ?? 'bi-globe'; ?>
@@ -477,38 +504,70 @@ function toast(msg, type = 'primary') {
 
 function fmt(n) { return Number(n).toLocaleString('en-US'); }
 
-// Platform selection
+// ---- Shared service loader (used by platform chips AND global search) ----
+async function loadServices(url, opts = {}) {
+    $service.prop('disabled', true).empty().append('<option>Inapakia huduma...</option>').trigger('change');
+    currentService = null; resetServiceUI(); recalc();
+    try {
+        const r = await fetch(url);
+        const j = await r.json();
+        if (j.success && j.data && j.data.length) {
+            $service.empty().append('<option value="">-- Chagua huduma --</option>');
+            j.data.forEach(s => {
+                const opt = new Option(`${s.name.substring(0,70)}  ·  ${fmt(s.price_per_1000)} TZS/1K`, s.id, false, false);
+                opt.dataset.svc = JSON.stringify(s);
+                $service.append(opt);
+            });
+            $service.prop('disabled', false).trigger('change');
+            let msg = `${j.data.length} huduma zimepatikana`;
+            if (j.truncated) msg = `Zinaonyeshwa ${fmt(j.data.length)} kati ya ${fmt(j.total)}+ — andika zaidi kupunguza`;
+            toast(msg, 'success');
+            if (opts.openDropdown) { try { $service.select2('open'); } catch (e) {} }
+        } else {
+            $service.empty().append('<option value="">Hakuna huduma</option>').prop('disabled', true).trigger('change');
+            toast(opts.emptyMsg || 'Hakuna huduma iliyopatikana', 'warning');
+        }
+    } catch (e) {
+        $service.empty().append('<option value="">Kosa la mtandao</option>').prop('disabled', true).trigger('change');
+        toast('Imeshindwa kupakua huduma. Jaribu tena.', 'danger');
+    }
+}
+
+const svcSearchEl  = document.getElementById('svcSearch');
+const svcSearchClr = document.getElementById('svcSearchClr');
+
+// Platform selection (chips)
 document.querySelectorAll('.chip').forEach(chip => {
-    chip.addEventListener('click', async () => {
+    chip.addEventListener('click', () => {
         document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
         chip.classList.add('active');
-        const platform = chip.dataset.platform;
-
-        $service.prop('disabled', true).empty().append('<option>Inapakia huduma...</option>').trigger('change');
-        currentService = null; resetServiceUI(); recalc();
-
-        try {
-            const r = await fetch(`api-services.php?platform=${encodeURIComponent(platform)}`);
-            const j = await r.json();
-            if (j.success && j.data && j.data.length) {
-                $service.empty().append('<option value="">-- Chagua huduma --</option>');
-                j.data.forEach(s => {
-                    const opt = new Option(`${s.name.substring(0,70)}  ·  ${fmt(s.price_per_1000)} TZS/1K`, s.id, false, false);
-                    opt.dataset.svc = JSON.stringify(s);
-                    $service.append(opt);
-                });
-                $service.prop('disabled', false).trigger('change');
-                toast(`${j.data.length} huduma zimepatikana`, 'success');
-            } else {
-                $service.empty().append('<option value="">Hakuna huduma</option>').prop('disabled', true).trigger('change');
-                toast('Hakuna huduma kwa platform hii', 'warning');
-            }
-        } catch (e) {
-            $service.empty().append('<option value="">Kosa la mtandao</option>').prop('disabled', true).trigger('change');
-            toast('Imeshindwa kupakua huduma. Jaribu tena.', 'danger');
-        }
+        if (svcSearchEl)  svcSearchEl.value = '';
+        if (svcSearchClr) svcSearchClr.style.display = 'none';
+        loadServices(`api-services.php?platform=${encodeURIComponent(chip.dataset.platform)}`,
+                     { emptyMsg: 'Hakuna huduma kwa platform hii' });
     });
 });
+
+// Global search across the whole catalogue (debounced)
+let searchTimer = null;
+if (svcSearchEl) {
+    svcSearchEl.addEventListener('input', () => {
+        const q = svcSearchEl.value.trim();
+        svcSearchClr.style.display = q ? 'flex' : 'none';
+        clearTimeout(searchTimer);
+        if (q.length < 2) return;
+        document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+        searchTimer = setTimeout(() => {
+            loadServices(`api-services.php?q=${encodeURIComponent(q)}`,
+                         { openDropdown: true, emptyMsg: `Hakuna huduma kwa "${q}"` });
+        }, 450);
+    });
+    svcSearchClr.addEventListener('click', () => {
+        svcSearchEl.value = '';
+        svcSearchClr.style.display = 'none';
+        svcSearchEl.focus();
+    });
+}
 
 // ---- Service detail + link guidance ----
 const linkInput = document.getElementById('linkInput');
