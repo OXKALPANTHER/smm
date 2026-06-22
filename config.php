@@ -8,10 +8,16 @@ if (defined('ROYAL_CONFIG_LOADED')) { return; }
 define('ROYAL_CONFIG_LOADED', true);
 
 // In production, never let stray warnings/notices corrupt output or headers.
-if (!headers_sent()) {
-    ini_set('display_errors', '0');
+// Append ?__debug=1 to any URL to temporarily surface the real error.
+if (isset($_GET['__debug'])) {
+    ini_set('display_errors', '1');
+    error_reporting(E_ALL);
+} else {
+    if (!headers_sent()) {
+        ini_set('display_errors', '0');
+    }
+    error_reporting(E_ALL & ~E_WARNING & ~E_NOTICE & ~E_DEPRECATED);
 }
-error_reporting(E_ALL & ~E_WARNING & ~E_NOTICE & ~E_DEPRECATED);
 
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
