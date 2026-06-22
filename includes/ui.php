@@ -13,6 +13,8 @@
 
 if (!defined('APP_NAME')) { define('APP_NAME', 'Royal'); }
 
+require_once __DIR__ . '/pwa.php';
+
 function ui_head($title, $bodyClass = 'app', $extraHead = '') {
     $app = APP_NAME;
     echo <<<HTML
@@ -111,6 +113,9 @@ body.drawer-open .hamburger span:nth-child(3){transform:translateY(-6.4px) rotat
 @keyframes sk{0%{background-position:200% 0}100%{background-position:-200% 0}}
 </style>
 {$extraHead}
+HTML;
+    pwa_head();
+    echo <<<HTML
 </head>
 <body class="{$bodyClass}">
 <div class="toast-wrap" id="toastWrap"></div>
@@ -218,6 +223,9 @@ function toast(msg,type='primary'){
 }
 </script>
 {$extraScript}
+HTML;
+    pwa_foot();
+    echo <<<HTML
 </body>
 </html>
 HTML;

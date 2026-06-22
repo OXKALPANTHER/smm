@@ -1,0 +1,48 @@
+{
+  "name": "Royal SMM Panel",
+  "short_name": "Royal SMM",
+  "description": "Weka order za Instagram, TikTok, YouTube na zaidi — haraka na salama.",
+  "lang": "sw",
+  "dir": "ltr",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#eef1fb",
+  "theme_color": "#6c5ce7",
+  "categories": ["social", "business", "shopping"],
+  "icons": [
+    {
+      "src": "assets/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "assets/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Weka Order",
+      "short_name": "Order",
+      "url": "index.php",
+      "description": "Fungua ukurasa wa kuweka order"
+    },
+    {
+      "name": "Ongeza Salio",
+      "short_name": "Salio",
+      "url": "topup.php",
+      "description": "Ongeza salio kwenye akaunti yako"
+    }
+  ]
+}

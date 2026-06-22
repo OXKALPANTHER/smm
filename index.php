@@ -230,7 +230,79 @@ function statusBadge($status) {
         @keyframes sk { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
 
         .toast-wrap { position: fixed; top: 14px; left: 50%; transform: translateX(-50%); z-index: 2000; width: calc(100% - 28px); max-width: 512px; }
+
+        /* Entrance animations */
+        @keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+        @keyframes popIn{0%{opacity:0;transform:scale(.96)}100%{opacity:1;transform:scale(1)}}
+        .reveal{animation:fadeUp .55s both}
+        .reveal-2{animation:fadeUp .55s .1s both}
+        .reveal-3{animation:fadeUp .55s .2s both}
+        .reveal-4{animation:fadeUp .55s .3s both}
+
+        /* Platform scrolling text belt */
+        .belt{overflow:hidden;border-radius:16px;background:linear-gradient(135deg,var(--primary),var(--primary-2));box-shadow:0 12px 30px rgba(72,52,212,.25);margin:.2rem 0 1.1rem;padding:.6rem 0;position:relative;}
+        .belt::before,.belt::after{content:'';position:absolute;top:0;bottom:0;width:40px;z-index:2;pointer-events:none;}
+        .belt::before{left:0;background:linear-gradient(90deg,#5a45d6,transparent);}
+        .belt::after{right:0;background:linear-gradient(270deg,#5a45d6,transparent);}
+        .belt-track{display:flex;gap:2rem;width:max-content;animation:scrollX 24s linear infinite;}
+        .belt:hover .belt-track{animation-play-state:paused;}
+        .belt-item{display:flex;align-items:center;gap:.45rem;color:#fff;font-weight:600;font-size:.85rem;white-space:nowrap;opacity:.96;}
+        .belt-item i{font-size:1.15rem;}
+        @keyframes scrollX{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+
+        /* Service DETAILS card */
+        .details-card{display:none;margin-top:.9rem;border-radius:18px;border:1.5px solid var(--line);background:linear-gradient(180deg,#fbfcff,#f3f5ff);padding:1rem;}
+        .details-card.show{display:block;animation:popIn .35s both;}
+        .details-head{font-size:.7rem;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--primary-2);display:flex;align-items:center;gap:.4rem;margin-bottom:.55rem;}
+        .details-name{font-weight:600;font-size:.88rem;line-height:1.35;margin-bottom:.7rem;color:var(--ink);}
+        .details-grid{display:grid;grid-template-columns:1fr 1fr;gap:.5rem;}
+        .detail-box{background:#fff;border:1px solid var(--line);border-radius:12px;padding:.5rem .7rem;}
+        .detail-box .k{font-size:.62rem;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);font-weight:600;}
+        .detail-box .v{font-weight:700;font-size:.9rem;color:var(--ink);}
+        .detail-tags{display:flex;flex-wrap:wrap;gap:.4rem;margin-top:.55rem;}
+
+        /* Link hint + guidance tips */
+        .link-hint{font-size:.74rem;color:var(--muted);margin-top:.4rem;display:flex;align-items:center;gap:.35rem;}
+        .tips-box{display:none;margin-top:.65rem;border-radius:14px;background:#fff7e6;border:1px solid #ffe0a3;padding:.75rem .85rem;font-size:.8rem;color:#8a6d3b;}
+        .tips-box.show{display:block;animation:popIn .35s both;}
+        .tips-box .th{font-weight:700;display:flex;align-items:center;gap:.4rem;color:#b8860b;margin-bottom:.3rem;}
+        .tips-box ul{margin:0;padding-left:1.1rem;}
+        .tips-box li{margin-bottom:.2rem;}
+
+        /* ---- UI polish: living gradients + motion ---- */
+        .hero{background:linear-gradient(135deg,var(--primary),var(--primary-2),#7b6cf0);background-size:220% 220%;animation:gradShift 9s ease infinite;}
+        @keyframes gradShift{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
+
+        /* platform chips: staggered entrance + clearly tappable */
+        .chip{transition:transform .15s, box-shadow .15s, border-color .15s, background .2s; animation:popIn .4s both;}
+        .platform-row .chip:nth-child(1){animation-delay:.03s}
+        .platform-row .chip:nth-child(2){animation-delay:.07s}
+        .platform-row .chip:nth-child(3){animation-delay:.11s}
+        .platform-row .chip:nth-child(4){animation-delay:.15s}
+        .platform-row .chip:nth-child(5){animation-delay:.19s}
+        .platform-row .chip:nth-child(6){animation-delay:.23s}
+        .platform-row .chip:nth-child(7){animation-delay:.27s}
+        .platform-row .chip:nth-child(8){animation-delay:.31s}
+        .platform-row .chip:nth-child(9){animation-delay:.35s}
+        .chip:hover{transform:translateY(-3px);box-shadow:0 10px 20px rgba(108,92,231,.18);border-color:var(--primary);}
+        .chip.active{transform:translateY(-2px) scale(1.03);}
+
+        /* belt: animated gradient + brighter icons so platforms are well seen */
+        .belt{background:linear-gradient(135deg,var(--primary),var(--primary-2),#5a45d6);background-size:220% 220%;animation:gradShift 12s ease infinite;}
+        .belt-item{text-shadow:0 1px 3px rgba(0,0,0,.18);}
+        .belt-item i{filter:drop-shadow(0 2px 6px rgba(0,0,0,.25));}
+
+        /* submit button shimmer */
+        .btn-primary-grad{position:relative;overflow:hidden;}
+        .btn-primary-grad::after{content:'';position:absolute;top:0;left:-60%;width:40%;height:100%;background:linear-gradient(120deg,transparent,rgba(255,255,255,.35),transparent);transform:skewX(-20deg);animation:shine 3.6s ease-in-out infinite;pointer-events:none;}
+        @keyframes shine{0%,58%{left:-60%}100%{left:130%}}
+
+        @media (prefers-reduced-motion: reduce){
+            .hero,.belt,.btn-primary-grad::after,.chip{animation:none!important;}
+            .belt-track{animation-duration:60s;}
+        }
     </style>
+    <?php pwa_head(); ?>
 </head>
 <body>
 
@@ -258,8 +330,17 @@ function statusBadge($status) {
         <div class="col-4"><div class="stat"><div class="n text-success"><?= $stats['completed'] ?></div><div class="l">Done</div></div></div>
     </div>
 
+    <!-- Platform scrolling belt -->
+    <div class="belt reveal-2">
+        <div class="belt-track">
+            <?php for ($i = 0; $i < 2; $i++): foreach ($platformsCfg as $key => $p): $ico = $platformIcons[$key] ?? 'bi-globe'; ?>
+                <span class="belt-item"><i class="bi <?= $ico ?>"></i><?= htmlspecialchars($p['name']) ?></span>
+            <?php endforeach; endfor; ?>
+        </div>
+    </div>
+
     <!-- Order card -->
-    <div class="card-soft">
+    <div class="card-soft reveal-3">
         <div class="section-title mb-3">
             <div class="section-ico"><i class="bi bi-cart-plus"></i></div>
             Weka Order Mpya
@@ -284,13 +365,16 @@ function statusBadge($status) {
                 <select class="form-select" id="serviceSelect" name="service_id" style="width:100%" disabled>
                     <option value="">Chagua platform kwanza...</option>
                 </select>
-                <div class="svc-detail" id="svcDetail"></div>
+                <!-- DETAILS card -->
+                <div class="details-card" id="svcDetail"></div>
             </div>
 
             <!-- Link -->
             <div class="mt-3">
-                <label class="form-label">3. Link / Username</label>
-                <input type="text" class="form-control" id="linkInput" name="link" placeholder="https://instagram.com/akaunti..." required>
+                <label class="form-label" id="linkLabel">3. Link / Username</label>
+                <input type="text" class="form-control" id="linkInput" name="link" placeholder="Chagua huduma kwanza..." required>
+                <div class="link-hint" id="linkHint"><i class="bi bi-info-circle"></i> Chagua huduma ili kuona maelekezo sahihi ya link.</div>
+                <div class="tips-box" id="igTips"></div>
             </div>
 
             <!-- Quantity -->
@@ -401,7 +485,7 @@ document.querySelectorAll('.chip').forEach(chip => {
         const platform = chip.dataset.platform;
 
         $service.prop('disabled', true).empty().append('<option>Inapakia huduma...</option>').trigger('change');
-        currentService = null; svcDetail.style.display = 'none'; recalc();
+        currentService = null; resetServiceUI(); recalc();
 
         try {
             const r = await fetch(`api-services.php?platform=${encodeURIComponent(platform)}`);
@@ -426,23 +510,97 @@ document.querySelectorAll('.chip').forEach(chip => {
     });
 });
 
+// ---- Service detail + link guidance ----
+const linkInput = document.getElementById('linkInput');
+const linkLabel = document.getElementById('linkLabel');
+const linkHint  = document.getElementById('linkHint');
+const igTips    = document.getElementById('igTips');
+
+const EXAMPLES = {
+  instagram:{profile:'https://instagram.com/username', post:'https://instagram.com/p/Cxxxx/'},
+  tiktok:{profile:'https://tiktok.com/@username', post:'https://tiktok.com/@user/video/123456'},
+  facebook:{profile:'https://facebook.com/YourPage', post:'https://facebook.com/YourPage/posts/123'},
+  youtube:{profile:'https://youtube.com/@channel', post:'https://youtube.com/watch?v=xxxx'},
+  twitter:{profile:'https://x.com/username', post:'https://x.com/user/status/123'},
+  telegram:{profile:'https://t.me/channel', post:'https://t.me/channel/123'},
+  snapchat:{profile:'https://snapchat.com/add/username', post:'https://snapchat.com/add/username'},
+  linkedin:{profile:'https://linkedin.com/in/username', post:'https://linkedin.com/feed/update/...'},
+  pinterest:{profile:'https://pinterest.com/username', post:'https://pinterest.com/pin/123'}
+};
+
+function svcText(s){ return ((s.name||'')+' '+(s.category||'')).toLowerCase(); }
+function platformOf(s){ const t=svcText(s); return ['instagram','tiktok','facebook','youtube','twitter','telegram','snapchat','linkedin','pinterest'].find(p=>t.includes(p))||''; }
+function linkType(s){
+  const t=svcText(s);
+  if(/like|view|comment|share|save|reaction|repost|retweet|vote|play|watch|impression|story/.test(t)) return 'post';
+  if(/follower|subscriber|member|connection|page like|fan/.test(t)) return 'profile';
+  return 'any';
+}
+function grab(name,key){ const m=name.match(new RegExp(key+'[:\\s]*([^|►⚡⏱♻]+)','i')); return m?m[1].trim():null; }
+
+function resetServiceUI(){
+  svcDetail.classList.remove('show'); svcDetail.innerHTML='';
+  igTips.classList.remove('show'); igTips.innerHTML='';
+  linkLabel.textContent='3. Link / Username';
+  linkInput.placeholder='Chagua huduma kwanza...';
+  linkHint.innerHTML='<i class="bi bi-info-circle"></i> Chagua huduma ili kuona maelekezo sahihi ya link.';
+  qtyRange.textContent='';
+}
+
+function applyServiceUI(s){
+  const plat=platformOf(s), type=linkType(s);
+  const start=grab(s.name,'start'), speed=grab(s.name,'speed');
+
+  svcDetail.innerHTML = `
+    <div class="details-head"><i class="bi bi-card-list"></i> Details za Huduma</div>
+    <div class="details-name">${s.name}</div>
+    <div class="details-grid">
+      <div class="detail-box"><div class="k">Kiwango cha chini</div><div class="v">${fmt(s.min)}</div></div>
+      <div class="detail-box"><div class="k">Kiwango cha juu</div><div class="v">${fmt(s.max)}</div></div>
+      <div class="detail-box"><div class="k">Bei / 1000</div><div class="v">${fmt(s.price_per_1000)} TZS</div></div>
+      <div class="detail-box"><div class="k">Refill</div><div class="v">${s.refill?'Ndiyo ✅':'Hapana'}</div></div>
+      ${start?`<div class="detail-box"><div class="k">Muda wa kuanza</div><div class="v" style="font-size:.8rem">${start}</div></div>`:''}
+      ${speed?`<div class="detail-box"><div class="k">Kasi</div><div class="v" style="font-size:.8rem">${speed}</div></div>`:''}
+    </div>
+    <div class="detail-tags">
+      ${plat?`<span class="pill blue"><i class="bi bi-hash"></i> ${plat}</span>`:''}
+      <span class="pill"><i class="bi bi-link-45deg"></i> ${type==='post'?'Link ya Post':type==='profile'?'Profile/Username':'Link'}</span>
+      ${s.refill?'<span class="pill green"><i class="bi bi-arrow-repeat"></i> Refill</span>':''}
+    </div>`;
+  svcDetail.classList.add('show');
+
+  const ex = (EXAMPLES[plat]||{})[type] || (EXAMPLES[plat]||{}).profile || 'https://...';
+  if(type==='post'){ linkLabel.textContent='3. Weka Link ya Post / Video'; linkHint.innerHTML='<i class="bi bi-link-45deg"></i> Weka link KAMILI ya post / video / reel husika.'; }
+  else if(type==='profile'){ linkLabel.textContent='3. Weka Link ya Profile / Username'; linkHint.innerHTML='<i class="bi bi-person"></i> Weka profile/username — akaunti iwe PUBLIC.'; }
+  else { linkLabel.textContent='3. Link / Username'; linkHint.innerHTML='<i class="bi bi-info-circle"></i> Weka link sahihi ya huduma uliyochagua.'; }
+  linkInput.placeholder = ex;
+
+  igTips.classList.remove('show'); igTips.innerHTML='';
+  const isFollowers = /follower/.test(svcText(s));
+  if(plat==='instagram' && isFollowers){
+    igTips.innerHTML = `<div class="th"><i class="bi bi-exclamation-triangle-fill"></i> Maelekezo (Instagram Followers)</div>
+      <ul>
+        <li>Hakikisha akaunti yako ni <b>Public</b> (siyo Private).</li>
+        <li>Ikiwezekana <b>zima "Flag / Restrict"</b> au vizuizi vyovyote vya akaunti.</li>
+        <li>Usibadilishe <b>username</b> wala kuifanya private wakati order inaendelea.</li>
+        <li>Weka <b>link kamili</b> ya profile, mf: https://instagram.com/username</li>
+      </ul>`;
+    igTips.classList.add('show');
+  } else if(type==='profile' && plat){
+    igTips.innerHTML = `<div class="th"><i class="bi bi-info-circle-fill"></i> Kumbuka</div><ul><li>Akaunti iwe <b>Public</b> ili order ipite vizuri.</li></ul>`;
+    igTips.classList.add('show');
+  }
+
+  qtyRange.textContent = `(min ${fmt(s.min)} - max ${fmt(s.max)})`;
+  quantityInput.min = s.min;
+  if(parseInt(quantityInput.value) < s.min) quantityInput.value = s.min;
+}
+
 // Service change
 $service.on('change', function () {
     const opt = this.options[this.selectedIndex];
     currentService = (opt && opt.dataset.svc) ? JSON.parse(opt.dataset.svc) : null;
-
-    if (currentService) {
-        svcDetail.style.display = 'flex';
-        svcDetail.innerHTML = `
-            <span class="pill blue"><i class="bi bi-arrow-down-up"></i> Min ${fmt(currentService.min)} · Max ${fmt(currentService.max)}</span>
-            <span class="pill"><i class="bi bi-cash-coin"></i> ${fmt(currentService.price_per_1000)} TZS / 1000</span>
-            ${currentService.refill ? '<span class="pill green"><i class="bi bi-arrow-repeat"></i> Refill</span>' : ''}`;
-        qtyRange.textContent = `(min ${fmt(currentService.min)} - max ${fmt(currentService.max)})`;
-        quantityInput.min = currentService.min;
-        if (parseInt(quantityInput.value) < currentService.min) quantityInput.value = currentService.min;
-    } else {
-        svcDetail.style.display = 'none'; qtyRange.textContent = '';
-    }
+    if (currentService) applyServiceUI(currentService); else resetServiceUI();
     recalc();
 });
 
@@ -514,5 +672,6 @@ document.getElementById('orderForm').addEventListener('submit', async function (
     }
 });
 </script>
+<?php pwa_foot(); ?>
 </body>
 </html>
