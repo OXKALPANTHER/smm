@@ -53,18 +53,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             exit(apiResponse(false, 'Hitilafu imetokea wakati wa kuandaa muamala.'));
         }
 
-        // Prepare payment request for PalmPesa. The api_key/token is also sent
-        // in the body (in addition to the Authorization header) because some
-        // gateway builds read it from the payload.
+        // Prepare payment request for PalmPesa /pay-via-mobile.
+        // name/email/phone/amount/address/postcode/user_id are all required by
+        // the gateway; auth is via the Bearer header (see makeAPICall).
         $payload = [
             "user_id"        => MPESA_USER_ID,
-            "api_key"        => MPESA_API_TOKEN,
-            "token"          => MPESA_API_TOKEN,
             "name"           => sanitize($name),
             "email"          => sanitize($email),
             "phone"          => $phone,
             "amount"         => $amount,
             "transaction_id" => $transaction_id,
+            "address"        => "Tanzania",
+            "postcode"       => "00000",
             "currency"       => CURRENCY_CODE,
         ];
 

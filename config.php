@@ -528,6 +528,9 @@ function makeAPICall($service, $endpoint, $method = 'GET', $data = null, $header
     
     $default_headers = [
         'Content-Type: application/json',
+        // Without Accept: application/json, Laravel APIs (e.g. PalmPesa) treat
+        // the call as a browser request and 302-redirect to their homepage.
+        'Accept: application/json',
         'Authorization: Bearer ' . $api_key,
         'User-Agent: ' . APP_NAME . '/' . APP_VERSION
     ];

@@ -16,28 +16,48 @@ if (!defined('APP_NAME')) { define('APP_NAME', 'Royal'); }
 require_once __DIR__ . '/pwa.php';
 
 /**
- * Classic gold crown mark for the Royal brand. Returns an inline <svg> sized to
- * $px. Self-contained (no external CSS) so it renders anywhere.
+ * Premium gold crown mark for the Royal brand. Returns a self-contained inline
+ * <svg> sized to $px (no external CSS, so it renders anywhere). Features curved
+ * arches, a jewelled band, a ruby centre gem and a soft highlight for sheen.
  */
 function ui_crown_svg($px = 26) {
     $px = (int)$px;
-    // Unique gradient id per size so multiple crowns on one page don't clash.
-    $gid = 'rcrown' . $px;
+    // Unique gradient ids per size so multiple crowns on one page don't clash.
+    $g  = 'rcg' . $px;   // gold body
+    $gb = 'rcb' . $px;   // band
+    $gh = 'rch' . $px;   // highlight
     return <<<SVG
 <svg width="{$px}" height="{$px}" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
   <defs>
-    <linearGradient id="{$gid}" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#FFF1C2"/>
-      <stop offset=".45" stop-color="#FFD25A"/>
-      <stop offset="1" stop-color="#F2A613"/>
+    <linearGradient id="{$g}" x1="10" y1="6" x2="34" y2="34" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFF7D6"/>
+      <stop offset=".4" stop-color="#FFD75E"/>
+      <stop offset=".75" stop-color="#F6B12B"/>
+      <stop offset="1" stop-color="#E08C12"/>
     </linearGradient>
+    <linearGradient id="{$gb}" x1="0" y1="32" x2="0" y2="41" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFE69A"/>
+      <stop offset="1" stop-color="#E89A18"/>
+    </linearGradient>
+    <radialGradient id="{$gh}" cx="0.32" cy="0.26" r="0.7">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity=".75"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
+    </radialGradient>
   </defs>
-  <path d="M5 33 L9 13 L18 24 L24 11 L30 24 L39 13 L43 33 Z" fill="url(#{$gid})" stroke="#E1932A" stroke-width="1.1" stroke-linejoin="round"/>
-  <rect x="6" y="33" width="36" height="6.4" rx="2.4" fill="url(#{$gid})" stroke="#E1932A" stroke-width="1.1"/>
-  <circle cx="9"  cy="12.2" r="2"   fill="#FFF6DC" stroke="#E1932A" stroke-width=".8"/>
-  <circle cx="24" cy="10"   r="2.4" fill="#FFF6DC" stroke="#E1932A" stroke-width=".8"/>
-  <circle cx="39" cy="12.2" r="2"   fill="#FFF6DC" stroke="#E1932A" stroke-width=".8"/>
-  <circle cx="24" cy="36.3" r="1.5" fill="#fff" opacity=".55"/>
+  <!-- crown body: curved arches between three jewelled peaks -->
+  <path d="M6.5 31.5 L9 12.5 Q16.5 21 12.8 19 L16.8 23.2 Q20 16.5 24 9.8 Q28 16.5 31.2 23.2 L35.2 19 Q31.5 21 39 12.5 L41.5 31.5 Z"
+        fill="url(#{$g})" stroke="#C97E12" stroke-width="1.1" stroke-linejoin="round"/>
+  <path d="M6.5 31.5 L9 12.5 L16.8 23.2 L24 9.8 L31.2 23.2 L39 12.5 L41.5 31.5 Z"
+        fill="url(#{$gh})"/>
+  <!-- jewelled band -->
+  <rect x="6" y="31.3" width="36" height="7" rx="2.6" fill="url(#{$gb})" stroke="#C97E12" stroke-width="1.1"/>
+  <!-- peak gems -->
+  <circle cx="9"  cy="11.4" r="2.1" fill="#FFF6DC" stroke="#C97E12" stroke-width=".7"/>
+  <circle cx="24" cy="8.6"  r="2.5" fill="#FFF6DC" stroke="#C97E12" stroke-width=".7"/>
+  <circle cx="39" cy="11.4" r="2.1" fill="#FFF6DC" stroke="#C97E12" stroke-width=".7"/>
+  <!-- centre ruby on the band -->
+  <circle cx="24" cy="34.8" r="2.1" fill="#E8466B" stroke="#B12B49" stroke-width=".7"/>
+  <circle cx="23.3" cy="34.1" r=".6" fill="#fff" opacity=".8"/>
 </svg>
 SVG;
 }
@@ -51,18 +71,29 @@ SVG;
  * @param int  $size     emblem size in px
  */
 function ui_logo($wordmark = true, $size = 46) {
-    $size  = (int)$size;
-    $radius = (int)round($size * 0.32);
-    $crown  = ui_crown_svg((int)round($size * 0.56));
-    $badge = "<span style=\"display:inline-flex;align-items:center;justify-content:center;width:{$size}px;height:{$size}px;border-radius:{$radius}px;"
-           . "background:linear-gradient(145deg,#7d6cf0,#4834d4);box-shadow:0 10px 22px rgba(72,52,212,.38),inset 0 1px 0 rgba(255,255,255,.35);flex:0 0 auto;\">{$crown}</span>";
+    $size   = (int)$size;
+    $radius = (int)round($size * 0.30);
+    $crown  = ui_crown_svg((int)round($size * 0.58));
+    // Rich badge: layered purple gradient, soft drop shadow, inner top sheen
+    // and a thin translucent ring for a polished, app-icon feel.
+    $badge = "<span style=\"position:relative;display:inline-flex;align-items:center;justify-content:center;"
+           . "width:{$size}px;height:{$size}px;border-radius:{$radius}px;flex:0 0 auto;"
+           . "background:linear-gradient(150deg,#8a78ff 0%,#6c5ce7 45%,#4226c9 100%);"
+           . "box-shadow:0 12px 26px rgba(72,52,212,.40),inset 0 1.5px 0 rgba(255,255,255,.45),inset 0 -3px 8px rgba(28,16,90,.35);"
+           . "border:1px solid rgba(255,255,255,.18);\">{$crown}</span>";
     if (!$wordmark) {
         return $badge;
     }
-    $app  = htmlspecialchars(APP_NAME);
-    $wsize = round($size * 0.46, 1);
-    $word = "<span style=\"font-family:'Poppins',sans-serif;font-weight:800;font-size:{$wsize}px;letter-spacing:-.5px;color:#2b3674;line-height:1;\">"
-          . "{$app}<span style=\"color:#6c5ce7;font-weight:700;\"> SMM</span></span>";
+    $app   = htmlspecialchars(APP_NAME);
+    $wsize = round($size * 0.5, 1);
+    $tsize = round($size * 0.205, 1);
+    $word  = "<span style=\"display:inline-flex;flex-direction:column;justify-content:center;line-height:1;\">"
+           . "<span style=\"font-family:'Poppins',sans-serif;font-weight:800;font-size:{$wsize}px;letter-spacing:-.5px;"
+           . "background:linear-gradient(90deg,#3a2a8c,#6c5ce7);-webkit-background-clip:text;background-clip:text;"
+           . "-webkit-text-fill-color:transparent;color:#3a2a8c;\">{$app}</span>"
+           . "<span style=\"font-family:'Poppins',sans-serif;font-weight:700;font-size:{$tsize}px;letter-spacing:3px;"
+           . "text-transform:uppercase;color:#b8860b;margin-top:2px;\">SMM Panel</span>"
+           . "</span>";
     return "<span style=\"display:inline-flex;align-items:center;gap:.6rem;\">{$badge}{$word}</span>";
 }
 
