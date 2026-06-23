@@ -1,5 +1,5 @@
 /* Royal SMM — service worker (offline support + installable PWA) */
-const VERSION   = 'royal-v2';
+const VERSION   = 'royal-v3';
 const SHELL     = 'royal-shell-' + VERSION;
 const RUNTIME   = 'royal-runtime-' + VERSION;
 

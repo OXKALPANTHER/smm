@@ -1,33 +1,95 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="Royal SMM">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" width="1000" height="1000" role="img" aria-label="Royal Panel">
   <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#7d6cf0"/>
-      <stop offset="1" stop-color="#4226c9"/>
+    <linearGradient id="gold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFF4B0"/>
+      <stop offset="50%" stop-color="#FFD700"/>
+      <stop offset="100%" stop-color="#A87400"/>
     </linearGradient>
-    <radialGradient id="glow" cx="0.5" cy="0.3" r="0.75">
-      <stop offset="0" stop-color="#ffffff" stop-opacity="0.18"/>
-      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+
+    <radialGradient id="royalBlue">
+      <stop offset="0%" stop-color="#163A70"/>
+      <stop offset="100%" stop-color="#071A35"/>
     </radialGradient>
-    <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#FFF7D6"/>
-      <stop offset="0.45" stop-color="#FFD75E"/>
-      <stop offset="1" stop-color="#E08C12"/>
-    </linearGradient>
-    <linearGradient id="band" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#FFE69A"/>
-      <stop offset="1" stop-color="#E89A18"/>
-    </linearGradient>
+
+    <radialGradient id="bg" cx="50%" cy="42%" r="75%">
+      <stop offset="0%" stop-color="#FFFDF6"/>
+      <stop offset="100%" stop-color="#EFE2C4"/>
+    </radialGradient>
   </defs>
-  <!-- full-bleed background keeps the icon maskable-safe -->
-  <rect width="512" height="512" fill="url(#bg)"/>
-  <rect width="512" height="512" fill="url(#glow)"/>
-  <!-- crown centred within the safe zone (48-unit artwork scaled up) -->
-  <g transform="translate(83.2,83.2) scale(7.2)" stroke="#C97E12" stroke-width="1.1" stroke-linejoin="round">
-    <path d="M6.5 31.5 L9 12.5 L16.8 23.2 L24 9.8 L31.2 23.2 L39 12.5 L41.5 31.5 Z" fill="url(#gold)"/>
-    <rect x="6" y="31.3" width="36" height="7" rx="2.6" fill="url(#band)"/>
-    <circle cx="9" cy="11.4" r="2.1" fill="#FFF6DC"/>
-    <circle cx="24" cy="8.6" r="2.5" fill="#FFF6DC"/>
-    <circle cx="39" cy="11.4" r="2.1" fill="#FFF6DC"/>
-    <circle cx="24" cy="34.8" r="2.1" fill="#E8466B" stroke="#B12B49"/>
+
+  <!-- full-bleed background keeps the icon readable + maskable-safe -->
+  <rect width="1000" height="1000" fill="url(#bg)"/>
+
+  <!-- Crown -->
+  <g transform="translate(500,180)">
+    <path d="M-180 80 L-120 -40 L0 40 L120 -40 L180 80
+             L150 130 L-150 130 Z"
+          fill="url(#gold)"/>
+    <circle cx="-120" cy="-40" r="14" fill="#fff"/>
+    <circle cx="0" cy="40" r="14" fill="#fff"/>
+    <circle cx="120" cy="-40" r="14" fill="#fff"/>
   </g>
+
+  <!-- Laurel Left -->
+  <g fill="none" stroke="url(#gold)" stroke-width="10">
+    <path d="M220 700 C120 550 120 350 250 250"/>
+    <path d="M240 650 l-50 -20"/>
+    <path d="M220 580 l-55 -10"/>
+    <path d="M220 500 l-55 10"/>
+    <path d="M240 420 l-50 20"/>
+    <path d="M270 340 l-45 30"/>
+  </g>
+
+  <!-- Laurel Right -->
+  <g fill="none" stroke="url(#gold)" stroke-width="10">
+    <path d="M780 700 C880 550 880 350 750 250"/>
+    <path d="M760 650 l50 -20"/>
+    <path d="M780 580 l55 -10"/>
+    <path d="M780 500 l55 10"/>
+    <path d="M760 420 l50 20"/>
+    <path d="M730 340 l45 30"/>
+  </g>
+
+  <!-- Main Crest -->
+  <circle cx="500" cy="500" r="220"
+          fill="url(#royalBlue)"
+          stroke="url(#gold)"
+          stroke-width="12"/>
+
+  <circle cx="500" cy="500" r="190"
+          fill="none"
+          stroke="url(#gold)"
+          stroke-width="3"
+          opacity="0.7"/>
+
+  <!-- RP Monogram -->
+  <text x="500"
+        y="560"
+        text-anchor="middle"
+        font-size="180"
+        font-family="Times New Roman, serif"
+        font-weight="bold"
+        fill="url(#gold)">
+    RP
+  </text>
+
+  <!-- Decorative Ornament -->
+  <path d="M400 650
+           C450 610 470 700 500 650
+           C530 700 550 610 600 650"
+        fill="none"
+        stroke="url(#gold)"
+        stroke-width="6"/>
+
+  <!-- Brand Name -->
+  <text x="500"
+        y="860"
+        text-anchor="middle"
+        font-size="70"
+        font-family="Georgia, serif"
+        letter-spacing="10"
+        fill="#071A35">
+    ROYAL PANEL
+  </text>
+
 </svg>
