@@ -336,7 +336,7 @@ function statusBadge($status) {
 
     <!-- Top bar -->
     <div class="topbar">
-        <div class="brand"><?= strtoupper(substr(APP_NAME,0,1)) . substr(APP_NAME,1) ?> <span>SMM</span></div>
+        <div class="brand"><?= ui_logo(true, 40) ?></div>
         <div class="text-muted" style="font-size:.74rem;">Habari, <?= htmlspecialchars($username) ?> 👋</div>
     </div>
 
@@ -438,7 +438,7 @@ function statusBadge($status) {
     <div class="card-soft mt-3">
         <div class="d-flex justify-content-between align-items-center mb-2">
             <div class="section-title" style="font-size:.98rem;"><div class="section-ico" style="width:34px;height:34px;font-size:1rem;"><i class="bi bi-clock-history"></i></div> Orders za Karibuni</div>
-            <a href="profile.php" class="text-decoration-none small fw-semibold" style="color:var(--primary)">Zote</a>
+            <a href="orders.php" class="text-decoration-none small fw-semibold" style="color:var(--primary)">Zote</a>
         </div>
         <?php if (empty($recentOrders)): ?>
             <div class="text-center text-muted py-4" style="font-size:.85rem;">

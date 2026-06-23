@@ -44,7 +44,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 ui_head('Jisajili — ' . APP_NAME, 'auth');
 ?>
 <div class="glass-card">
-    <div class="brand-icon"><i class="bi bi-person-plus"></i></div>
+    <div class="brand-icon"><?= ui_crown_svg(38) ?></div>
     <h3 class="fw-bold text-center mb-1" style="color:var(--ink)">Tengeneza Akaunti</h3>
     <p class="text-center text-muted mb-4" style="font-size:.9rem;">Jaza taarifa zako hapa chini</p>
 

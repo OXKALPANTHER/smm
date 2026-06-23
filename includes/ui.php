@@ -15,6 +15,57 @@ if (!defined('APP_NAME')) { define('APP_NAME', 'Royal'); }
 
 require_once __DIR__ . '/pwa.php';
 
+/**
+ * Classic gold crown mark for the Royal brand. Returns an inline <svg> sized to
+ * $px. Self-contained (no external CSS) so it renders anywhere.
+ */
+function ui_crown_svg($px = 26) {
+    $px = (int)$px;
+    // Unique gradient id per size so multiple crowns on one page don't clash.
+    $gid = 'rcrown' . $px;
+    return <<<SVG
+<svg width="{$px}" height="{$px}" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <defs>
+    <linearGradient id="{$gid}" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFF1C2"/>
+      <stop offset=".45" stop-color="#FFD25A"/>
+      <stop offset="1" stop-color="#F2A613"/>
+    </linearGradient>
+  </defs>
+  <path d="M5 33 L9 13 L18 24 L24 11 L30 24 L39 13 L43 33 Z" fill="url(#{$gid})" stroke="#E1932A" stroke-width="1.1" stroke-linejoin="round"/>
+  <rect x="6" y="33" width="36" height="6.4" rx="2.4" fill="url(#{$gid})" stroke="#E1932A" stroke-width="1.1"/>
+  <circle cx="9"  cy="12.2" r="2"   fill="#FFF6DC" stroke="#E1932A" stroke-width=".8"/>
+  <circle cx="24" cy="10"   r="2.4" fill="#FFF6DC" stroke="#E1932A" stroke-width=".8"/>
+  <circle cx="39" cy="12.2" r="2"   fill="#FFF6DC" stroke="#E1932A" stroke-width=".8"/>
+  <circle cx="24" cy="36.3" r="1.5" fill="#fff" opacity=".55"/>
+</svg>
+SVG;
+}
+
+/**
+ * Royal logo lockup: a purple gradient badge holding the gold crown, with an
+ * optional "Royal SMM" wordmark. Fully inline-styled so it works on pages that
+ * don't load the shared <style> block (e.g. index.php).
+ *
+ * @param bool $wordmark show the text wordmark next to the emblem
+ * @param int  $size     emblem size in px
+ */
+function ui_logo($wordmark = true, $size = 46) {
+    $size  = (int)$size;
+    $radius = (int)round($size * 0.32);
+    $crown  = ui_crown_svg((int)round($size * 0.56));
+    $badge = "<span style=\"display:inline-flex;align-items:center;justify-content:center;width:{$size}px;height:{$size}px;border-radius:{$radius}px;"
+           . "background:linear-gradient(145deg,#7d6cf0,#4834d4);box-shadow:0 10px 22px rgba(72,52,212,.38),inset 0 1px 0 rgba(255,255,255,.35);flex:0 0 auto;\">{$crown}</span>";
+    if (!$wordmark) {
+        return $badge;
+    }
+    $app  = htmlspecialchars(APP_NAME);
+    $wsize = round($size * 0.46, 1);
+    $word = "<span style=\"font-family:'Poppins',sans-serif;font-weight:800;font-size:{$wsize}px;letter-spacing:-.5px;color:#2b3674;line-height:1;\">"
+          . "{$app}<span style=\"color:#6c5ce7;font-weight:700;\"> SMM</span></span>";
+    return "<span style=\"display:inline-flex;align-items:center;gap:.6rem;\">{$badge}{$word}</span>";
+}
+
 function ui_head($title, $bodyClass = 'app', $extraHead = '') {
     $app = APP_NAME;
     echo <<<HTML
@@ -133,10 +184,11 @@ function ui_nav($active = 'home', $opts = []) {
     $appName  = APP_NAME;
 
     $links = [
-        'home'    => ['index.php',   'bi-grid-1x2-fill', 'Dashboard'],
-        'topup'   => ['#',           'bi-wallet2',        'Ongeza Salio'],
-        'howto'   => ['howto.php',   'bi-journal-text',   'Mwongozo'],
-        'profile' => ['profile.php', 'bi-person-fill',    'Profile'],
+        'home'    => ['index.php',   'bi-grid-1x2-fill',  'Dashboard'],
+        'orders'  => ['orders.php',  'bi-bag-check-fill', 'Orders Zangu'],
+        'topup'   => ['#',           'bi-wallet2',         'Ongeza Salio'],
+        'howto'   => ['howto.php',   'bi-journal-text',    'Mwongozo'],
+        'profile' => ['profile.php', 'bi-person-fill',     'Profile'],
     ];
     if ($role === 'admin') {
         $links['admin'] = ['admin.php', 'bi-speedometer2', 'Admin Panel'];

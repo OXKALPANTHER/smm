@@ -53,32 +53,48 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             exit(apiResponse(false, 'Hitilafu imetokea wakati wa kuandaa muamala.'));
         }
 
-        // Prepare payment request for MPESA
+        // Prepare payment request for PalmPesa. The api_key/token is also sent
+        // in the body (in addition to the Authorization header) because some
+        // gateway builds read it from the payload.
         $payload = [
-            "user_id" => MPESA_USER_ID,
-            "name" => sanitize($name),
-            "email" => sanitize($email),
-            "phone" => $phone,
-            "amount" => $amount,
+            "user_id"        => MPESA_USER_ID,
+            "api_key"        => MPESA_API_TOKEN,
+            "token"          => MPESA_API_TOKEN,
+            "name"           => sanitize($name),
+            "email"          => sanitize($email),
+            "phone"          => $phone,
+            "amount"         => $amount,
             "transaction_id" => $transaction_id,
-            "currency" => CURRENCY_CODE
+            "currency"       => CURRENCY_CODE,
         ];
 
-        // Call MPESA API
+        // Call PalmPesa API
         $response = makeAPICall('mpesa', '/pay-via-mobile', 'POST', $payload);
+        $body     = is_array($response['data'] ?? null) ? $response['data'] : [];
 
-        if ($response['success'] && isset($response['data']['order_id'])) {
-            // Update transaction with order ID
+        // The order/reference id can come back under a few different keys.
+        $order_id = $body['order_id']
+            ?? $body['orderId']
+            ?? $body['reference']
+            ?? $body['transaction_id']
+            ?? ($body['data']['order_id'] ?? null);
+
+        // Treat an explicit failure status in the body as a failure even on HTTP 200.
+        $bodyStatus = strtolower((string)($body['status'] ?? $body['payment_status'] ?? ''));
+        $bodyFailed = in_array($bodyStatus, ['failed', 'error', 'declined'], true);
+
+        if (!empty($response['success']) && $order_id && !$bodyFailed) {
+            // Update transaction with the provider order ID
             $stmt = $conn->prepare("UPDATE transactions SET external_ref = ? WHERE external_ref = ?");
-            $stmt->bind_param("ss", $response['data']['order_id'], $transaction_id);
+            $stmt->bind_param("ss", $order_id, $transaction_id);
             $stmt->execute();
 
-            logActivity($user_id, 'top_up_initiated', "Amount: {$amount}, Order: {$response['data']['order_id']}", 'success');
+            logActivity($user_id, 'top_up_initiated', "Amount: {$amount}, Order: {$order_id}", 'success');
 
             http_response_code(200);
             exit(apiResponse(true, 'Ombi la malipo limetumwa kwenye simu yako.', [
-                'order_id' => $response['data']['order_id'],
-                'transaction_id' => $transaction_id
+                'order_id'       => $order_id,
+                'transaction_id' => $transaction_id,
             ]));
         } else {
             // Update transaction to failed
@@ -86,10 +102,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt->bind_param("s", $transaction_id);
             $stmt->execute();
 
-            logActivity($user_id, 'top_up_failed', "Error: " . ($response['error'] ?? 'Unknown error'), 'failed');
+            // Surface the real reason: provider message, our curl error, or HTTP code.
+            $reason = $body['message']
+                ?? $body['error']
+                ?? $response['error']
+                ?? ('Mtoa huduma amerudisha msimbo ' . (int)($response['code'] ?? 0));
 
-            http_response_code(500);
-            exit(apiResponse(false, 'Hitilafu imetokea wakati wa kuanzisha malipo: ' . ($response['error'] ?? 'Unknown')));
+            logActivity($user_id, 'top_up_failed',
+                "Error: {$reason} | code: " . (int)($response['code'] ?? 0) . " | resp: " . json_encode($body),
+                'failed');
+
+            http_response_code(502);
+            exit(apiResponse(false, 'Malipo hayakuanzishwa: ' . $reason, [
+                'provider_code'     => (int)($response['code'] ?? 0),
+                'provider_response' => $body,
+            ]));
         }
 
     } elseif ($action === 'check_status') {
@@ -100,11 +127,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             exit(apiResponse(false, 'Order ID inahitajika.'));
         }
 
-        // Check status from MPESA API
-        $response = makeAPICall('mpesa', '/order-status', 'POST', ["order_id" => $order_id]);
+        // Check status from PalmPesa
+        $response = makeAPICall('mpesa', '/order-status', 'POST', [
+            "order_id" => $order_id,
+            "api_key"  => MPESA_API_TOKEN,
+            "token"    => MPESA_API_TOKEN,
+        ]);
+        $body = is_array($response['data'] ?? null) ? $response['data'] : [];
 
-        if ($response['success'] && isset($response['data']['payment_status'])) {
-            $status = strtoupper($response['data']['payment_status']);
+        // payment_status may sit at the top level, under data, or in data[0].
+        $rawStatus = $body['payment_status']
+            ?? $body['status']
+            ?? ($body['data']['payment_status'] ?? null)
+            ?? ($body['data'][0]['payment_status'] ?? null);
+
+        if (!empty($response['success']) && $rawStatus !== null) {
+            $status = strtoupper((string)$rawStatus);
+            if (in_array($status, ['SUCCESS', 'SUCCESSFUL', 'PAID', 'COMPLETE'], true)) {
+                $status = 'COMPLETED';
+            }
 
             if ($status === 'COMPLETED') {
                 $stmt = $conn->prepare("SELECT id, user_id, amount FROM transactions WHERE external_ref = ? AND status = 'pending' LIMIT 1");
@@ -133,12 +174,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         logActivity($user_id, 'top_up_completion_failed', "Error: " . $e->getMessage(), 'failed');
                     }
                 }
-            } elseif ($status === 'FAILED') {
+            } elseif (in_array($status, ['FAILED', 'CANCELLED', 'CANCELED', 'DECLINED', 'ERROR'], true)) {
                 $stmt = $conn->prepare("UPDATE transactions SET status = 'failed' WHERE external_ref = ? AND status = 'pending'");
                 $stmt->bind_param("s", $order_id);
                 $stmt->execute();
-                
-                logActivity($user_id, 'top_up_failed', "Order: {$order_id}", 'failed');
+
+                logActivity($user_id, 'top_up_failed', "Order: {$order_id} ({$status})", 'failed');
+                $status = 'FAILED'; // normalise for the client poller
             }
 
             exit(apiResponse(true, 'Status ya malipo: ' . $status, ['status' => $status]));
@@ -200,7 +242,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <label class="block text-xs font-semibold text-gray-500 uppercase mb-1">Kiasi (TZS)</label>
                 <div class="relative">
                     <span class="absolute left-4 top-3.5 text-gray-400 font-bold">TSh</span>
-                    <input type="number" id="amount" name="amount" required placeholder="500" min="100"
+                    <input type="number" id="amount" name="amount" required placeholder="1000" min="1000"
                         class="w-full pl-14 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all font-bold text-gray-700 text-lg">
                 </div>
             </div>

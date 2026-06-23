@@ -28,7 +28,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 ui_head('Ingia — ' . APP_NAME, 'auth');
 ?>
 <div class="glass-card">
-    <div class="brand-icon"><i class="bi bi-rocket-takeoff"></i></div>
+    <div class="brand-icon"><?= ui_crown_svg(38) ?></div>
     <h3 class="fw-bold text-center mb-1" style="color:var(--ink)"><?= APP_NAME ?></h3>
     <p class="text-center text-muted mb-4" style="font-size:.9rem;">Karibu tena — ingia kwenye akaunti yako</p>
 
