@@ -38,6 +38,10 @@ $platformIcons = [
     'shazam'     => 'bi-music-note',
 ];
 
+// Refresh order statuses from the live provider before reading them.
+require_once 'includes/order-sync.php';
+syncUserOrders($conn, $user_id, isset($_GET['sync']));
+
 // Recent orders
 $recentOrders = [];
 $stmt = $conn->prepare("SELECT id, service_name, platform, quantity, price, status, external_order_id, created_at FROM orders WHERE user_id = ? ORDER BY id DESC LIMIT 8");
@@ -58,13 +62,13 @@ while ($row = $res->fetch_assoc()) {
     $stats['total'] += (int)$row['c'];
     $st = strtolower($row['status']);
     if (strpos($st, 'complet') !== false) $stats['completed'] += (int)$row['c'];
-    if (strpos($st, 'pend') !== false || strpos($st, 'process') !== false) $stats['pending'] += (int)$row['c'];
+    if (strpos($st, 'pend') !== false || strpos($st, 'process') !== false || strpos($st, 'progress') !== false) $stats['pending'] += (int)$row['c'];
 }
 
 function statusBadge($status) {
     $s = strtolower($status);
     if (strpos($s, 'complet') !== false) return 'success';
-    if (strpos($s, 'pend') !== false || strpos($s, 'process') !== false) return 'warning';
+    if (strpos($s, 'pend') !== false || strpos($s, 'process') !== false || strpos($s, 'progress') !== false) return 'warning';
     if (strpos($s, 'cancel') !== false || strpos($s, 'fail') !== false) return 'danger';
     return 'secondary';
 }

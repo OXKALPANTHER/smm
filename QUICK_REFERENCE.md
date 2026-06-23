@@ -106,8 +106,8 @@ $status = $api->getOrderStatus('ORDER_ID');
 $payment = $api->processPayment(
     50000,           // amount
     '255744123456',  // phone
-    'user@example.com',
-    'Full Name'
+    'royal@example.com',
+    'Royal'
 );
 
 // Check payment status
@@ -293,8 +293,8 @@ $mpesa = new APIHandler('mpesa');
 $payment = $mpesa->processPayment(
     50000,
     '255744123456',
-    'user@email.com',
-    'John Doe'
+    'royal@example.com',
+    'Royal'
 );
 
 $transaction_id = $payment['data']['transaction_id'];

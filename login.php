@@ -39,7 +39,7 @@ ui_head('Ingia — ' . APP_NAME, 'auth');
     <form method="post">
         <div class="mb-3">
             <label class="form-label">Jina la mtumiaji / Email</label>
-            <input type="text" name="username" class="form-control" placeholder="john@example.com" required autofocus>
+            <input type="text" name="username" class="form-control" placeholder="royal" required autofocus>
         </div>
         <div class="mb-2">
             <label class="form-label">Neno siri</label>

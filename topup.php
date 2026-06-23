@@ -209,7 +209,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <label class="block text-xs font-semibold text-gray-500 uppercase mb-1">Jina Kamili</label>
                 <div class="relative">
                     <span class="absolute left-4 top-3.5 text-gray-400"><i class="fas fa-user"></i></span>
-                    <input type="text" id="name" name="name" required placeholder="Mfano: Juma Ali"
+                    <input type="text" id="name" name="name" required placeholder="Mfano: Royal"
                         class="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-gray-700">
                 </div>
             </div>
@@ -218,7 +218,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <label class="block text-xs font-semibold text-gray-500 uppercase mb-1">Barua Pepe</label>
                 <div class="relative">
                     <span class="absolute left-4 top-3.5 text-gray-400"><i class="fas fa-envelope"></i></span>
-                    <input type="email" id="email" name="email" required placeholder="juma@example.com"
+                    <input type="email" id="email" name="email" required placeholder="royal@example.com"
                         class="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-gray-700">
                 </div>
             </div>

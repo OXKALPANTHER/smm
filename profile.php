@@ -37,6 +37,10 @@ $stmt->bind_param("i", $user_id);
 $stmt->execute();
 $user = $stmt->get_result()->fetch_assoc();
 
+// Refresh order statuses from the live provider before displaying them.
+require_once 'includes/order-sync.php';
+syncUserOrders($conn, $user_id, isset($_GET['sync']));
+
 // Orders
 $stmt = $conn->prepare("SELECT id, service_name, platform, quantity, price, status, external_order_id, created_at, refill_available, refill_requested, refill_status FROM orders WHERE user_id = ? ORDER BY id DESC");
 $stmt->bind_param("i", $user_id);
@@ -52,7 +56,7 @@ foreach ($orders as $o) {
 function pbadge($status) {
     $s = strtolower($status);
     if (strpos($s,'complet')!==false) return 'badge-success';
-    if (strpos($s,'pend')!==false || strpos($s,'process')!==false) return 'badge-warning';
+    if (strpos($s,'pend')!==false || strpos($s,'process')!==false || strpos($s,'progress')!==false) return 'badge-warning';
     if (strpos($s,'cancel')!==false || strpos($s,'fail')!==false) return 'badge-danger';
     return 'badge-secondary';
 }
@@ -115,7 +119,10 @@ ui_head('Profile — ' . APP_NAME, 'app');
 
     <!-- Orders -->
     <div class="card-soft mb-3">
-        <div class="section-title mb-3" style="font-size:.98rem;"><div class="section-ico" style="width:34px;height:34px;font-size:1rem;"><i class="bi bi-clock-history"></i></div> Historia ya Orders</div>
+        <div class="d-flex align-items-center justify-content-between mb-3">
+            <div class="section-title" style="font-size:.98rem;"><div class="section-ico" style="width:34px;height:34px;font-size:1rem;"><i class="bi bi-clock-history"></i></div> Historia ya Orders</div>
+            <a href="profile.php?sync=1" class="btn btn-sm" style="background:#eef0ff;color:#4834d4;border:none;border-radius:20px;font-size:.7rem;font-weight:600;padding:.25rem .7rem;"><i class="bi bi-arrow-clockwise"></i> Sasisha</a>
+        </div>
         <?php if (empty($orders)): ?>
             <div class="text-center text-muted py-4" style="font-size:.85rem;"><i class="bi bi-inbox fs-2 d-block mb-2 opacity-50"></i>Hakuna orders bado.</div>
         <?php else: ?>

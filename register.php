@@ -55,11 +55,11 @@ ui_head('Jisajili — ' . APP_NAME, 'auth');
     <form method="post">
         <div class="mb-3">
             <label class="form-label">Jina la mtumiaji</label>
-            <input type="text" name="username" class="form-control" placeholder="john_doe" value="<?= htmlspecialchars($_POST['username'] ?? '') ?>" required>
+            <input type="text" name="username" class="form-control" placeholder="royal" value="<?= htmlspecialchars($_POST['username'] ?? '') ?>" required>
         </div>
         <div class="mb-3">
             <label class="form-label">Barua pepe</label>
-            <input type="email" name="email" class="form-control" placeholder="john@example.com" value="<?= htmlspecialchars($_POST['email'] ?? '') ?>" required>
+            <input type="email" name="email" class="form-control" placeholder="royal@example.com" value="<?= htmlspecialchars($_POST['email'] ?? '') ?>" required>
         </div>
         <div class="mb-3">
             <label class="form-label">Namba ya simu</label>

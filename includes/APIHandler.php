@@ -226,18 +226,34 @@ class APIHandler {
      * Check order status
      */
     public function getOrderStatus($order_id) {
-        $response = $this->request("/order/{$order_id}");
-        
-        if ($response['success']) {
-            return [
-                'success' => true,
-                'status' => $response['data']['status'] ?? 'unknown',
-                'progress' => $response['data']['progress'] ?? 0,
-                'data' => $response['data']
-            ];
+        $response = $this->request('/order/' . rawurlencode((string)$order_id));
+
+        if (empty($response['success'])) {
+            return ['success' => false, 'error' => $this->last_error ?: 'Failed to check order'];
         }
-        
-        return ['success' => false, 'error' => 'Failed to check order'];
+
+        // The order object may sit at the top level or be nested under
+        // `order` / `data`, depending on the provider's response shape.
+        $body  = is_array($response['data'] ?? null) ? $response['data'] : [];
+        $order = $body;
+        if (isset($body['order']) && is_array($body['order'])) {
+            $order = $body['order'];
+        } elseif (isset($body['data']) && is_array($body['data'])) {
+            $order = $body['data'];
+        }
+
+        $status = $order['status']
+            ?? $order['order_status']
+            ?? $order['state']
+            ?? $body['status']
+            ?? 'unknown';
+
+        return [
+            'success'  => true,
+            'status'   => is_string($status) ? trim($status) : 'unknown',
+            'progress' => $order['progress'] ?? $order['remains'] ?? 0,
+            'data'     => $body,
+        ];
     }
     
     /**

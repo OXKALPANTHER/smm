@@ -107,7 +107,7 @@ $response = $api->placeOrder(123, 'https://instagram.com/user', 500, 'TZS');
 $status = $api->getOrderStatus('ORDER_ID');
 
 // Process payment
-$payment = $api->processPayment(50000, '255744123456', 'user@example.com', 'John Doe');
+$payment = $api->processPayment(50000, '255744123456', 'royal@example.com', 'Royal');
 ```
 
 ### REST API Endpoints

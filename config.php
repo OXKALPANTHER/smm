@@ -300,9 +300,9 @@ define('SMMDADDY_API_TIMEOUT', 30);
 // PAYMENT GATEWAY INTEGRATIONS
 // ============================================
 
-// MPESA (Tanzania Mobile Money)
-define('MPESA_API_TOKEN', 'token toka palmpesa');
-define('MPESA_USER_ID', 'weka id toka palmpesa');
+// MPESA / PalmPesa (Tanzania Mobile Money) — https://palmpesa.drmlelwa.co.tz/
+define('MPESA_API_TOKEN', getenv('PALMPESA_API_TOKEN') ?: 'E6NERlSG1Q0d8IFAILb1PoawHpCliX5fQKonfcxNtqExtpr8Mo7GzwsrE6q5');
+define('MPESA_USER_ID', getenv('PALMPESA_USER_ID') ?: '498');
 define('MPESA_BASE_URL', 'https://palmpesa.drmlelwa.co.tz/api');
 define('MPESA_CALLBACK_URL', 'https://yourdomain.com/webhooks/mpesa.php');
 define('MPESA_TIMEOUT', 30);
