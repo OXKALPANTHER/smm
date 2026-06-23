@@ -1,19 +1,33 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="Royal SMM">
   <defs>
-    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#6c5ce7"/>
-      <stop offset="1" stop-color="#4834d4"/>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#7d6cf0"/>
+      <stop offset="1" stop-color="#4226c9"/>
     </linearGradient>
-    <radialGradient id="glow" cx="0.72" cy="0.18" r="0.9">
-      <stop offset="0" stop-color="#ffffff" stop-opacity="0.22"/>
+    <radialGradient id="glow" cx="0.5" cy="0.3" r="0.75">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.18"/>
       <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
     </radialGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFF7D6"/>
+      <stop offset="0.45" stop-color="#FFD75E"/>
+      <stop offset="1" stop-color="#E08C12"/>
+    </linearGradient>
+    <linearGradient id="band" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFE69A"/>
+      <stop offset="1" stop-color="#E89A18"/>
+    </linearGradient>
   </defs>
-  <!-- full-bleed background so the icon is maskable-safe -->
-  <rect width="512" height="512" fill="url(#g)"/>
+  <!-- full-bleed background keeps the icon maskable-safe -->
+  <rect width="512" height="512" fill="url(#bg)"/>
   <rect width="512" height="512" fill="url(#glow)"/>
-  <!-- monogram kept within the central safe zone -->
-  <text x="50%" y="50%" dy=".07em" text-anchor="middle" dominant-baseline="middle"
-        font-family="Poppins, 'Segoe UI', Arial, sans-serif" font-weight="800"
-        font-size="300" fill="#ffffff">R</text>
+  <!-- crown centred within the safe zone (48-unit artwork scaled up) -->
+  <g transform="translate(83.2,83.2) scale(7.2)" stroke="#C97E12" stroke-width="1.1" stroke-linejoin="round">
+    <path d="M6.5 31.5 L9 12.5 L16.8 23.2 L24 9.8 L31.2 23.2 L39 12.5 L41.5 31.5 Z" fill="url(#gold)"/>
+    <rect x="6" y="31.3" width="36" height="7" rx="2.6" fill="url(#band)"/>
+    <circle cx="9" cy="11.4" r="2.1" fill="#FFF6DC"/>
+    <circle cx="24" cy="8.6" r="2.5" fill="#FFF6DC"/>
+    <circle cx="39" cy="11.4" r="2.1" fill="#FFF6DC"/>
+    <circle cx="24" cy="34.8" r="2.1" fill="#E8466B" stroke="#B12B49"/>
+  </g>
 </svg>

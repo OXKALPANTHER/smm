@@ -238,6 +238,15 @@ function ui_nav($active = 'home', $opts = []) {
         $balHtml = "<div class=\"drawer-bal\"><span style=\"font-size:.72rem;opacity:.85;\"><i class=\"bi bi-wallet2 me-1\"></i>Salio</span><strong>{$bal} TZS</strong></div>";
     }
 
+    // Support / community (WhatsApp group + channel)
+    $waGroup   = defined('WHATSAPP_GROUP_URL')   ? WHATSAPP_GROUP_URL   : '#';
+    $waChannel = defined('WHATSAPP_CHANNEL_URL') ? WHATSAPP_CHANNEL_URL : '#';
+    $supportHtml = <<<HTML
+<div style="padding:.6rem .85rem .1rem;font-size:.64rem;font-weight:700;letter-spacing:.6px;color:#8a93b2;text-transform:uppercase;">Msaada &amp; Jamii</div>
+<a href="{$waGroup}" target="_blank" rel="noopener" class="drawer-link js-nav-link"><span class="di" style="background:#e7fbef;color:#25D366;"><i class="bi bi-whatsapp"></i></span>WhatsApp Group</a>
+<a href="{$waChannel}" target="_blank" rel="noopener" class="drawer-link js-nav-link"><span class="di" style="background:#e7fbef;color:#25D366;"><i class="bi bi-megaphone-fill"></i></span>WhatsApp Channel</a>
+HTML;
+
     echo <<<HTML
 <button class="hamburger" id="navToggle" aria-label="Menu"><span></span><span></span><span></span></button>
 <div class="nav-backdrop" id="navBackdrop"></div>
@@ -253,7 +262,7 @@ function ui_nav($active = 'home', $opts = []) {
     </div>
     {$balHtml}
   </div>
-  <nav class="drawer-nav">{$linksHtml}</nav>
+  <nav class="drawer-nav">{$linksHtml}{$supportHtml}</nav>
   <a href="logout.php" class="drawer-link danger js-nav-link" style="margin:0 .8rem .7rem;"><span class="di"><i class="bi bi-box-arrow-right"></i></span>Toka (Logout)</a>
   <div class="drawer-foot">{$appName} SMM Panel &middot; v2.0</div>
 </aside>

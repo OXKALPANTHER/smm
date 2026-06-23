@@ -1,5 +1,5 @@
 /* Royal SMM — service worker (offline support + installable PWA) */
-const VERSION   = 'royal-v1';
+const VERSION   = 'royal-v2';
 const SHELL     = 'royal-shell-' + VERSION;
 const RUNTIME   = 'royal-runtime-' + VERSION;
 
@@ -7,7 +7,9 @@ const RUNTIME   = 'royal-runtime-' + VERSION;
 const SHELL_ASSETS = [
   './offline.html',
   './manifest.webmanifest',
-  './assets/icon.svg'
+  './assets/icon.svg',
+  './assets/icon-192.png',
+  './assets/icon-512.png'
 ];
 
 // Never let the SW touch these (auth / live order / keep-alive / dynamic JSON).

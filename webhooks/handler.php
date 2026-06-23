@@ -192,8 +192,11 @@ class WebhookHandler {
                         $stmt = $this->conn->prepare("UPDATE users SET balance = balance + ? WHERE id = ?");
                         $stmt->bind_param("di", $transaction['amount'], $row['user_id']);
                         $stmt->execute();
+
+                        // Reward the inviter on this user's first deposit.
+                        applyReferralBonus($this->conn, $row['user_id'], $transaction['amount']);
                     }
-                    
+
                     $this->conn->commit();
                     
                     logActivity($row['user_id'], 'payment_completed', "Transaction: $external_ref, Amount: $amount", 'success');

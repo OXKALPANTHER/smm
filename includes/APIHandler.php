@@ -86,7 +86,7 @@ class APIHandler {
      * Fetch and cache the full formatted service catalogue.
      */
     public function getAllServices($use_cache = true) {
-        $cache_key = "services_all_v3"; // bumped when pricing/markup logic changes
+        $cache_key = "services_all_v4"; // bumped when pricing/markup logic changes (markup 50%)
 
         if ($use_cache) {
             $cached = $this->getCache($cache_key);

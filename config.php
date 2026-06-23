@@ -386,8 +386,18 @@ define('MINIMUM_TOPUP', 1000);
 define('MAXIMUM_TOPUP', 10000000);
 
 // Profit margin added on top of the provider's real price (percent).
-// e.g. 20 => the user sees & pays 20% more than the API price.
-define('PRICE_MARKUP_PERCENT', 20);
+// e.g. 50 => the user sees & pays 50% more than the API price.
+define('PRICE_MARKUP_PERCENT', 50);
+
+// Referral reward: the inviter earns this % of a friend's FIRST top-up.
+define('REFERRAL_BONUS_PERCENT', 50);
+
+// ============================================
+// SUPPORT / COMMUNITY LINKS
+// ============================================
+define('WHATSAPP_SUPPORT_PHONE', '745720609'); // direct chat (wa.me)
+define('WHATSAPP_GROUP_URL',   'https://chat.whatsapp.com/IPY94YyDh8N4qUx1yN3zj5');
+define('WHATSAPP_CHANNEL_URL', 'https://whatsapp.com/channel/0029VbAjawl9MF8vQQa0ZT32');
 
 // ============================================
 // UTILITY FUNCTIONS
@@ -425,6 +435,61 @@ function logActivity($user_id, $action, $details = '', $status = 'success') {
     $stmt = $conn->prepare("INSERT INTO activity_logs (user_id, action, details, status) VALUES (?, ?, ?, ?)");
     $stmt->bind_param("isss", $user_id, $action, $details, $status);
     return $stmt->execute();
+}
+
+/**
+ * Award the referral bonus when a referred user makes their FIRST top-up.
+ *
+ * Credits the inviter REFERRAL_BONUS_PERCENT% of the friend's first completed
+ * deposit. Must be called *inside* the DB transaction that marks the deposit
+ * completed (so it's atomic and runs exactly once per first deposit).
+ *
+ * @param mixed $conn         active connection
+ * @param int   $depositorId  the user who just deposited
+ * @param float $depositAmount the completed deposit amount
+ * @return float the bonus credited (0 if none)
+ */
+function applyReferralBonus($conn, $depositorId, $depositAmount) {
+    $depositorId = (int)$depositorId;
+    $depositAmount = (float)$depositAmount;
+    if ($depositorId <= 0 || $depositAmount <= 0) return 0;
+
+    // Who invited this user?
+    $stmt = $conn->prepare("SELECT referred_by, username FROM users WHERE id = ?");
+    $stmt->bind_param("i", $depositorId);
+    $stmt->execute();
+    $dep = $stmt->get_result()->fetch_assoc();
+    $referrerId = (int)($dep['referred_by'] ?? 0);
+    if ($referrerId <= 0) return 0;
+
+    // Only on the depositor's FIRST completed top-up (type='credit').
+    $stmt = $conn->prepare("SELECT COUNT(*) c FROM transactions WHERE user_id = ? AND type = 'credit' AND status = 'completed'");
+    $stmt->bind_param("i", $depositorId);
+    $stmt->execute();
+    $completed = (int)($stmt->get_result()->fetch_assoc()['c'] ?? 0);
+    if ($completed !== 1) return 0; // not the first deposit
+
+    $pct   = defined('REFERRAL_BONUS_PERCENT') ? (float)REFERRAL_BONUS_PERCENT : 50;
+    $bonus = floor($depositAmount * $pct / 100);
+    if ($bonus <= 0) return 0;
+
+    // Credit the inviter.
+    $stmt = $conn->prepare("UPDATE users SET balance = balance + ? WHERE id = ?");
+    $stmt->bind_param("di", $bonus, $referrerId);
+    $stmt->execute();
+
+    $depName = $dep['username'] ?? ('#' . $depositorId);
+    $desc = "Zawadi ya rufaa: {$pct}% ya deposit ya kwanza ya {$depName}";
+    $stmt = $conn->prepare(
+        "INSERT INTO transactions (user_id, amount, type, payment_method, gateway, description, external_ref, status, completed_at)
+         VALUES (?, ?, 'referral_bonus', 'bonus', 'referral', ?, ?, 'completed', CURRENT_TIMESTAMP)"
+    );
+    $ref = 'REF-' . $depositorId;
+    $stmt->bind_param("idss", $referrerId, $bonus, $desc, $ref);
+    $stmt->execute();
+
+    logActivity($referrerId, 'referral_bonus', "Bonus {$bonus} TZS kutoka {$depName} (deposit {$depositAmount})", 'success');
+    return $bonus;
 }
 
 /**

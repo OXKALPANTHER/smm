@@ -165,9 +165,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $stmt = $conn->prepare("UPDATE users SET balance = balance + ? WHERE id = ?");
                         $stmt->bind_param("di", $row['amount'], $row['user_id']);
                         $stmt->execute();
-                        
+
+                        // Reward the inviter on this user's first deposit.
+                        applyReferralBonus($conn, $row['user_id'], $row['amount']);
+
                         $conn->commit();
-                        
+
                         logActivity($row['user_id'], 'top_up_completed', "Amount: {$row['amount']}, Order: {$order_id}", 'success');
                     } catch (Exception $e) {
                         $conn->rollback();

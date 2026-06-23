@@ -32,10 +32,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['change_password'])) {
 }
 
 // User info
-$stmt = $conn->prepare("SELECT username, email, phone, balance, created_at FROM users WHERE id = ?");
+$stmt = $conn->prepare("SELECT username, email, phone, balance, created_at, referral_code FROM users WHERE id = ?");
 $stmt->bind_param("i", $user_id);
 $stmt->execute();
 $user = $stmt->get_result()->fetch_assoc();
+
+// Referral stats
+$stmt = $conn->prepare("SELECT COUNT(*) c FROM users WHERE referred_by = ?");
+$stmt->bind_param("i", $user_id);
+$stmt->execute();
+$refCount = (int)($stmt->get_result()->fetch_assoc()['c'] ?? 0);
+
+$stmt = $conn->prepare("SELECT COALESCE(SUM(amount),0) s FROM transactions WHERE user_id = ? AND type = 'referral_bonus'");
+$stmt->bind_param("i", $user_id);
+$stmt->execute();
+$refEarned = (float)($stmt->get_result()->fetch_assoc()['s'] ?? 0);
+
+$refCode = $user['referral_code'] ?? '';
+$refLink = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' ? 'https' : 'http')
+         . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost')
+         . dirname($_SERVER['PHP_SELF'] ?? '/')
+         . '/register.php?ref=' . urlencode($refCode);
+$refLink = preg_replace('#(?<!:)//+#', '/', $refLink);
+$refLink = preg_replace('#^(https?):/#', '$1://', $refLink);
 
 // Refresh order statuses from the live provider before displaying them.
 require_once 'includes/order-sync.php';
@@ -107,6 +126,26 @@ ui_head('Profile — ' . APP_NAME, 'app');
         <div class="d-flex justify-content-between py-2"><span class="text-muted small">Mwanachama Tangu</span><span class="fw-semibold"><?= date('M Y', strtotime($user['created_at'])) ?></span></div>
     </div>
 
+    <!-- Invite friends / referral -->
+    <div class="card-soft mb-3">
+        <div class="section-title mb-2"><div class="section-ico" style="background:linear-gradient(135deg,#00b894,#00cec9)"><i class="bi bi-gift"></i></div> Karibisha Marafiki</div>
+        <p class="text-muted mb-3" style="font-size:.82rem;">Mwalike rafiki kwa link yako. Akijiunga na kuweka <strong>deposit ya kwanza</strong>, wewe unapata <strong><?= (int)REFERRAL_BONUS_PERCENT ?>%</strong> ya kiasi alichoweka — moja kwa moja kwenye salio lako!</p>
+
+        <div class="row g-2 mb-3">
+            <div class="col-6"><div class="stat-mini"><div class="stat-ico" style="background:#e7fbef;color:#00b894"><i class="bi bi-people-fill"></i></div><div><div class="text-muted" style="font-size:.66rem;text-transform:uppercase;">Marafiki</div><div class="fw-bold"><?= $refCount ?></div></div></div></div>
+            <div class="col-6"><div class="stat-mini"><div class="stat-ico" style="background:#fff6e5;color:#b8860b"><i class="bi bi-cash-coin"></i></div><div><div class="text-muted" style="font-size:.66rem;text-transform:uppercase;">Umepata</div><div class="fw-bold"><?= number_format($refEarned) ?> TZS</div></div></div></div>
+        </div>
+
+        <label class="form-label">Referral code yako</label>
+        <div class="d-flex align-items-center gap-2 mb-2">
+            <input type="text" id="refCode" class="form-control" value="<?= htmlspecialchars($refCode) ?>" readonly style="font-weight:700;letter-spacing:1px;">
+            <button class="btn-grad" style="width:auto;padding:.7rem 1rem;" onclick="copyRef('<?= htmlspecialchars($refLink, ENT_QUOTES) ?>')"><i class="bi bi-clipboard"></i></button>
+        </div>
+        <a id="waShare" data-link="<?= htmlspecialchars($refLink, ENT_QUOTES) ?>" class="btn d-flex align-items-center justify-content-center gap-2" target="_blank" rel="noopener" style="background:#25D366;color:#fff;border-radius:14px;font-weight:600;padding:.7rem;">
+            <i class="bi bi-whatsapp"></i> Share kwa WhatsApp
+        </a>
+    </div>
+
     <!-- Change password -->
     <div class="card-soft mb-3">
         <div class="section-title mb-3"><div class="section-ico"><i class="bi bi-shield-lock"></i></div> Badilisha Neno Siri</div>
@@ -154,6 +193,20 @@ ui_nav('profile', ['balance' => $user['balance']]);
 ui_topup_modal();
 ui_foot(<<<'JS'
 <script>
+// Referral: copy link + WhatsApp share
+function copyRef(link){
+  navigator.clipboard.writeText(link).then(()=>toast('Link imenakiliwa!','success'))
+    .catch(()=>toast('Imeshindwa kunakili.','danger'));
+}
+(function(){
+  var wa=document.getElementById('waShare');
+  if(wa){
+    var link=wa.dataset.link;
+    var msg='Jiunge na Royal SMM Panel — weka order za Instagram, TikTok, YouTube na zaidi kwa bei nafuu! '+link;
+    wa.href='https://wa.me/?text='+encodeURIComponent(msg);
+  }
+})();
+
 document.querySelectorAll('.refill-btn').forEach(btn=>{
   btn.addEventListener('click', async ()=>{
     if(!confirm('Omba refill kwa order hii?')) return;

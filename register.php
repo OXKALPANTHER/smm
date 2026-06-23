@@ -27,8 +27,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             $hash = password_hash($password, PASSWORD_DEFAULT);
             $ref  = strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', $username), 0, 4)) . rand(100, 999);
-            $stmt = $conn->prepare("INSERT INTO users (username, email, phone, password, referral_code) VALUES (?, ?, ?, ?, ?)");
-            $stmt->bind_param("sssss", $username, $email, $phone, $hash, $ref);
+
+            // Resolve the inviter from a referral code (?ref= or the form field).
+            $refInput   = trim($_POST['ref'] ?? '');
+            $referredBy = null;
+            if ($refInput !== '') {
+                $rs = $conn->prepare("SELECT id FROM users WHERE referral_code = ?");
+                $rs->bind_param("s", $refInput);
+                $rs->execute();
+                $rr = $rs->get_result()->fetch_assoc();
+                if ($rr) $referredBy = (int)$rr['id'];
+            }
+
+            $stmt = $conn->prepare("INSERT INTO users (username, email, phone, password, referral_code, referred_by) VALUES (?, ?, ?, ?, ?, ?)");
+            $stmt->bind_param("sssssi", $username, $email, $phone, $hash, $ref, $referredBy);
             if ($stmt->execute()) {
                 $_SESSION['user_id']  = $conn->insert_id();
                 $_SESSION['username'] = $username;
@@ -68,6 +80,11 @@ ui_head('Jisajili — ' . APP_NAME, 'auth');
         <div class="mb-2">
             <label class="form-label">Neno siri</label>
             <input type="password" name="password" class="form-control" placeholder="••••••••" required>
+        </div>
+        <?php $refPrefill = trim($_POST['ref'] ?? $_GET['ref'] ?? ''); ?>
+        <div class="mb-2">
+            <label class="form-label">Referral code <span class="text-muted">(hiari)</span></label>
+            <input type="text" name="ref" class="form-control" placeholder="Code ya rafiki aliyekualika" value="<?= htmlspecialchars($refPrefill) ?>">
         </div>
         <button type="submit" class="btn-grad mt-3"><i class="bi bi-check2-circle"></i> JISAJILI SASA</button>
     </form>

@@ -40,11 +40,25 @@ ui_head('Jinsi ya Kutumia — ' . APP_NAME, 'app');
 
     <div class="info-card">
         <i class="bi bi-info-circle-fill text-primary me-1"></i>
-        <strong>Zingatia:</strong> Ukihitaji msaada zaidi, tumia kitufe cha WhatsApp pembeni.
+        <strong>Zingatia:</strong> Ukihitaji msaada zaidi, jiunge na jamii yetu ya WhatsApp hapa chini.
+    </div>
+
+    <!-- WhatsApp community -->
+    <div class="step-card mt-3" style="flex-direction:column;align-items:stretch;gap:.7rem;">
+        <h6 class="fw-bold mb-0"><i class="bi bi-whatsapp text-success me-1"></i> Msaada & Jamii</h6>
+        <a href="<?= WHATSAPP_GROUP_URL ?>" target="_blank" rel="noopener" class="btn d-flex align-items-center justify-content-center gap-2" style="background:#25D366;color:#fff;border-radius:14px;font-weight:600;padding:.7rem;">
+            <i class="bi bi-people-fill"></i> Jiunge na WhatsApp Group
+        </a>
+        <a href="<?= WHATSAPP_CHANNEL_URL ?>" target="_blank" rel="noopener" class="btn d-flex align-items-center justify-content-center gap-2" style="background:#128C7E;color:#fff;border-radius:14px;font-weight:600;padding:.7rem;">
+            <i class="bi bi-megaphone-fill"></i> Fuata WhatsApp Channel
+        </a>
+        <a href="https://wa.me/<?= WHATSAPP_SUPPORT_PHONE ?>" target="_blank" rel="noopener" class="btn d-flex align-items-center justify-content-center gap-2" style="background:#eef4ff;color:var(--primary);border-radius:14px;font-weight:600;padding:.7rem;">
+            <i class="bi bi-chat-dots-fill"></i> Ongea na Support Moja kwa Moja
+        </a>
     </div>
 </div>
 
-<a href="https://wa.me/745720609" target="_blank" class="floating-btn btn-wa"><i class="bi bi-whatsapp"></i></a>
+<a href="<?= WHATSAPP_GROUP_URL ?>" target="_blank" rel="noopener" class="floating-btn btn-wa"><i class="bi bi-whatsapp"></i></a>
 
 <?php
 ui_nav('howto');
