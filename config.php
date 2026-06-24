@@ -157,6 +157,7 @@ function initializeSQLiteDatabase($pdo) {
                 external_order_id TEXT,
                 link TEXT NOT NULL,
                 notes TEXT,
+                gateway TEXT DEFAULT 'primary',
                 refund_requested INTEGER DEFAULT 0,
                 refund_reason TEXT,
                 refund_amount REAL,

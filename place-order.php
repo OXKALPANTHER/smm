@@ -163,27 +163,28 @@ try {
 
         $stmt = $conn->prepare(
             "INSERT INTO orders
-                (user_id, service_id, service_name, service_category, platform, quantity, price, status, external_order_id, link, refill_available)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+                (user_id, service_id, service_name, service_category, platform, quantity, price, status, external_order_id, link, gateway, refill_available)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
         );
         $ext = $external_id !== null ? (string)$external_id : null;
         $refillAvail = !empty($service['refill']) ? 1 : 0;
+        $gateway = $use_fallback ? 'partner' : 'primary';
         $stmt->bind_param(
-            "iisssidsssi",
+            "iisssidssi",
             $user_id, $service_id, $service['name'], $service['category'],
-            $platform, $quantity, $cost, $status, $ext, $link, $refillAvail
+            $platform, $quantity, $cost, $status, $ext, $link, $gateway, $refillAvail
         );
         $stmt->execute();
         $order_id = $conn->insert_id();
 
         $desc = "Order #{$order_id} - {$service['name']}";
-        $gateway = $use_fallback ? 'partner' : 'primary';
+        $gateway_dup = $use_fallback ? 'partner' : 'primary';
         $stmt = $conn->prepare(
             "INSERT INTO transactions
                 (user_id, order_id, amount, type, payment_method, gateway, description, external_ref, status, completed_at)
              VALUES (?, ?, ?, 'debit', 'balance', ?, ?, ?, 'completed', CURRENT_TIMESTAMP)"
         );
-        $stmt->bind_param("iidss", $user_id, $order_id, $cost, $gateway, $desc, $ext);
+        $stmt->bind_param("iidss", $user_id, $order_id, $cost, $gateway_dup, $desc, $ext);
         $stmt->execute();
 
         $conn->commit();
