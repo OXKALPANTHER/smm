@@ -10,4 +10,4 @@ hii ni kama skeleton ya kuanzia means security n ndogo maana kila kitu ni hardco
 
 ukipendezwa na moyo wa shukrani 😁😁ni support hata afutatu ya bando
 
-happy vibe coding........ "charlie tech"
+happy vibe coding........ "blaze tech"
