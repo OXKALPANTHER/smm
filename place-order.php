@@ -108,14 +108,47 @@ try {
         }
     }
 
-    // 1) Submit to the LIVE provider with automatic fallback (Boost → FastWay).
-    $result = callApiWithFallback('placeOrder', $service_id, $link, $quantity, $email);
+    // Check if user wants to try fallback provider
+    $use_fallback = filter_var($input['use_fallback'] ?? false, FILTER_VALIDATE_BOOLEAN);
 
-    if (!$result['success']) {
-        logActivity($user_id, 'order_failed', $service['name'] . ' - ' . ($result['error'] ?? ''), 'failed');
-        jsonOut(false, 'Order imeshindikana kwa mtoa huduma: ' . ($result['error'] ?? 'Unknown error'), [
-            'provider_error' => $result['error'] ?? null,
-        ], 502);
+    // 1) Try primary provider (Lazack Boost) first
+    if (!$use_fallback) {
+        $api_primary = new APIHandler('boost');
+        $result = $api_primary->placeOrder($service_id, $link, $quantity, $email);
+
+        if (!$result['success']) {
+            // Primary failed - ask user if they want to try alternative provider
+            logActivity($user_id, 'order_attempt_primary_failed', $service['name'] . ' - ' . ($result['error'] ?? ''), 'failed');
+            
+            jsonOut(false, 'Huduma yetu ya kawaida haipatikani kwa sasa. Ingekuwa na njia nyingine ya kukamilisha order hii?', [
+                'provider_unavailable' => true,
+                'can_retry_alt' => true,
+                'service_id' => $service_id,
+                'quantity' => $quantity,
+                'link' => $link,
+            ], 503);
+        }
+    } else {
+        // User approved fallback - try FastWay with USD conversion
+        $api_fallback = new APIHandler('fastway');
+        
+        // Convert cost from TSH to USD for FastWay
+        $usd_rate = (float)(getenv('USD_TO_TZS_RATE') ?: USD_TO_TZS_RATE ?: 3500);
+        $cost_usd = max(1, (int)ceil($cost / $usd_rate));
+
+        $result = $api_fallback->placeOrder($service_id, $link, $quantity, $email);
+
+        if (!$result['success']) {
+            logActivity($user_id, 'order_attempt_fallback_failed', $service['name'] . ' - ' . ($result['error'] ?? ''), 'failed');
+            
+            // Both providers failed - suggest similar orders
+            jsonOut(false, 'Huduma hii haiwezi kutengenezwa kwa sasa. Tafadhali jaribu huduma nyingine.', [
+                'both_failed' => true,
+                'suggest_alternatives' => true,
+                'service_id' => $service_id,
+                'platform' => $platform,
+            ], 503);
+        }
     }
 
     $external_id = $result['order_id'] ?? null;
@@ -144,12 +177,13 @@ try {
         $order_id = $conn->insert_id();
 
         $desc = "Order #{$order_id} - {$service['name']}";
+        $gateway = $use_fallback ? 'partner' : 'primary';
         $stmt = $conn->prepare(
             "INSERT INTO transactions
                 (user_id, order_id, amount, type, payment_method, gateway, description, external_ref, status, completed_at)
-             VALUES (?, ?, ?, 'debit', 'balance', 'boost', ?, ?, 'completed', CURRENT_TIMESTAMP)"
+             VALUES (?, ?, ?, 'debit', 'balance', ?, ?, ?, 'completed', CURRENT_TIMESTAMP)"
         );
-        $stmt->bind_param("iidss", $user_id, $order_id, $cost, $desc, $ext);
+        $stmt->bind_param("iidss", $user_id, $order_id, $cost, $gateway, $desc, $ext);
         $stmt->execute();
 
         $conn->commit();
@@ -157,13 +191,14 @@ try {
         $conn->rollback();
         error_log("Local order persistence failed (provider order $external_id placed!): " . $e->getMessage());
         // The provider order WAS placed; surface success but flag the local issue.
-        jsonOut(true, 'Order imewekwa kwa mtoa huduma, lakini kumetokea tatizo la kuhifadhi. Wasiliana na support ukitaja ID: ' . $external_id, [
+        jsonOut(true, 'Order imewekwa, lakini kumetokea tatizo la kuhifadhi. Wasiliana na support.', [
             'external_order_id' => $external_id,
             'warning' => true,
         ]);
     }
 
-    logActivity($user_id, 'order_placed', "Order #{$order_id} ({$service['name']}) x{$quantity} = {$cost} TZS");
+    $provider_used = $use_fallback ? 'partner_service' : 'primary_service';
+    logActivity($user_id, 'order_placed', "Order #{$order_id} ({$service['name']}) x{$quantity} = {$cost} TZS via {$provider_used}");
 
     jsonOut(true, 'Order imefanikiwa!', [
         'order_id'          => $order_id,
