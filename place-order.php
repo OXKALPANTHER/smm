@@ -51,11 +51,12 @@ if ($service_id <= 0 || $quantity <= 0 || $link === '') {
 }
 
 try {
-    $api = new APIHandler('boost');
+    // Get services with automatic fallback: tries Boost first, then FastWay
+    $services = callApiWithFallback('getAllServices');
 
     // Resolve the service from the live catalogue (authoritative price/limits).
     $service = null;
-    foreach ($api->getAllServices() as $s) {
+    foreach ($services as $s) {
         if ((int)$s['id'] === $service_id) {
             $service = $s;
             break;
@@ -107,8 +108,8 @@ try {
         }
     }
 
-    // 1) Submit to the LIVE provider first.
-    $result = $api->placeOrder($service_id, $link, $quantity, $email);
+    // 1) Submit to the LIVE provider with automatic fallback (Boost → FastWay).
+    $result = callApiWithFallback('placeOrder', $service_id, $link, $quantity, $email);
 
     if (!$result['success']) {
         logActivity($user_id, 'order_failed', $service['name'] . ' - ' . ($result['error'] ?? ''), 'failed');

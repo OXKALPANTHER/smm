@@ -82,6 +82,52 @@ class APIHandler {
     public function getProvider() {
         return $this->service;
     }
+
+    /**
+     * Static method for automatic fallback: tries services in priority order
+     * defined in SMM_PROVIDERS config. Returns on first success or last error.
+     *
+     * Usage: $result = APIHandler::withFallback('placeOrder', $id, $link, $qty);
+     */
+    public static function withFallback($method, ...$args) {
+        $providers = json_decode(SMM_PROVIDERS, true) ?: ['boost', 'fastway'];
+        $lastError = null;
+        
+        foreach ($providers as $provider) {
+            try {
+                $handler = new self($provider);
+                
+                if (!method_exists($handler, $method)) {
+                    continue;
+                }
+                
+                $result = call_user_func_array([$handler, $method], $args);
+                
+                // Check if the result indicates success
+                if (is_array($result) && isset($result['success']) && $result['success']) {
+                    error_log("API call successful with provider: $provider, method: $method");
+                    return $result;
+                } elseif (is_array($result) && !isset($result['success'])) {
+                    // If no success key, assume it worked (e.g., array of services)
+                    error_log("API call returned data from provider: $provider, method: $method");
+                    return $result;
+                }
+                
+                $lastError = $result['error'] ?? 'Unknown error';
+                error_log("API call failed with $provider/$method: " . json_encode($result));
+                
+            } catch (Exception $e) {
+                $lastError = $e->getMessage();
+                error_log("Exception with $provider/$method: " . $e->getMessage());
+            }
+        }
+        
+        // All services failed
+        return [
+            'success' => false,
+            'error' => "All providers failed. Last error: $lastError",
+        ];
+    }
     
     /**
      * Get services for a platform (or all). The Boost API ignores the
@@ -214,24 +260,42 @@ class APIHandler {
      * Place an order
      */
     public function placeOrder($service_id, $link, $quantity, $email = null) {
-        // Boost API requires: service_id, username_or_link, quantity (X-API-Key auth).
-        $data = [
-            'service_id'       => (int)$service_id,
-            'username_or_link' => $link,
-            'quantity'         => (int)$quantity,
-            'source'           => 'web',
-        ];
-        if ($email) {
-            $data['email'] = $email;
+        // Different providers expect different formats
+        if ($this->protocol === 'perfectpanel') {
+            // FastWay: Perfect Panel uses form-encoded POST with key+action
+            $data = [
+                'key'      => $this->api_key,
+                'action'   => 'add',
+                'service'  => (int)$service_id,
+                'link'     => $link,
+                'quantity' => (int)$quantity,
+            ];
+            if ($email) {
+                $data['email'] = $email;
+            }
+            
+            $response = $this->requestFormEncoded('/add', 'POST', $data);
+        } else {
+            // Boost API: JSON with service_id, username_or_link, quantity
+            $data = [
+                'service_id'       => (int)$service_id,
+                'username_or_link' => $link,
+                'quantity'         => (int)$quantity,
+                'source'           => 'web',
+            ];
+            if ($email) {
+                $data['email'] = $email;
+            }
+            
+            $response = $this->request('/order', 'POST', $data);
         }
-
-        $response = $this->request('/order', 'POST', $data);
+        
         $body = $response['data'] ?? [];
 
         if ($response['success'] && empty($body['error'])) {
             return [
                 'success'  => true,
-                'order_id' => $body['fastwayOrderId'] ?? $body['order_id'] ?? $body['id'] ?? null,
+                'order_id' => $body['fastwayOrderId'] ?? $body['order_id'] ?? $body['id'] ?? $body['order'] ?? null,
                 'status'   => $body['status'] ?? 'Pending',
                 'charge'   => $body['charge'] ?? null,
                 'data'     => $body,
@@ -242,6 +306,75 @@ class APIHandler {
             'success' => false,
             'error'   => $body['error'] ?? $response['error'] ?? 'Order failed',
             'data'    => $body,
+        ];
+    }
+    
+    /**
+     * Make form-encoded API request (for Perfect Panel / FastWay)
+     */
+    private function requestFormEncoded($endpoint, $method = 'POST', $data = null, $params = []) {
+        $url = rtrim($this->base_url, '/') . $endpoint;
+        
+        // Add query parameters
+        if (!empty($params)) {
+            $url .= '?' . http_build_query($params);
+        }
+        
+        $ch = curl_init();
+        
+        $headers = [
+            'Content-Type: application/x-www-form-urlencoded',
+            'User-Agent: Royal/' . APP_VERSION,
+        ];
+        
+        curl_setopt_array($ch, [
+            CURLOPT_URL => $url,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT => $this->timeout,
+            CURLOPT_HTTPHEADER => $headers,
+            CURLOPT_SSL_VERIFYPEER => $this->verify_ssl,
+            CURLOPT_SSL_VERIFYHOST => $this->verify_ssl ? 2 : 0,
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_MAXREDIRS => 5,
+        ]);
+        
+        if ($method !== 'GET') {
+            curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $method);
+            if ($data) {
+                // Form-encode the data
+                curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($data));
+            }
+        }
+        
+        $response = curl_exec($ch);
+        $this->last_response_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $error = curl_error($ch);
+        
+        curl_close($ch);
+        
+        if ($error) {
+            $this->last_error = $error;
+            error_log("CURL Error: $error (Endpoint: $endpoint)");
+            return [
+                'success' => false,
+                'error' => $error,
+                'code' => $this->last_response_code
+            ];
+        }
+        
+        $decoded = json_decode($response, true);
+        $success = $this->last_response_code >= 200 && $this->last_response_code < 300;
+        
+        if (!$success) {
+            $this->last_error = $decoded['error'] ?? $decoded['message'] ?? 'API Error';
+            error_log("API Error ($method $endpoint): " . json_encode($decoded));
+        }
+        
+        return [
+            'success' => $success,
+            'code' => $this->last_response_code,
+            'data' => $decoded,
+            'error' => !$success ? $this->last_error : null
         ];
     }
     
