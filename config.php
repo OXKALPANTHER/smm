@@ -297,7 +297,7 @@ define('BOOST_API_VERIFY_SSL', true);
 
 // Fallback SMM Service - FastWay (Perfect Panel API: POST /api/v2 with key+action).
 // FastWay quotes rates in USD/1000, so prices are converted to TZS via USD_TO_TZS_RATE.
-define('FASTWAY_API_KEY', getenv('FASTWAY_API_KEY') ?: 'a739affd900d4d8cacc0d8e7b40411ea');
+define('FASTWAY_API_KEY', getenv('FASTWAY_API_KEY') ?: '1b4f31a4b94de5c1fd6f3314e7a42294');
 define('FASTWAY_API_BASE_URL', 'https://fastwaysmm.com/api/v2');
 define('FASTWAY_API_TIMEOUT', 30);
 define('FASTWAY_API_VERIFY_SSL', true);

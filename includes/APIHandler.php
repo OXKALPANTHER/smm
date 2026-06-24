@@ -167,7 +167,16 @@ class APIHandler {
             }
         }
 
-        $response = $this->request('/services', 'GET');
+        if ($this->protocol === 'perfectpanel') {
+            // Perfect Panel (FastWay): single endpoint, POST key + action=services.
+            $response = $this->requestFormEncoded('', 'POST', [
+                'key'    => $this->api_key,
+                'action' => 'services',
+            ]);
+        } else {
+            // Boost: public GET /services.
+            $response = $this->request('/services', 'GET');
+        }
 
         if ($response['success'] && !empty($response['data'])) {
             $services_data = $this->extractServicesFromResponse($response['data']);
@@ -219,7 +228,8 @@ class APIHandler {
                 continue;
             }
 
-            $id = $service['service_id'] ?? $service['id'] ?? null;
+            // Perfect Panel (FastWay) returns the id under `service`; Boost uses `service_id`/`id`.
+            $id = $service['service_id'] ?? $service['id'] ?? $service['service'] ?? null;
 
             // The Boost API returns `price_tzs` = price per 1000 units in TZS
             // and `rate` = price per 1000 in USD. The app charges in TZS, so the
@@ -279,8 +289,9 @@ class APIHandler {
             if ($email) {
                 $data['email'] = $email;
             }
-            
-            $response = $this->requestFormEncoded('/add', 'POST', $data);
+
+            // Perfect Panel routes every action through the single /api/v2 endpoint.
+            $response = $this->requestFormEncoded('', 'POST', $data);
         } else {
             // Boost API: JSON with service_id, username_or_link, quantity
             $data = [
