@@ -15,7 +15,7 @@ class APIHandler {
     private $last_error = '';
     private $last_response_code = 0;
     
-    public function __construct($service = 'boost') {
+    public function __construct($service = 'fastway') {
         $this->service = strtolower($service);
         $this->cache_dir = __DIR__ . '/../data/cache';
         
@@ -28,10 +28,58 @@ class APIHandler {
     }
     
     /**
+     * Static method for automatic fallback: tries Fastway first, then falls back to Boost
+     */
+    public static function withFallback($method, ...$args) {
+        $services = ['fastway', 'boost'];
+        $lastError = null;
+        
+        foreach ($services as $service) {
+            try {
+                $handler = new self($service);
+                
+                if (!method_exists($handler, $method)) {
+                    continue;
+                }
+                
+                $result = call_user_func_array([$handler, $method], $args);
+                
+                // Check if the result indicates success
+                if (is_array($result) && isset($result['success']) && $result['success']) {
+                    error_log("API call successful with service: $service");
+                    return $result;
+                } elseif (!is_array($result) || !isset($result['success'])) {
+                    // If no success key, assume it worked
+                    return $result;
+                }
+                
+                $lastError = $result['error'] ?? 'Unknown error';
+                error_log("API call failed with $service: " . json_encode($result));
+                
+            } catch (Exception $e) {
+                $lastError = $e->getMessage();
+                error_log("Exception with $service: " . $e->getMessage());
+            }
+        }
+        
+        // All services failed
+        return [
+            'success' => false,
+            'error' => "All services failed. Last error: $lastError",
+        ];
+    }
+    
+    /**
      * Configure API settings based on service
      */
     private function configureService($service) {
         switch($service) {
+            case 'fastway':
+                $this->api_key = FASTWAY_API_KEY;
+                $this->base_url = FASTWAY_API_BASE_URL;
+                $this->timeout = FASTWAY_API_TIMEOUT;
+                $this->verify_ssl = FASTWAY_API_VERIFY_SSL;
+                break;
             case 'boost':
                 $this->api_key = BOOST_API_KEY;
                 $this->base_url = BOOST_API_BASE_URL;

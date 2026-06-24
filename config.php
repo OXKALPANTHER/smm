@@ -285,7 +285,13 @@ define('PLATFORMS', json_encode([
 // EXTERNAL APIs - SOCIAL MEDIA SERVICES
 // ============================================
 
-// Primary SMM Service - Boost API (Lazack Organization)
+// Primary SMM Service - Fastway SMM
+define('FASTWAY_API_KEY', 'a739affd900d4d8cacc0d8e7b40411ea');
+define('FASTWAY_API_BASE_URL', 'https://fastwaysmm.com/api');
+define('FASTWAY_API_TIMEOUT', 30);
+define('FASTWAY_API_VERIFY_SSL', true);
+
+// Fallback SMM Service - Boost API (Lazack Organization)
 define('BOOST_API_KEY', '5673ca1f6e026c293a54efb2c2cc228e8b08c48488e3df12e0f1136b87f3770b');
 define('BOOST_API_BASE_URL', 'https://boostapi.lazackorganisation.my.id/api/v1');
 define('BOOST_API_TIMEOUT', 30);
@@ -632,6 +638,15 @@ function makeAPICall($service, $endpoint, $method = 'GET', $data = null, $header
         'code' => $http_code,
         'data' => json_decode($response, true)
     ];
+}
+
+/**
+ * Call API with automatic fallback from Fastway to Boost
+ * Usage: $result = callApiWithFallback('getServices', 'instagram');
+ */
+function callApiWithFallback($method, ...$args) {
+    require_once __DIR__ . '/includes/APIHandler.php';
+    return APIHandler::withFallback($method, ...$args);
 }
 
 ?>
