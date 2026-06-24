@@ -41,7 +41,7 @@ function syncUserOrders($conn, $user_id, $force = false) {
     // Pull orders that can still change. Anything already in a final state is
     // skipped (and never re-refunded).
     $stmt = $conn->prepare(
-        "SELECT id, external_order_id, status, price, refund_amount
+        "SELECT id, external_order_id, status, price, refund_amount, gateway
            FROM orders
           WHERE user_id = ?
             AND external_order_id IS NOT NULL
@@ -59,16 +59,30 @@ function syncUserOrders($conn, $user_id, $force = false) {
         return 0;
     }
 
-    try {
-        $api = new APIHandler('boost');
-    } catch (Exception $e) {
-        error_log("syncUserOrders: cannot init API: " . $e->getMessage());
-        return 0;
-    }
+    // Route each order to the provider it was placed with so the status query
+    // speaks the right protocol (partner = FastWay/Perfect Panel, else Boost).
+    // Handlers are cached so we build at most one per provider.
+    $handlers = [];
+    $handlerFor = function ($gateway) use (&$handlers) {
+        $provider = ($gateway === 'partner') ? 'fastway' : 'boost';
+        if (!isset($handlers[$provider])) {
+            try {
+                $handlers[$provider] = new APIHandler($provider);
+            } catch (Exception $e) {
+                error_log("syncUserOrders: cannot init API ($provider): " . $e->getMessage());
+                $handlers[$provider] = false;
+            }
+        }
+        return $handlers[$provider];
+    };
 
     $changed = 0;
 
     foreach ($rows as $o) {
+        $api = $handlerFor($o['gateway'] ?? 'primary');
+        if (!$api) {
+            continue;
+        }
         $info = $api->getOrderStatus($o['external_order_id']);
         if (empty($info['success'])) {
             continue;
@@ -120,13 +134,14 @@ function syncUserOrders($conn, $user_id, $force = false) {
 
                 $desc = "Refund for canceled order #{$o['id']}";
                 $ext  = (string)$o['external_order_id'];
+                $gw   = ($o['gateway'] ?? 'primary');
                 $stmt = $conn->prepare(
                     "INSERT INTO transactions
                         (user_id, order_id, amount, type, payment_method, gateway,
                          description, external_ref, status, completed_at)
-                     VALUES (?, ?, ?, 'credit', 'balance', 'boost', ?, ?, 'completed', CURRENT_TIMESTAMP)"
+                     VALUES (?, ?, ?, 'credit', 'balance', ?, ?, ?, 'completed', CURRENT_TIMESTAMP)"
                 );
-                $stmt->bind_param("iidss", $user_id, $o['id'], $price, $desc, $ext);
+                $stmt->bind_param("iidsss", $user_id, $o['id'], $price, $gw, $desc, $ext);
                 $stmt->execute();
 
                 logActivity($user_id, 'order_refunded',

@@ -399,7 +399,17 @@ class APIHandler {
      * Check order status
      */
     public function getOrderStatus($order_id) {
-        $response = $this->request('/order/' . rawurlencode((string)$order_id));
+        if ($this->protocol === 'perfectpanel') {
+            // Perfect Panel (FastWay): POST key + action=status + order id.
+            $response = $this->requestFormEncoded('', 'POST', [
+                'key'    => $this->api_key,
+                'action' => 'status',
+                'order'  => (int)$order_id,
+            ]);
+        } else {
+            // Boost: GET /order/{id}.
+            $response = $this->request('/order/' . rawurlencode((string)$order_id));
+        }
 
         if (empty($response['success'])) {
             return ['success' => false, 'error' => $this->last_error ?: 'Failed to check order'];
