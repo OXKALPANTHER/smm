@@ -155,7 +155,10 @@ class APIHandler {
      * Fetch and cache the full formatted service catalogue.
      */
     public function getAllServices($use_cache = true) {
-        $cache_key = "services_all_v4"; // bumped when pricing/markup logic changes (markup 50%)
+        // Cache key is per-provider so Boost and FastWay catalogues never
+        // overwrite each other's cache file. Bumped to v5 when the USD->TZS
+        // conversion was switched to USD_TO_TZS_RATE + single markup.
+        $cache_key = "services_all_v5_" . $this->service;
 
         if ($use_cache) {
             $cached = $this->getCache($cache_key);
@@ -225,8 +228,11 @@ class APIHandler {
             $rate_usd = (float)($service['rate'] ?? $service['price'] ?? 0);
 
             if ($price_per_k <= 0 && $rate_usd > 0) {
-                // Fallback: derive TZS from USD using the documented 3500 rate + 35% markup.
-                $price_per_k = round($rate_usd * 3500 * 1.35);
+                // Provider quotes in USD/1000 (e.g. FastWay). Convert to TZS/1000
+                // using the configured exchange rate. The profit margin is applied
+                // uniformly below, so DON'T bake an extra markup in here.
+                $usd_to_tzs = defined('USD_TO_TZS_RATE') ? (float)USD_TO_TZS_RATE : 3500;
+                $price_per_k = $rate_usd * $usd_to_tzs;
             }
 
             // Apply our profit margin on top of the provider's real price.

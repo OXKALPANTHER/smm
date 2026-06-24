@@ -50,9 +50,19 @@ if ($service_id <= 0 || $quantity <= 0 || $link === '') {
     jsonOut(false, 'Tafadhali jaza huduma, idadi na link.', [], 422);
 }
 
+// Does the user want the alternative (FastWay / "Huduma Pro") provider?
+// This must be known up front so we resolve the service and its price from
+// the SAME catalogue we will order against — Boost and FastWay have separate
+// service_id spaces and prices, so resolving from the wrong one mischarges.
+$use_fallback = filter_var($input['use_fallback'] ?? false, FILTER_VALIDATE_BOOLEAN);
+
 try {
-    // Get services with automatic fallback: tries Boost first, then FastWay
-    $services = callApiWithFallback('getAllServices');
+    // Resolve from the catalogue of the provider we'll actually order against.
+    if ($use_fallback) {
+        $services = (new APIHandler('fastway'))->getAllServices();
+    } else {
+        $services = (new APIHandler('boost'))->getAllServices();
+    }
 
     // Resolve the service from the live catalogue (authoritative price/limits).
     $service = null;
@@ -108,9 +118,6 @@ try {
         }
     }
 
-    // Check if user wants to try fallback provider
-    $use_fallback = filter_var($input['use_fallback'] ?? false, FILTER_VALIDATE_BOOLEAN);
-
     // 1) Try primary provider (Lazack Boost) first
     if (!$use_fallback) {
         $api_primary = new APIHandler('boost');
@@ -129,13 +136,10 @@ try {
             ], 503);
         }
     } else {
-        // User approved fallback - try FastWay with USD conversion
+        // User approved the alternative provider. The service_id and $cost were
+        // already resolved from FastWay's own catalogue above (with its USD->TZS
+        // converted price), so we just submit and charge in TZS.
         $api_fallback = new APIHandler('fastway');
-        
-        // Convert cost from TSH to USD for FastWay
-        $usd_rate = (float)(getenv('USD_TO_TZS_RATE') ?: USD_TO_TZS_RATE ?: 3500);
-        $cost_usd = max(1, (int)ceil($cost / $usd_rate));
-
         $result = $api_fallback->placeOrder($service_id, $link, $quantity, $email);
 
         if (!$result['success']) {

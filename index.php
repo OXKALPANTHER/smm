@@ -180,6 +180,9 @@ function statusBadge($status) {
         .svc-search .clr { position: absolute; right: .55rem; top: 50%; transform: translateY(-50%); border: none; background: #eef1f8; color: var(--muted); width: 30px; height: 30px; border-radius: 10px; cursor: pointer; display: none; align-items: center; justify-content: center; }
         .or-divider { display: flex; align-items: center; gap: .7rem; color: var(--muted); font-size: .68rem; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; margin: .2rem 0 .7rem; }
         .or-divider::before, .or-divider::after { content: ''; flex: 1; height: 1px; background: #e9edf7; }
+        .pro-banner { display: flex; align-items: center; gap: .7rem; background: linear-gradient(135deg,#f3eaff,#eef0ff); border: 1px solid #d9c7ff; color: #5b21b6; border-radius: 16px; padding: .7rem .85rem; margin: .2rem 0 .7rem; font-size: .8rem; }
+        .pro-banner > i { font-size: 1.3rem; color: #7c3aed; }
+        .pro-banner .pro-exit { background: none; border: none; color: #7c3aed; cursor: pointer; padding: .2rem; font-size: .85rem; }
         .chip.active { border-color: var(--primary); background: linear-gradient(135deg,var(--primary),var(--primary-2)); color: #fff; box-shadow: 0 10px 20px rgba(108,92,231,.28); }
 
         /* Service detail */
@@ -379,6 +382,17 @@ function statusBadge($status) {
                        placeholder="Tafuta huduma yoyote (mf: WhatsApp, Google, Spotify)...">
                 <button type="button" class="clr" id="svcSearchClr" aria-label="Futa"><i class="bi bi-x-lg"></i></button>
             </div>
+
+            <!-- Pro / alternative-provider mode banner (shown after a primary failure) -->
+            <div id="proBanner" class="pro-banner" style="display:none;">
+                <i class="bi bi-rocket-fill"></i>
+                <div class="flex-grow-1">
+                    <div class="fw-bold">Unatafuta Huduma Pro</div>
+                    <div class="small">Tafuta huduma mbadala hapo juu kisha weka order tena.</div>
+                </div>
+                <button type="button" class="pro-exit" id="proExit" aria-label="Rudi kawaida"><i class="bi bi-x-lg"></i></button>
+            </div>
+
             <div class="or-divider">au chagua platform</div>
             <div class="platform-row" id="platformRow">
                 <?php foreach ($platformsCfg as $key => $p):
@@ -486,6 +500,13 @@ function statusBadge($status) {
 <script>
 let userBalance = <?= json_encode($tzsBalance) ?>;
 let currentService = null;
+let currentPlatform = '';            // last platform chip / search context
+let currentProvider = 'boost';       // 'boost' (Kawaida) | 'fastway' (Pro)
+
+// Append the active provider to an api-services.php URL.
+function withProvider(url) {
+    return url + (url.includes('?') ? '&' : '?') + 'provider=' + encodeURIComponent(currentProvider);
+}
 
 const $service = $('#serviceSelect');
 const quantityInput = document.getElementById('quantity');
@@ -545,9 +566,10 @@ document.querySelectorAll('.chip').forEach(chip => {
     chip.addEventListener('click', () => {
         document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
         chip.classList.add('active');
+        currentPlatform = chip.dataset.platform;
         if (svcSearchEl)  svcSearchEl.value = '';
         if (svcSearchClr) svcSearchClr.style.display = 'none';
-        loadServices(`api-services.php?platform=${encodeURIComponent(chip.dataset.platform)}`,
+        loadServices(withProvider(`api-services.php?platform=${encodeURIComponent(chip.dataset.platform)}`),
                      { emptyMsg: 'Hakuna huduma kwa platform hii' });
     });
 });
@@ -562,7 +584,7 @@ if (svcSearchEl) {
         if (q.length < 2) return;
         document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
         searchTimer = setTimeout(() => {
-            loadServices(`api-services.php?q=${encodeURIComponent(q)}`,
+            loadServices(withProvider(`api-services.php?q=${encodeURIComponent(q)}`),
                          { openDropdown: true, emptyMsg: `Hakuna huduma kwa "${q}"` });
         }, 450);
     });
@@ -572,6 +594,39 @@ if (svcSearchEl) {
         svcSearchEl.focus();
     });
 }
+
+// ---- Provider (Kawaida <-> Pro) switching ----
+const proBanner = document.getElementById('proBanner');
+const proExit   = document.getElementById('proExit');
+
+// Switch to the alternative provider (FastWay / "Huduma Pro") and reload the
+// catalogue so the user can search for a substitute service to order.
+function enterProMode() {
+    currentProvider = 'fastway';
+    if (proBanner) proBanner.style.display = 'flex';
+    if (svcSearchEl) { svcSearchEl.value = ''; svcSearchClr.style.display = 'none'; }
+    // Reload the same platform from FastWay if one was chosen, else prompt search.
+    if (currentPlatform) {
+        loadServices(withProvider(`api-services.php?platform=${encodeURIComponent(currentPlatform)}`),
+                     { openDropdown: true, emptyMsg: 'Hakuna huduma Pro kwa platform hii' });
+    } else if (svcSearchEl) {
+        svcSearchEl.focus();
+    }
+    // Bring the search box into view so the "link to search" is obvious.
+    if (svcSearchEl) svcSearchEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function exitProMode() {
+    if (currentProvider === 'boost') return;
+    currentProvider = 'boost';
+    if (proBanner) proBanner.style.display = 'none';
+    if (currentPlatform) {
+        loadServices(withProvider(`api-services.php?platform=${encodeURIComponent(currentPlatform)}`),
+                     { emptyMsg: 'Hakuna huduma kwa platform hii' });
+    }
+}
+
+if (proExit) proExit.addEventListener('click', exitProMode);
 
 // ---- Service detail + link guidance ----
 const linkInput = document.getElementById('linkInput');
@@ -714,7 +769,12 @@ document.getElementById('orderForm').addEventListener('submit', async function (
         const r = await fetch('place-order.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ service_id: currentService.id, quantity: qty, link })
+            body: JSON.stringify({
+                service_id: currentService.id,
+                quantity: qty,
+                link,
+                use_fallback: currentProvider === 'fastway',
+            })
         });
         const j = await r.json();
         if (j.success) {
@@ -724,6 +784,17 @@ document.getElementById('orderForm').addEventListener('submit', async function (
                 document.getElementById('balanceText').textContent = fmt(j.new_balance);
             }
             setTimeout(() => location.reload(), 1400);
+        } else if (j.provider_unavailable) {
+            // Primary provider couldn't place the order -> offer the Pro provider.
+            toast('⚠️ ' + (j.message || 'Huduma ya kawaida haipatikani.'), 'warning');
+            if (confirm('Huduma yetu ya kawaida imeshindikana kwa sasa.\n\nUngependa kutafuta huduma mbadala (Huduma Pro)?')) {
+                enterProMode();
+            }
+        } else if (j.both_failed) {
+            // Already on Pro and it failed too -> keep them in Pro search to retry.
+            toast('⚠️ ' + (j.message || 'Jaribu huduma nyingine ya Pro.'), 'danger');
+            if (currentProvider !== 'fastway') enterProMode();
+            else if (svcSearchEl) svcSearchEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
         } else {
             toast('⚠️ ' + (j.message || 'Order imeshindikana.'), 'danger');
         }

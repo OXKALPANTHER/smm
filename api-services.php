@@ -14,13 +14,20 @@ try {
     $query    = trim($_GET['q'] ?? '');
     $refresh  = isset($_GET['refresh']) && $_GET['refresh'] === 'true';
 
+    // Provider selection: 'boost' (Huduma Kawaida) is the default; 'fastway'
+    // (Huduma Pro) is offered when the primary provider can't place an order.
+    $provider = strtolower(trim($_GET['provider'] ?? 'boost'));
+    if (!in_array($provider, ['boost', 'fastway'], true)) {
+        $provider = 'boost';
+    }
+
     // "all"/empty platform means: do not filter by platform.
     if ($platform === '__all__' || $platform === 'all' || $platform === '') {
         $platform = null;
     }
 
-    // Initialize API handler
-    $api = new APIHandler('boost');
+    // Initialize API handler for the chosen provider
+    $api = new APIHandler($provider);
 
     if ($query !== '') {
         // Global search across the whole catalogue (name + category).
@@ -40,6 +47,7 @@ try {
             'total'     => count($matched),
             'truncated' => count($matched) > count($services),
             'query'     => $query,
+            'provider'  => $provider,
             'timestamp' => time(),
         ]);
         exit;
@@ -64,6 +72,7 @@ try {
         'success' => true,
         'data' => $services,
         'count' => count($services),
+        'provider' => $provider,
         'timestamp' => time()
     ]);
     
