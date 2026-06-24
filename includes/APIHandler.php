@@ -1,7 +1,13 @@
 <?php
 /**
- * Advanced API Handler for Royal Platform
- * Handles Boost API integration with service caching and retry logic
+ * Advanced API Handler for Royal Platform.
+ *
+ * Speaks two SMM provider protocols behind one interface:
+ *   - 'boost'        Lazack Boost REST API (JSON, prices already in TZS).
+ *   - 'perfectpanel' FastWay (POST /api/v2, form-encoded key+action, USD rates).
+ *
+ * Provider selection / failover lives in includes/provider.php; this class just
+ * talks to whichever single provider it was constructed with.
  */
 
 class APIHandler {
@@ -10,102 +16,71 @@ class APIHandler {
     private $base_url;
     private $timeout;
     private $verify_ssl;
+    private $protocol;        // 'boost' | 'perfectpanel'
     private $cache_dir;
     private $cache_duration = 3600; // 1 hour
     private $last_error = '';
     private $last_response_code = 0;
-    
-    public function __construct($service = 'fastway') {
+
+    public function __construct($service = 'boost') {
         $this->service = strtolower($service);
         $this->cache_dir = __DIR__ . '/../data/cache';
-        
+
         // Ensure cache directory exists
         if (!is_dir($this->cache_dir)) {
             mkdir($this->cache_dir, 0755, true);
         }
-        
+
         $this->configureService($this->service);
     }
-    
-    /**
-     * Static method for automatic fallback: tries Fastway first, then falls back to Boost
-     */
-    public static function withFallback($method, ...$args) {
-        $services = ['fastway', 'boost'];
-        $lastError = null;
-        
-        foreach ($services as $service) {
-            try {
-                $handler = new self($service);
-                
-                if (!method_exists($handler, $method)) {
-                    continue;
-                }
-                
-                $result = call_user_func_array([$handler, $method], $args);
-                
-                // Check if the result indicates success
-                if (is_array($result) && isset($result['success']) && $result['success']) {
-                    error_log("API call successful with service: $service");
-                    return $result;
-                } elseif (!is_array($result) || !isset($result['success'])) {
-                    // If no success key, assume it worked
-                    return $result;
-                }
-                
-                $lastError = $result['error'] ?? 'Unknown error';
-                error_log("API call failed with $service: " . json_encode($result));
-                
-            } catch (Exception $e) {
-                $lastError = $e->getMessage();
-                error_log("Exception with $service: " . $e->getMessage());
-            }
-        }
-        
-        // All services failed
-        return [
-            'success' => false,
-            'error' => "All services failed. Last error: $lastError",
-        ];
-    }
-    
+
     /**
      * Configure API settings based on service
      */
     private function configureService($service) {
         switch($service) {
             case 'fastway':
-                $this->api_key = FASTWAY_API_KEY;
-                $this->base_url = FASTWAY_API_BASE_URL;
-                $this->timeout = FASTWAY_API_TIMEOUT;
+                $this->api_key    = FASTWAY_API_KEY;
+                $this->base_url   = FASTWAY_API_BASE_URL;
+                $this->timeout    = FASTWAY_API_TIMEOUT;
                 $this->verify_ssl = FASTWAY_API_VERIFY_SSL;
+                $this->protocol   = 'perfectpanel';
                 break;
             case 'boost':
-                $this->api_key = BOOST_API_KEY;
-                $this->base_url = BOOST_API_BASE_URL;
-                $this->timeout = BOOST_API_TIMEOUT;
+                $this->api_key    = BOOST_API_KEY;
+                $this->base_url   = BOOST_API_BASE_URL;
+                $this->timeout    = BOOST_API_TIMEOUT;
                 $this->verify_ssl = BOOST_API_VERIFY_SSL;
+                $this->protocol   = 'boost';
                 break;
             case 'smmdaddy':
-                $this->api_key = SMMDADDY_API_KEY;
-                $this->base_url = SMMDADDY_API_BASE_URL;
-                $this->timeout = SMMDADDY_API_TIMEOUT;
+                $this->api_key    = SMMDADDY_API_KEY;
+                $this->base_url   = SMMDADDY_API_BASE_URL;
+                $this->timeout    = SMMDADDY_API_TIMEOUT;
                 $this->verify_ssl = true;
+                $this->protocol   = 'perfectpanel'; // smmdaddy is also Perfect Panel
                 break;
             case 'mpesa':
-                $this->api_key = MPESA_API_TOKEN;
-                $this->base_url = MPESA_BASE_URL;
-                $this->timeout = MPESA_TIMEOUT;
+                $this->api_key    = MPESA_API_TOKEN;
+                $this->base_url   = MPESA_BASE_URL;
+                $this->timeout    = MPESA_TIMEOUT;
                 $this->verify_ssl = true;
+                $this->protocol   = 'boost';
                 break;
             case 'stripe':
-                $this->api_key = STRIPE_SECRET_KEY;
-                $this->base_url = 'https://api.stripe.com/v1';
+                $this->api_key    = STRIPE_SECRET_KEY;
+                $this->base_url   = 'https://api.stripe.com/v1';
                 $this->verify_ssl = true;
+                $this->protocol   = 'boost';
                 break;
             default:
                 throw new Exception("Unknown service: $service");
         }
+    }
+
+    /** Which provider this handler talks to (e.g. 'fastway', 'boost'). */
+    public function getProvider() {
+        return $this->service;
     }
     
     /**

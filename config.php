@@ -242,6 +242,9 @@ function ensureRuntimeColumns($pdo) {
             'refill_requested'    => "INTEGER DEFAULT 0",
             'refill_status'       => "TEXT",
             'refill_requested_at' => "DATETIME",
+            // Which SMM provider this order was placed with, so status syncs and
+            // refunds route to the right API. Existing rows default to 'boost'.
+            'provider'            => "TEXT DEFAULT 'boost'",
         ];
         foreach ($additions as $name => $def) {
             if (!isset($cols[$name])) {
@@ -285,17 +288,25 @@ define('PLATFORMS', json_encode([
 // EXTERNAL APIs - SOCIAL MEDIA SERVICES
 // ============================================
 
-// Primary SMM Service - Fastway SMM
-define('FASTWAY_API_KEY', 'a739affd900d4d8cacc0d8e7b40411ea');
-define('FASTWAY_API_BASE_URL', 'https://fastwaysmm.com/api');
-define('FASTWAY_API_TIMEOUT', 30);
-define('FASTWAY_API_VERIFY_SSL', true);
-
-// Fallback SMM Service - Boost API (Lazack Organization)
+// Primary SMM Service - Boost API (Lazack Organization).
 define('BOOST_API_KEY', '5673ca1f6e026c293a54efb2c2cc228e8b08c48488e3df12e0f1136b87f3770b');
 define('BOOST_API_BASE_URL', 'https://boostapi.lazackorganisation.my.id/api/v1');
 define('BOOST_API_TIMEOUT', 30);
 define('BOOST_API_VERIFY_SSL', true);
+
+// Fallback SMM Service - FastWay (Perfect Panel API: POST /api/v2 with key+action).
+// FastWay quotes rates in USD/1000, so prices are converted to TZS via USD_TO_TZS_RATE.
+define('FASTWAY_API_KEY', getenv('FASTWAY_API_KEY') ?: 'a739affd900d4d8cacc0d8e7b40411ea');
+define('FASTWAY_API_BASE_URL', 'https://fastwaysmm.com/api/v2');
+define('FASTWAY_API_TIMEOUT', 30);
+define('FASTWAY_API_VERIFY_SSL', true);
+
+// USD -> TZS conversion for providers that quote in USD (FastWay). Applied to
+// the provider's raw rate BEFORE PRICE_MARKUP_PERCENT is added.
+define('USD_TO_TZS_RATE', (float)(getenv('USD_TO_TZS_RATE') ?: 3500));
+
+// SMM providers in priority order: primary first, fallback after.
+define('SMM_PROVIDERS', json_encode(['boost', 'fastway']));
 
 // Backup SMM Service - Alternative Provider
 define('SMMDADDY_API_KEY', 'your_smmdaddy_api_key');
