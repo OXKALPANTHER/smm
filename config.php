@@ -246,6 +246,10 @@ function ensureRuntimeColumns($pdo) {
             // Which SMM provider this order was placed with, so status syncs and
             // refunds route to the right API. Existing rows default to 'boost'.
             'provider'            => "TEXT DEFAULT 'boost'",
+            // Provider lane used by the orders page (primary = Kawaida,
+            // partner = Pro/FastWay). The order INSERT and orders.php both
+            // depend on this column; without it every order INSERT rolls back.
+            'gateway'             => "TEXT DEFAULT 'primary'",
         ];
         foreach ($additions as $name => $def) {
             if (!isset($cols[$name])) {
