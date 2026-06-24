@@ -1,8 +1,45 @@
 <?php
 require_once 'config.php';
-requireLogin();
 
-$user_id = $_SESSION['user_id'];
+if (!isset($_SESSION['user_id'])) {
+    http_response_code(401);
+    echo json_encode(['success' => false, 'message' => 'Not logged in']);
+    exit;
+}
+
+define('API_TOKEN', 'E6NERlSG1Q0d8IFAILb1PoawHpCliX5fQKonfcxNtqExtpr8Mo7GzwsrE6q5');
+define('USER_ID', '498');
+define('BASE_URL', 'https://palmpesa.drmlelwa.co.tz/api');
+
+function callAPI($method, $url, $data = false) {
+    $curl = curl_init();
+    $headers = [
+        'Authorization: Bearer ' . API_TOKEN,
+        'Content-Type: application/json',
+        'Accept: application/json'
+    ];
+    curl_setopt($curl, CURLOPT_URL, $url);
+    curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
+    curl_setopt($curl, CURLOPT_HTTPHEADER, $headers);
+    if ($method === "POST") {
+        curl_setopt($curl, CURLOPT_POST, 1);
+        if ($data) curl_setopt($curl, CURLOPT_POSTFIELDS, json_encode($data));
+    }
+    $result = curl_exec($curl);
+    curl_close($curl);
+    return json_decode($result, true);
+}
+
+function formatPhoneNumber($phone) {
+    $phone = preg_replace('/[^0-9]/', '', $phone);
+    if (strpos($phone, '0') === 0) {
+        return '255' . substr($phone, 1);
+    }
+    if (strpos($phone, '255') === 0) {
+        return $phone;
+    }
+    return false;
+}
 
 // Handle AJAX requests
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -10,186 +47,97 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $input['action'] ?? '';
 
     if ($action === 'initiate_payment') {
-        $phone = $input['phone'] ?? '';
-        $amount = intval($input['amount'] ?? 0);
-        $email = $input['email'] ?? '';
-        $name = $input['name'] ?? '';
+        $phone = formatPhoneNumber($input['phone']);
+        $amount = $input['amount'];
+        $email = $input['email'];
+        $name = $input['name'];
 
-        // Validate inputs
         if (!$phone || !$amount || !$email || !$name) {
-            http_response_code(400);
-            exit(apiResponse(false, 'Tafadhali jaza taarifa zote kwa usahihi.'));
-        }
-
-        // Validate amount
-        if ($amount < MINIMUM_TOPUP || $amount > MAXIMUM_TOPUP) {
-            http_response_code(400);
-            exit(apiResponse(false, 'Kiasi lazima kiwe kati ya ' . formatCurrency(MINIMUM_TOPUP) . ' na ' . formatCurrency(MAXIMUM_TOPUP)));
-        }
-
-        // Validate email
-        if (!validateEmail($email)) {
-            http_response_code(400);
-            exit(apiResponse(false, 'Barua pepe si sahihi.'));
-        }
-
-        // Format phone number
-        $phone = preg_replace('/[^0-9]/', '', $phone);
-        if (strpos($phone, '0') === 0) {
-            $phone = '255' . substr($phone, 1);
-        } elseif (strpos($phone, '255') !== 0) {
-            http_response_code(400);
-            exit(apiResponse(false, 'Namba ya simu si sahihi.'));
+            echo json_encode(['success' => false, 'message' => 'Tafadhali jaza taarifa zote kwa usahihi.']);
+            exit;
         }
 
         $transaction_id = "TXN" . time() . rand(1000, 9999);
 
-        // Create pending transaction record
-        $stmt = $conn->prepare("INSERT INTO transactions (user_id, amount, type, description, external_ref, status) VALUES (?, ?, 'credit', ?, ?, 'pending')");
-        $desc = "Top-up via MPESA - $phone";
-        $stmt->bind_param("idss", $user_id, $amount, $desc, $transaction_id);
-        if (!$stmt->execute()) {
-            http_response_code(500);
-            exit(apiResponse(false, 'Hitilafu imetokea wakati wa kuandaa muamala.'));
-        }
-
-        // Prepare payment request for PalmPesa /pay-via-mobile.
-        // name/email/phone/amount/address/postcode/user_id are all required by
-        // the gateway; auth is via the Bearer header (see makeAPICall).
         $payload = [
-            "user_id"        => MPESA_USER_ID,
-            "name"           => sanitize($name),
-            "email"          => sanitize($email),
-            "phone"          => $phone,
-            "amount"         => $amount,
+            "user_id" => USER_ID,
+            "name" => $name,
+            "email" => $email,
+            "phone" => $phone,
+            "amount" => (int)$amount,
             "transaction_id" => $transaction_id,
-            "address"        => "Tanzania",
-            "postcode"       => "00000",
-            "currency"       => CURRENCY_CODE,
+            "address" => "Royal HQ",
+            "postcode" => "00000",
+            "buyer_uuid" => rand(100000, 999999)
         ];
 
-        // Call PalmPesa API
-        $response = makeAPICall('mpesa', '/pay-via-mobile', 'POST', $payload);
-        $body     = is_array($response['data'] ?? null) ? $response['data'] : [];
+        $response = callAPI('POST', BASE_URL . '/pay-via-mobile', $payload);
 
-        // The order/reference id can come back under a few different keys.
-        $order_id = $body['order_id']
-            ?? $body['orderId']
-            ?? $body['reference']
-            ?? $body['transaction_id']
-            ?? ($body['data']['order_id'] ?? null);
-
-        // Treat an explicit failure status in the body as a failure even on HTTP 200.
-        $bodyStatus = strtolower((string)($body['status'] ?? $body['payment_status'] ?? ''));
-        $bodyFailed = in_array($bodyStatus, ['failed', 'error', 'declined'], true);
-
-        if (!empty($response['success']) && $order_id && !$bodyFailed) {
-            // Update transaction with the provider order ID
-            $stmt = $conn->prepare("UPDATE transactions SET external_ref = ? WHERE external_ref = ?");
-            $stmt->bind_param("ss", $order_id, $transaction_id);
+        if (isset($response['order_id'])) {
+            // Insert pending transaction
+            $stmt = $conn->prepare("INSERT INTO transactions (user_id, amount, type, description, external_ref, status) VALUES (?, ?, 'credit', ?, ?, 'pending')");
+            $desc = "Top-up via PalmPesa";
+            $stmt->bind_param("idss", $_SESSION['user_id'], $amount, $desc, $response['order_id']);
             $stmt->execute();
 
-            logActivity($user_id, 'top_up_initiated', "Amount: {$amount}, Order: {$order_id}", 'success');
-
-            http_response_code(200);
-            exit(apiResponse(true, 'Ombi la malipo limetumwa kwenye simu yako.', [
-                'order_id'       => $order_id,
-                'transaction_id' => $transaction_id,
-            ]));
+            echo json_encode([
+                'success' => true,
+                'order_id' => $response['order_id'],
+                'message' => 'Ombi la malipo limetumwa kwenye simu yako.'
+            ]);
         } else {
-            // Update transaction to failed
-            $stmt = $conn->prepare("UPDATE transactions SET status = 'failed' WHERE external_ref = ?");
-            $stmt->bind_param("s", $transaction_id);
-            $stmt->execute();
-
-            // Surface the real reason: provider message, our curl error, or HTTP code.
-            $reason = $body['message']
-                ?? $body['error']
-                ?? $response['error']
-                ?? ('Mtoa huduma amerudisha msimbo ' . (int)($response['code'] ?? 0));
-
-            logActivity($user_id, 'top_up_failed',
-                "Error: {$reason} | code: " . (int)($response['code'] ?? 0) . " | resp: " . json_encode($body),
-                'failed');
-
-            http_response_code(502);
-            exit(apiResponse(false, 'Malipo hayakuanzishwa: ' . $reason, [
-                'provider_code'     => (int)($response['code'] ?? 0),
-                'provider_response' => $body,
-            ]));
+            echo json_encode([
+                'success' => false,
+                'message' => 'Hitilafu imetokea wakati wa kuanzisha malipo.',
+                'debug' => $response
+            ]);
         }
+        exit;
 
     } elseif ($action === 'check_status') {
-        $order_id = $input['order_id'] ?? '';
-        
+        $order_id = $input['order_id'];
+
         if (!$order_id) {
-            http_response_code(400);
-            exit(apiResponse(false, 'Order ID inahitajika.'));
+            echo json_encode(['success' => false, 'status' => 'ERROR']);
+            exit;
         }
 
-        // Check status from PalmPesa
-        $response = makeAPICall('mpesa', '/order-status', 'POST', [
-            "order_id" => $order_id,
-            "api_key"  => MPESA_API_TOKEN,
-            "token"    => MPESA_API_TOKEN,
-        ]);
-        $body = is_array($response['data'] ?? null) ? $response['data'] : [];
+        $payload = ["order_id" => $order_id];
+        $response = callAPI('POST', BASE_URL . '/order-status', $payload);
 
-        // payment_status may sit at the top level, under data, or in data[0].
-        $rawStatus = $body['payment_status']
-            ?? $body['status']
-            ?? ($body['data']['payment_status'] ?? null)
-            ?? ($body['data'][0]['payment_status'] ?? null);
+        if (isset($response['data'][0]['payment_status'])) {
+            $status = $response['data'][0]['payment_status']; // COMPLETED, PENDING, FAILED
 
-        if (!empty($response['success']) && $rawStatus !== null) {
-            $status = strtoupper((string)$rawStatus);
-            if (in_array($status, ['SUCCESS', 'SUCCESSFUL', 'PAID', 'COMPLETE'], true)) {
-                $status = 'COMPLETED';
-            }
-
+            // If completed, update transaction and user balance
             if ($status === 'COMPLETED') {
-                $stmt = $conn->prepare("SELECT id, user_id, amount FROM transactions WHERE external_ref = ? AND status = 'pending' LIMIT 1");
+                // Find the pending transaction
+                $stmt = $conn->prepare("SELECT id, user_id, amount FROM transactions WHERE external_ref = ? AND status = 'pending'");
                 $stmt->bind_param("s", $order_id);
                 $stmt->execute();
                 $result = $stmt->get_result();
-                
                 if ($row = $result->fetch_assoc()) {
                     $conn->begin_transaction();
-                    try {
-                        // Update transaction status
-                        $stmt = $conn->prepare("UPDATE transactions SET status = 'completed' WHERE id = ?");
-                        $stmt->bind_param("i", $row['id']);
-                        $stmt->execute();
-                        
-                        // Add to user balance
-                        $stmt = $conn->prepare("UPDATE users SET balance = balance + ? WHERE id = ?");
-                        $stmt->bind_param("di", $row['amount'], $row['user_id']);
-                        $stmt->execute();
-
-                        // Reward the inviter on this user's first deposit.
-                        applyReferralBonus($conn, $row['user_id'], $row['amount']);
-
-                        $conn->commit();
-
-                        logActivity($row['user_id'], 'top_up_completed', "Amount: {$row['amount']}, Order: {$order_id}", 'success');
-                    } catch (Exception $e) {
-                        $conn->rollback();
-                        logActivity($user_id, 'top_up_completion_failed', "Error: " . $e->getMessage(), 'failed');
-                    }
+                    // Update transaction status
+                    $stmt = $conn->prepare("UPDATE transactions SET status = 'completed' WHERE id = ?");
+                    $stmt->bind_param("i", $row['id']);
+                    $stmt->execute();
+                    // Add to user balance
+                    $stmt = $conn->prepare("UPDATE users SET balance = balance + ? WHERE id = ?");
+                    $stmt->bind_param("di", $row['amount'], $row['user_id']);
+                    $stmt->execute();
+                    $conn->commit();
                 }
-            } elseif (in_array($status, ['FAILED', 'CANCELLED', 'CANCELED', 'DECLINED', 'ERROR'], true)) {
+            } elseif ($status === 'FAILED') {
                 $stmt = $conn->prepare("UPDATE transactions SET status = 'failed' WHERE external_ref = ? AND status = 'pending'");
                 $stmt->bind_param("s", $order_id);
                 $stmt->execute();
-
-                logActivity($user_id, 'top_up_failed', "Order: {$order_id} ({$status})", 'failed');
-                $status = 'FAILED'; // normalise for the client poller
             }
 
-            exit(apiResponse(true, 'Status ya malipo: ' . $status, ['status' => $status]));
+            echo json_encode(['success' => true, 'status' => $status]);
         } else {
-            exit(apiResponse(true, 'Kusubiria malipo...', ['status' => 'PENDING']));
+            echo json_encode(['success' => true, 'status' => 'PENDING']);
         }
+        exit;
     }
 }
 
