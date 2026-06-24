@@ -54,6 +54,7 @@ CREATE TABLE orders (
     status VARCHAR(50) DEFAULT 'Pending',
     progress INT DEFAULT 0,
     external_order_id VARCHAR(100),
+    provider VARCHAR(30) DEFAULT 'boost',
     link TEXT NOT NULL,
     notes TEXT,
     refund_requested BOOLEAN DEFAULT FALSE,

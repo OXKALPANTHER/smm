@@ -74,6 +74,7 @@ CREATE TABLE orders (
     status            TEXT DEFAULT 'Pending',
     progress          INTEGER DEFAULT 0,
     external_order_id TEXT,
+    provider          TEXT DEFAULT 'boost',
     link              TEXT NOT NULL,
     notes             TEXT,
     refund_requested  SMALLINT DEFAULT 0,
