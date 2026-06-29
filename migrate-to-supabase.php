@@ -40,11 +40,21 @@ CREATE TABLE IF NOT EXISTS orders (
     status VARCHAR(50) DEFAULT 'Pending',
     progress INT DEFAULT 0,
     external_order_id VARCHAR(100),
+    -- Which SMM provider the order was placed with (status syncs/refunds route here).
+    provider VARCHAR(50) DEFAULT 'boost',
+    -- Provider lane shown on the orders page (primary = Kawaida, partner = Pro).
+    -- place-order.php and orders.php both write/read this; without it every order
+    -- INSERT aborts its transaction on Postgres and silently rolls back.
+    gateway VARCHAR(50) DEFAULT 'primary',
     link TEXT NOT NULL,
     notes TEXT,
     refund_requested BOOLEAN DEFAULT FALSE,
     refund_reason TEXT,
     refund_amount DECIMAL(15,2),
+    refill_available SMALLINT DEFAULT 0,
+    refill_requested SMALLINT DEFAULT 0,
+    refill_status VARCHAR(50),
+    refill_requested_at TIMESTAMP,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     completed_at TIMESTAMP NULL,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -104,6 +114,18 @@ CREATE TABLE IF NOT EXISTS promo_codes (
     is_active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Heal tables created before these columns were introduced. CREATE TABLE
+-- IF NOT EXISTS above is a no-op on an existing table, so columns added later
+-- (gateway/provider/refill_*) must be backfilled explicitly or every order
+-- INSERT that references them aborts its transaction and silently rolls back.
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS provider VARCHAR(50) DEFAULT 'boost';
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS gateway VARCHAR(50) DEFAULT 'primary';
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS refill_available SMALLINT DEFAULT 0;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS refill_requested SMALLINT DEFAULT 0;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS refill_status VARCHAR(50);
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS refill_requested_at TIMESTAMP;
+ALTER TABLE transactions ADD COLUMN IF NOT EXISTS gateway VARCHAR(50);
 
 -- Create indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);

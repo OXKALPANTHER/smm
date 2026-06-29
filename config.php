@@ -71,8 +71,12 @@ try {
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
         ]);
         $pdo->query('SELECT 1');
-        // Schema is created once via supabase_schema.sql in the SQL editor,
-        // so no init/migration is run here.
+        // Schema is created once via supabase_schema.sql in the SQL editor.
+        // We still reconcile columns added after that schema was first applied,
+        // otherwise an order INSERT referencing a missing column (e.g. gateway)
+        // aborts the whole transaction on Postgres and silently rolls back the
+        // balance deduction — the order is never saved yet the user sees success.
+        ensurePgRuntimeColumns($pdo);
     } else {
         // ---- SQLite (local default) ----
         if (!is_dir(__DIR__ . '/data')) {
@@ -226,6 +230,34 @@ function initializeSQLiteDatabase($pdo) {
         ");
     } catch (Exception $e) {
         // Tables may already exist, ignore
+    }
+}
+
+/**
+ * Reconcile orders columns on Postgres/Supabase (idempotent).
+ *
+ * Postgres supports `ADD COLUMN IF NOT EXISTS`, so unlike the SQLite path we
+ * can issue these blindly. Keep this list in sync with the orders columns the
+ * app writes to (see place-order.php and order-sync.php).
+ */
+function ensurePgRuntimeColumns($pdo) {
+    $additions = [
+        'refill_available'    => "SMALLINT DEFAULT 0",
+        'refill_requested'    => "SMALLINT DEFAULT 0",
+        'refill_status'       => "TEXT",
+        'refill_requested_at' => "TIMESTAMPTZ",
+        'provider'            => "TEXT DEFAULT 'boost'",
+        // Provider lane shown on the orders page (primary = Kawaida,
+        // partner = Pro/FastWay). The order INSERT depends on this column;
+        // without it every order INSERT aborts the transaction and rolls back.
+        'gateway'             => "TEXT DEFAULT 'primary'",
+    ];
+    foreach ($additions as $name => $def) {
+        try {
+            $pdo->exec("ALTER TABLE orders ADD COLUMN IF NOT EXISTS {$name} {$def}");
+        } catch (Exception $e) {
+            error_log("ensurePgRuntimeColumns ({$name}): " . $e->getMessage());
+        }
     }
 }
 

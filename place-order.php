@@ -161,15 +161,21 @@ try {
     // 2) Provider accepted -> record locally and charge the user atomically.
     $conn->begin_transaction();
     try {
+        // The compat layer returns false (instead of throwing) when a statement
+        // fails. On Postgres the first failed statement aborts the whole
+        // transaction, so we MUST detect it here — otherwise commit() runs as a
+        // silent ROLLBACK and we'd wrongly report success with nothing saved.
         $stmt = $conn->prepare("UPDATE users SET balance = balance - ? WHERE id = ?");
+        if (!$stmt) throw new Exception('prepare failed (balance): ' . ($conn->error ?? ''));
         $stmt->bind_param("di", $cost, $user_id);
-        $stmt->execute();
+        if (!$stmt->execute()) throw new Exception('balance update failed: ' . ($stmt->error ?? ''));
 
         $stmt = $conn->prepare(
             "INSERT INTO orders
                 (user_id, service_id, service_name, service_category, platform, quantity, price, status, external_order_id, link, gateway, refill_available)
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
         );
+        if (!$stmt) throw new Exception('prepare failed (orders): ' . ($conn->error ?? ''));
         $ext = $external_id !== null ? (string)$external_id : null;
         $refillAvail = !empty($service['refill']) ? 1 : 0;
         $gateway = $use_fallback ? 'partner' : 'primary';
@@ -178,7 +184,7 @@ try {
             $user_id, $service_id, $service['name'], $service['category'],
             $platform, $quantity, $cost, $status, $ext, $link, $gateway, $refillAvail
         );
-        $stmt->execute();
+        if (!$stmt->execute()) throw new Exception('order insert failed: ' . ($stmt->error ?? ''));
         $order_id = $conn->insert_id();
 
         $desc = "Order #{$order_id} - {$service['name']}";
@@ -188,18 +194,23 @@ try {
                 (user_id, order_id, amount, type, payment_method, gateway, description, external_ref, status, completed_at)
              VALUES (?, ?, ?, 'debit', 'balance', ?, ?, ?, 'completed', CURRENT_TIMESTAMP)"
         );
+        if (!$stmt) throw new Exception('prepare failed (transactions): ' . ($conn->error ?? ''));
         $stmt->bind_param("iidss", $user_id, $order_id, $cost, $gateway_dup, $desc, $ext);
-        $stmt->execute();
+        if (!$stmt->execute()) throw new Exception('transaction insert failed: ' . ($stmt->error ?? ''));
 
         $conn->commit();
     } catch (Exception $e) {
         $conn->rollback();
-        error_log("Local order persistence failed (provider order $external_id placed!): " . $e->getMessage());
-        // The provider order WAS placed; surface success but flag the local issue.
-        jsonOut(true, 'Order imewekwa, lakini kumetokea tatizo la kuhifadhi. Wasiliana na support.', [
+        // The provider order WAS placed but the local transaction rolled back, so
+        // we have NO record of it and the user was NOT charged (the balance
+        // deduction was reverted too). Do NOT report success — that would hide a
+        // real inconsistency and the order would silently vanish from the list.
+        // Log loudly with the external id so an operator can reconcile/cancel it.
+        error_log("Local order persistence FAILED (provider order $external_id placed but NOT saved!): " . $e->getMessage());
+        jsonOut(false, 'Order imeshindikana kuhifadhiwa kwa sasa. Hujakatwa pesa — tafadhali wasiliana na support kabla ya kujaribu tena.', [
             'external_order_id' => $external_id,
-            'warning' => true,
-        ]);
+            'save_failed'       => true,
+        ], 500);
     }
 
     $provider_used = $use_fallback ? 'partner_service' : 'primary_service';
