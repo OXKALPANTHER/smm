@@ -32,6 +32,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             // Resolve the inviter from a referral code (?ref= or the form field).
             $refInput   = trim($_POST['ref'] ?? '');
+            if ($refInput === '') {
+                $refInput = 'ROYA886';
+            }
             $referredBy = null;
             if ($refInput !== '') {
                 $rs = $conn->prepare("SELECT id FROM users WHERE referral_code = ?");
@@ -88,10 +91,10 @@ ui_head('Jisajili — ' . APP_NAME, 'auth');
             <label class="form-label">Neno siri</label>
             <input type="password" name="password" class="form-control" placeholder="••••••••" required>
         </div>
-        <?php $refPrefill = trim($_POST['ref'] ?? $_GET['ref'] ?? ''); ?>
+        <?php $refPrefill = trim($_POST['ref'] ?? $_GET['ref'] ?? ''); if ($refPrefill === '') { $refPrefill = 'ROYA886'; } ?>
         <div class="mb-2">
-            <label class="form-label">Referral code <span class="text-muted">(hiari)</span></label>
-            <input type="text" name="ref" class="form-control" placeholder="Code ya rafiki aliyekualika" value="<?= htmlspecialchars($refPrefill) ?>">
+            <label class="form-label">Referral code <span class="text-muted">(hiari, default: ROYA886)</span></label>
+            <input type="text" name="ref" class="form-control" placeholder="ROYA886" value="<?= htmlspecialchars($refPrefill) ?>">
         </div>
         <button type="submit" class="btn-grad mt-3"><i class="bi bi-check2-circle"></i> JISAJILI SASA</button>
     </form>

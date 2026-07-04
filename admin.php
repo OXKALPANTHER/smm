@@ -134,17 +134,41 @@ foreach ($conn->query("SELECT {$dexpr} d, COUNT(*) c FROM orders GROUP BY {$dexp
     if (isset($trend[$r['d']])) $trend[$r['d']] = (int)$r['c'];
 }
 
-// Live provider balance (cached ~2 min so the dashboard stays snappy / resilient)
-$providerBalance = null;
+// Live provider balances (cached ~2 min so the dashboard stays snappy / resilient)
+$providerBalances = [];
+$providerList = json_decode(defined('SMM_PROVIDERS') ? SMM_PROVIDERS : '[]', true) ?: ['boost', 'fastway'];
 $pbCache = __DIR__ . '/data/cache/provider_balance.json';
+$pbCacheData = null;
 if (is_file($pbCache) && (time() - filemtime($pbCache) < 120)) {
-    $providerBalance = json_decode(file_get_contents($pbCache), true);
-} else {
-    try {
-        require_once 'includes/APIHandler.php';
-        $providerBalance = (new APIHandler('boost'))->getBalance('TZS');
-        @file_put_contents($pbCache, json_encode($providerBalance));
-    } catch (Exception $e) { $providerBalance = null; }
+    $pbCacheData = json_decode(file_get_contents($pbCache), true);
+}
+
+try {
+    require_once 'includes/APIHandler.php';
+    foreach ($providerList as $provider) {
+        $providerName = is_string($provider) ? strtolower(trim($provider)) : '';
+        if ($providerName === '') continue;
+
+        $cachedBalance = null;
+        if (is_array($pbCacheData) && isset($pbCacheData[$providerName])) {
+            $cachedBalance = $pbCacheData[$providerName];
+        }
+
+        if ($cachedBalance !== null) {
+            $providerBalances[$providerName] = (float)$cachedBalance;
+            continue;
+        }
+
+        $providerBalances[$providerName] = (float)(new APIHandler($providerName))->getBalance('TZS');
+    }
+
+    @file_put_contents($pbCache, json_encode($providerBalances));
+} catch (Exception $e) {
+    if (is_array($pbCacheData)) {
+        foreach ($pbCacheData as $providerName => $balance) {
+            $providerBalances[$providerName] = (float)$balance;
+        }
+    }
 }
 
 function abadge($status) {
@@ -209,7 +233,15 @@ body.admin{background:#f4f7fe;}
         <div class="col-xl-3 col-md-6"><div class="stat-card d-flex justify-content-between align-items-center"><div><div class="lbl">Total Users</div><div class="val"><?= number_format($totalUsers) ?></div></div><div class="ico" style="background:#eef0ff;color:var(--primary)"><i class="bi bi-people"></i></div></div></div>
         <div class="col-xl-3 col-md-6"><div class="stat-card d-flex justify-content-between align-items-center"><div><div class="lbl">Total Orders</div><div class="val"><?= number_format($totalOrders) ?></div></div><div class="ico" style="background:#e6fbfa;color:#00a8a3"><i class="bi bi-bag-check"></i></div></div></div>
         <div class="col-xl-3 col-md-6"><div class="stat-card d-flex justify-content-between align-items-center"><div><div class="lbl">Total Sales</div><div class="val"><?= number_format($sales) ?> <small class="text-muted" style="font-size:.9rem;">TZS</small></div></div><div class="ico" style="background:#e4faf3;color:#00876a"><i class="bi bi-graph-up-arrow"></i></div></div></div>
-        <div class="col-xl-3 col-md-6"><div class="stat-card d-flex justify-content-between align-items-center"><div><div class="lbl">Provider Balance</div><div class="val"><?= $providerBalance !== null ? number_format($providerBalance).' <small class="text-muted" style="font-size:.9rem;">TZS</small>' : '<span class="text-danger" style="font-size:1rem;">offline</span>' ?></div></div><div class="ico" style="background:#fdeee9;color:#c0392b"><i class="bi bi-cloud-check"></i></div></div></div>
+        <div class="col-xl-3 col-md-6"><div class="stat-card d-flex justify-content-between align-items-center"><div><div class="lbl">Provider Balances</div><div class="val" style="font-size:1rem;line-height:1.4;">
+            <?php if (!empty($providerBalances)): ?>
+                <?php foreach ($providerBalances as $providerName => $balance): ?>
+                    <div><?= htmlspecialchars(strtoupper($providerName)) ?>: <?= number_format($balance) ?> <small class="text-muted">TZS</small></div>
+                <?php endforeach; ?>
+            <?php else: ?>
+                <span class="text-danger" style="font-size:1rem;">offline</span>
+            <?php endif; ?>
+        </div></div><div class="ico" style="background:#fdeee9;color:#c0392b"><i class="bi bi-cloud-check"></i></div></div></div>
     </div>
 
     <!-- Charts + liability -->
