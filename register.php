@@ -9,6 +9,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $username = trim($_POST['username'] ?? '');
     $email    = trim($_POST['email'] ?? '');
     $phone    = trim($_POST['phone'] ?? '');
+    $phone    = $phone ? $phone : null;  // Convert empty string to NULL
     $password = $_POST['password'] ?? '';
 
     if ($username === '' || $email === '' || $password === '') {
@@ -21,12 +22,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Duplicate check
         $stmt = $conn->prepare("SELECT id FROM users WHERE username = ? OR email = ?");
         $stmt->bind_param("ss", $username, $email);
-        $stmt->execute();
+        $stmt->execute(); 
         if ($stmt->get_result()->fetch_assoc()) {
             $error = 'Jina au email tayari limetumika.';
         } else {
             $hash = password_hash($password, PASSWORD_DEFAULT);
-            $ref  = strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', $username), 0, 4)) . rand(100, 999);
+            // Generate unique referral code: use time-based + random to avoid collisions
+            $ref  = strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', $username), 0, 3)) . substr(time(), -4) . rand(1000, 9999);
 
             // Resolve the inviter from a referral code (?ref= or the form field).
             $refInput   = trim($_POST['ref'] ?? '');
@@ -39,16 +41,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if ($rr) $referredBy = (int)$rr['id'];
             }
 
+            // Build insert: phone can be NULL (already converted above)
             $stmt = $conn->prepare("INSERT INTO users (username, email, phone, password, referral_code, referred_by) VALUES (?, ?, ?, ?, ?, ?)");
             $stmt->bind_param("sssssi", $username, $email, $phone, $hash, $ref, $referredBy);
+            
             if ($stmt->execute()) {
                 $_SESSION['user_id']  = $conn->insert_id();
                 $_SESSION['username'] = $username;
                 $_SESSION['role']     = 'user';
                 header("Location: index.php");
                 exit;
+            } else {
+                // Log the actual error for debugging
+                error_log("Registration error for user $username: " . $stmt->error);
+                $error = 'Usajili umeshindikana. Jaribu tena.';
             }
-            $error = 'Usajili umeshindikana. Jaribu tena.';
         }
     }
 }

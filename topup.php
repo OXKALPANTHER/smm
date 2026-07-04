@@ -125,6 +125,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $stmt = $conn->prepare("UPDATE users SET balance = balance + ? WHERE id = ?");
                     $stmt->bind_param("di", $row['amount'], $row['user_id']);
                     $stmt->execute();
+                    // Award referral bonus if this is the user's first deposit
+                    applyReferralBonus($conn, $row['user_id'], $row['amount']);
                     $conn->commit();
                 }
             } elseif ($status === 'FAILED') {
