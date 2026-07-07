@@ -149,10 +149,20 @@ function syncUserOrders($conn, $user_id, $force = false) {
 
             } else {
                 // In progress / processing / partial-but-not-final etc.
+                // Calculate progress based on status keywords
+                $progress = 50; // default for unknown processing status
+                if (strpos($low, 'partial') !== false) {
+                    $progress = 75; // partial completion
+                } elseif (strpos($low, 'process') !== false || strpos($low, 'in progress') !== false) {
+                    $progress = 60; // actively processing
+                } elseif (strpos($low, 'pending') !== false || strpos($low, 'queue') !== false) {
+                    $progress = 20; // waiting in queue
+                }
+                
                 $stmt = $conn->prepare(
-                    "UPDATE orders SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?"
+                    "UPDATE orders SET status = ?, progress = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?"
                 );
-                $stmt->bind_param("si", $newStatus, $o['id']);
+                $stmt->bind_param("sii", $newStatus, $progress, $o['id']);
                 $stmt->execute();
             }
 

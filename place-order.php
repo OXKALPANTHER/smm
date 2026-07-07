@@ -172,17 +172,18 @@ try {
 
         $stmt = $conn->prepare(
             "INSERT INTO orders
-                (user_id, service_id, service_name, service_category, platform, quantity, price, status, external_order_id, link, gateway, refill_available)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+                (user_id, service_id, service_name, service_category, platform, quantity, price, status, progress, external_order_id, link, gateway, refill_available)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
         );
         if (!$stmt) throw new Exception('prepare failed (orders): ' . ($conn->error ?? ''));
         $ext = $external_id !== null ? (string)$external_id : null;
         $refillAvail = !empty($service['refill']) ? 1 : 0;
         $gateway = $use_fallback ? 'partner' : 'primary';
+        $initialProgress = 10; // Start at 10% for newly placed orders
         $stmt->bind_param(
-            "iisssidssi",
+            "iisssiisssi",
             $user_id, $service_id, $service['name'], $service['category'],
-            $platform, $quantity, $cost, $status, $ext, $link, $gateway, $refillAvail
+            $platform, $quantity, $cost, $status, $initialProgress, $ext, $link, $gateway, $refillAvail
         );
         if (!$stmt->execute()) throw new Exception('order insert failed: ' . ($stmt->error ?? ''));
         $order_id = $conn->insert_id();

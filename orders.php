@@ -7,6 +7,7 @@
 require_once 'config.php';
 require_once 'includes/ui.php';
 require_once 'includes/order-sync.php';
+require_once 'includes/progress-bar.php';
 requireLogin();
 
 $user_id = $_SESSION['user_id'];
@@ -22,7 +23,7 @@ $user = $stmt->get_result()->fetch_assoc();
 
 // All orders, newest first.
 $stmt = $conn->prepare(
-    "SELECT id, service_name, platform, quantity, price, status, external_order_id,
+    "SELECT id, service_name, platform, quantity, price, status, progress, external_order_id,
             link, created_at, refill_available, refill_requested, refill_status, gateway
        FROM orders WHERE user_id = ? ORDER BY id DESC"
 );
@@ -100,6 +101,42 @@ ui_head('Orders Zangu — ' . APP_NAME, 'app');
 .ocard .ometa{color:var(--muted);font-size:.7rem;margin-top:.15rem;}
 .ocard .olink{color:var(--muted);font-size:.68rem;margin-top:.1rem;word-break:break-all;}
 .refill-btn{background:#e4faf3;color:#00876a;border:none;border-radius:20px;font-size:.68rem;font-weight:600;padding:.25rem .75rem;}
+
+/* === Order Progress Bar === */
+.order-progress{padding:.8rem 0;margin:.8rem 0;}
+.progress-track{position:relative;height:6px;background:#e8eaf6;border-radius:8px;overflow:hidden;box-shadow:inset 0 1px 2px rgba(0,0,0,.05);}
+.progress-fill{height:100%;border-radius:8px;transition:width .4s cubic-bezier(.4,0,.2,1);background:linear-gradient(90deg,#667eea,#764ba2);}
+.progress-info{display:flex;justify-content:space-between;align-items:center;margin-top:.5rem;font-size:.75rem;}
+.progress-label{font-weight:600;color:#667eea;}
+.progress-percent{font-weight:700;color:#667eea;}
+.progress-stages{display:flex;justify-content:space-around;gap:.5rem;margin-top:.4rem;font-size:.65rem;}
+.pstage{display:flex;align-items:center;gap:.3rem;font-weight:600;color:#9ca3af;}
+
+/* === Place Order Form Section === */
+.place-order-section{background:linear-gradient(135deg,#f8f9ff,#fff);border-radius:20px;padding:1.2rem;box-shadow:0 8px 20px rgba(72,52,212,.08);border:1px solid rgba(72,52,212,.1);}
+.place-order-card{background:#fff;border-radius:18px;padding:1.5rem;box-shadow:0 4px 12px rgba(72,52,212,.06);}
+.place-order-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;flex-wrap:wrap;gap:1rem;}
+.place-order-title{display:flex;align-items:center;gap:.8rem;}
+.place-order-title h5{margin:0;font-size:1.05rem;font-weight:700;}
+.place-order-title p{margin:0;font-size:.75rem;color:#6b7280;}
+.balance-pill{background:linear-gradient(135deg,#fef3c7,#fde68a);color:#78350f;font-size:.8rem;font-weight:600;padding:.4rem .9rem;border-radius:30px;white-space:nowrap;}
+.place-order-form{border-top:1px solid #e5e7eb;padding-top:1.2rem;}
+.form-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem;}
+.form-group{display:flex;flex-direction:column;}
+.form-group label{font-size:.8rem;font-weight:600;color:#374151;margin-bottom:.4rem;text-transform:uppercase;letter-spacing:.5px;}
+.form-control{background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;padding:.65rem .8rem;font-size:.85rem;font-family:inherit;transition:.2s;}
+.form-control:focus{outline:none;border-color:#667eea;box-shadow:0 0 0 3px rgba(102,126,234,.1);}
+.form-control::placeholder{color:#9ca3af;}
+.form-text{display:block;font-size:.7rem;color:#6b7280;margin-top:.3rem;}
+.btn-place-order{width:100%;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;border:none;border-radius:10px;padding:.75rem 1.2rem;font-size:.9rem;font-weight:600;cursor:pointer;transition:.3s;display:flex;align-items:center;justify-content:center;gap:.5rem;margin-top:.5rem;}
+.btn-place-order:hover{transform:translateY(-2px);box-shadow:0 12px 24px rgba(102,126,234,.3);}
+.btn-place-order:active{transform:translateY(0);}
+
+@media (max-width:768px) {
+  .place-order-header{flex-direction:column;align-items:flex-start;}
+  .balance-pill{align-self:flex-start;}
+  .form-row{grid-template-columns:1fr;}
+}
 </style>
 
 <div class="orders-hero">
@@ -116,6 +153,57 @@ ui_head('Orders Zangu — ' . APP_NAME, 'app');
 </div>
 
 <div class="container px-3" style="margin-top:-1.5rem;">
+
+    <!-- Place Order Section (Pro) -->
+    <div class="place-order-section" style="margin-bottom:2.5rem;">
+        <div class="place-order-card">
+            <div class="place-order-header">
+                <div class="place-order-title">
+                    <i class="bi bi-rocket-fill" style="font-size:1.4rem;color:#7c3aed;margin-right:0.5rem;"></i>
+                    <div>
+                        <h5 class="mb-0 fw-bold">Weka Order Mpya</h5>
+                        <p class="mb-0 small text-muted">Jaza huduma, idadi na link kwenye pointi hapa chini</p>
+                    </div>
+                </div>
+                <span class="balance-pill">💰 Salio: <strong><?= number_format($user['balance'], 0) ?> TZS</strong></span>
+            </div>
+
+            <div class="place-order-form">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Huduma *</label>
+                        <select id="serviceSelect" class="form-control" required>
+                            <option value="">-- Chagua huduma --</option>
+                        </select>
+                        <small class="form-text">Min/Max: <span id="minMax">-</span></small>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Idadi *</label>
+                        <input type="number" id="quantityInput" class="form-control" placeholder="Idadi" required min="1">
+                        <small class="form-text">Bei: <strong><span id="costDisplay">0</span> TZS</strong></small>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Link / URL *</label>
+                        <input type="text" id="linkInput" class="form-control" placeholder="https://..." required>
+                    </div>
+
+                    <div class="form-group">
+                        <label style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0;">
+                            <input type="checkbox" id="useProProvider" style="width:18px;height:18px;cursor:pointer;">
+                            Tumia Huduma Pro (FastWay)
+                        </label>
+                        <small class="form-text">Huduma mbadala inaweza kuwa na bei tofauti</small>
+                    </div>
+
+                    <button class="btn-place-order" id="placeOrderBtn">
+                        <i class="bi bi-send-fill"></i> Weka Order
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Search Box -->
     <div class="search-box">
@@ -167,6 +255,10 @@ ui_head('Orders Zangu — ' . APP_NAME, 'app');
                             <?php if (!empty($o['link'])): ?>
                                 <div class="olink"><i class="bi bi-link-45deg"></i> <?= htmlspecialchars(mb_substr($o['link'], 0, 50)) ?></div>
                             <?php endif; ?>
+                            
+                            <!-- Order Progress Bar -->
+                            <?= renderProgressBar($o['status'], $o['progress'] ?? null) ?>
+                            
                             <div class="mt-2 d-flex align-items-center gap-2 flex-wrap">
                                 <span class="badge-soft <?= obadge($o['status']) ?>"><?= htmlspecialchars($o['status']) ?></span>
                                 <?php if ($canRefill): ?>
@@ -229,6 +321,10 @@ ui_head('Orders Zangu — ' . APP_NAME, 'app');
                             <?php if (!empty($o['link'])): ?>
                                 <div class="olink"><i class="bi bi-link-45deg"></i> <?= htmlspecialchars(mb_substr($o['link'], 0, 50)) ?></div>
                             <?php endif; ?>
+                            
+                            <!-- Order Progress Bar -->
+                            <?= renderProgressBar($o['status'], $o['progress'] ?? null) ?>
+                            
                             <div class="mt-2 d-flex align-items-center gap-2 flex-wrap">
                                 <span class="badge-soft <?= obadge($o['status']) ?>"><?= htmlspecialchars($o['status']) ?></span>
                                 <?php if ($canRefill): ?>
@@ -306,6 +402,109 @@ ui_foot(<<<'JS'
 
     if (empty) empty.style.display = shown ? 'none' : '';
   }));
+})();
+
+// === Order Placement Form ===
+(async () => {
+  const serviceSelect = document.getElementById('serviceSelect');
+  const quantityInput = document.getElementById('quantityInput');
+  const linkInput = document.getElementById('linkInput');
+  const useProProvider = document.getElementById('useProProvider');
+  const placeOrderBtn = document.getElementById('placeOrderBtn');
+  const costDisplay = document.getElementById('costDisplay');
+  const minMaxDisplay = document.getElementById('minMax');
+
+  let services = [];
+
+  // Load services on page load
+  async function loadServices() {
+    try {
+      const r = await fetch('api-services.php');
+      const j = await r.json();
+      if (j.success) {
+        services = j.data || [];
+        serviceSelect.innerHTML = '<option value="">-- Chagua huduma --</option>';
+        services.forEach(s => {
+          const opt = document.createElement('option');
+          opt.value = s.id;
+          opt.textContent = `${s.name} (${s.category})`;
+          serviceSelect.appendChild(opt);
+        });
+      }
+    } catch (e) {
+      console.error('Failed to load services:', e);
+    }
+  }
+
+  // Calculate cost when service or quantity changes
+  function updateCost() {
+    const serviceId = parseInt(serviceSelect.value);
+    const quantity = parseInt(quantityInput.value) || 0;
+
+    if (!serviceId || !quantity) {
+      costDisplay.textContent = '0';
+      minMaxDisplay.textContent = '-';
+      return;
+    }
+
+    const service = services.find(s => s.id == serviceId);
+    if (service) {
+      const min = Math.max(1, parseInt(service.min) || 1);
+      const max = parseInt(service.max) || 0;
+      const rate = parseFloat(service.rate) || 0;
+      const cost = Math.ceil(quantity * rate);
+
+      minMaxDisplay.textContent = max > 0 ? `${min} - ${max}` : `${min}+`;
+      costDisplay.textContent = cost.toLocaleString();
+    }
+  }
+
+  serviceSelect.addEventListener('change', updateCost);
+  quantityInput.addEventListener('input', updateCost);
+
+  // Place order
+  placeOrderBtn.addEventListener('click', async () => {
+    const serviceId = parseInt(serviceSelect.value);
+    const quantity = parseInt(quantityInput.value) || 0;
+    const link = linkInput.value.trim();
+    const useAlt = useProProvider.checked;
+
+    if (!serviceId || quantity <= 0 || !link) {
+      toast('Tafadhali jaza huduma, idadi na link.', 'warning');
+      return;
+    }
+
+    placeOrderBtn.disabled = true;
+    placeOrderBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Inatuma...';
+
+    try {
+      const r = await fetch('place-order.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ service_id: serviceId, quantity, link, use_fallback: useAlt })
+      });
+      const j = await r.json();
+
+      if (j.success) {
+        toast('Order imeweka kwa mafanikio! Akasha inatuma...', 'success');
+        setTimeout(() => location.reload(), 1500);
+      } else if (j.provider_unavailable && j.can_retry_alt) {
+        toast('Huduma ya kawaida haipatikani. Jaribu Huduma Pro?', 'warning');
+        useProProvider.checked = true;
+      } else {
+        toast(j.message || 'Kosa limefanyika.', 'danger');
+      }
+    } catch (e) {
+      toast('Kosa la mtandao.', 'danger');
+      console.error(e);
+    } finally {
+      placeOrderBtn.disabled = false;
+      placeOrderBtn.innerHTML = '<i class="bi bi-send-fill"></i> Weka Order';
+    }
+  });
+
+  // Load services on page load
+  await loadServices();
 })();
 
 // Refill requests
