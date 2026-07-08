@@ -8,6 +8,7 @@ require_once 'config.php';
 require_once 'includes/ui.php';
 require_once 'includes/order-sync.php';
 require_once 'includes/progress-bar.php';
+require_once 'includes/APIHandler.php';
 requireLogin();
 
 $user_id = $_SESSION['user_id'];
@@ -23,7 +24,7 @@ $user = $stmt->get_result()->fetch_assoc();
 
 // All orders, newest first.
 $stmt = $conn->prepare(
-    "SELECT id, service_name, platform, quantity, price, status, progress, external_order_id,
+    "SELECT id, service_id, service_name, platform, quantity, price, status, progress, external_order_id,
             link, created_at, refill_available, refill_requested, refill_status, gateway
        FROM orders WHERE user_id = ? ORDER BY id DESC"
 );
@@ -60,6 +61,33 @@ function obadge($status) {
     if ($s === 'Completed') return 'badge-success';
     if ($s === 'Canceled') return 'badge-danger';
     return 'badge-warning';
+}
+
+function serviceSupportsCancellation($order) {
+    static $serviceCache = [];
+
+    $serviceId = (int)($order['service_id'] ?? 0);
+    if ($serviceId <= 0) {
+        return false;
+    }
+
+    $gateway = strtolower((string)($order['gateway'] ?? 'primary'));
+    $provider = ($gateway === 'partner' || $gateway === 'pro' || $gateway === 'premium' || $gateway === 'fastway') ? 'fastway' : 'boost';
+
+    if (!isset($serviceCache[$provider])) {
+        try {
+            $api = new APIHandler($provider);
+            $serviceCache[$provider] = [];
+            foreach ($api->getAllServices() as $service) {
+                $serviceCache[$provider][(int)($service['id'] ?? 0)] = $service;
+            }
+        } catch (Exception $e) {
+            return false;
+        }
+    }
+
+    $service = $serviceCache[$provider][$serviceId] ?? null;
+    return !empty($service['cancel']);
 }
 
 // Separate orders by gateway (provider)
@@ -114,6 +142,8 @@ ui_head('Orders Zangu — ' . APP_NAME, 'app');
 .ocard .ometa{color:var(--muted);font-size:.7rem;margin-top:.15rem;}
 .ocard .olink{color:var(--muted);font-size:.68rem;margin-top:.1rem;word-break:break-all;}
 .refill-btn{background:#e4faf3;color:#00876a;border:none;border-radius:20px;font-size:.68rem;font-weight:600;padding:.25rem .75rem;}
+.cancel-btn{background:#fff5f5;color:#c2410c;border:1px solid #fed7aa;border-radius:20px;font-size:.68rem;font-weight:600;padding:.25rem .75rem;}
+.cancel-btn:hover{background:#ffedd5;color:#9a2c00;}
 
 /* === Order Progress Bar === */
 .order-progress{padding:.8rem 0;margin:.8rem 0;}
@@ -213,7 +243,9 @@ ui_head('Orders Zangu — ' . APP_NAME, 'app');
                         $group       = orderGroup($o['status']);
                         $statusLabel = normalizeOrderStatus($o['status']);
                         $isCompleted = $statusLabel === 'Completed';
+                        $isCanceled  = $statusLabel === 'Canceled';
                         $canRefill   = !empty($o['refill_available']) && empty($o['refill_requested']) && $isCompleted;
+                        $showCancel  = !$isCompleted && !$isCanceled && serviceSupportsCancellation($o);
                     ?>
                     <div class="ocard" data-group="<?= $group ?>" data-search="<?= strtolower(htmlspecialchars($o['id'] . ' ' . $o['service_name'] . ' ' . ($o['link'] ?? ''))) ?>">
                         <div class="oico"><i class="bi bi-bag-check"></i></div>
@@ -241,6 +273,9 @@ ui_head('Orders Zangu — ' . APP_NAME, 'app');
                                     <button class="btn btn-sm refill-btn" data-id="<?= (int)$o['id'] ?>"><i class="bi bi-arrow-repeat"></i> Omba Refill</button>
                                 <?php elseif (!empty($o['refill_requested'])): ?>
                                     <span class="badge-soft badge-warning" style="font-size:.66rem;"><i class="bi bi-hourglass-split"></i> Refill: <?= htmlspecialchars($o['refill_status'] ?: 'requested') ?></span>
+                                <?php endif; ?>
+                                <?php if ($showCancel): ?>
+                                    <button class="btn btn-sm cancel-btn" data-id="<?= (int)$o['id'] ?>"><i class="bi bi-slash-circle"></i> Cancel</button>
                                 <?php endif; ?>
                             </div>
                         </div>
@@ -283,7 +318,9 @@ ui_head('Orders Zangu — ' . APP_NAME, 'app');
                         $group       = orderGroup($o['status']);
                         $statusLabel = normalizeOrderStatus($o['status']);
                         $isCompleted = $statusLabel === 'Completed';
+                        $isCanceled  = $statusLabel === 'Canceled';
                         $canRefill   = !empty($o['refill_available']) && empty($o['refill_requested']) && $isCompleted;
+                        $showCancel  = !$isCompleted && !$isCanceled && serviceSupportsCancellation($o);
                     ?>
                     <div class="ocard" data-group="<?= $group ?>" data-search="<?= strtolower(htmlspecialchars($o['id'] . ' ' . $o['service_name'] . ' ' . ($o['link'] ?? ''))) ?>">
                         <div class="oico"><i class="bi bi-bag-check"></i></div>
@@ -311,6 +348,9 @@ ui_head('Orders Zangu — ' . APP_NAME, 'app');
                                     <button class="btn btn-sm refill-btn" data-id="<?= (int)$o['id'] ?>"><i class="bi bi-arrow-repeat"></i> Omba Refill</button>
                                 <?php elseif (!empty($o['refill_requested'])): ?>
                                     <span class="badge-soft badge-warning" style="font-size:.66rem;"><i class="bi bi-hourglass-split"></i> Refill: <?= htmlspecialchars($o['refill_status'] ?: 'requested') ?></span>
+                                <?php endif; ?>
+                                <?php if ($showCancel): ?>
+                                    <button class="btn btn-sm cancel-btn" data-id="<?= (int)$o['id'] ?>"><i class="bi bi-slash-circle"></i> Cancel</button>
                                 <?php endif; ?>
                             </div>
                         </div>
@@ -397,6 +437,20 @@ document.querySelectorAll('.refill-btn').forEach(btn => {
       else { btn.disabled=false; btn.innerHTML='<i class="bi bi-arrow-repeat"></i> Omba Refill'; }
     }catch(e){ toast('Kosa la mtandao.','danger'); btn.disabled=false; btn.innerHTML='<i class="bi bi-arrow-repeat"></i> Omba Refill'; }
   });
+});
+
+document.querySelectorAll('.cancel-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+        if(!confirm('Omba cancellation kwa order hii?')) return;
+        btn.disabled = true; btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Inatuma...';
+        try{
+            const r = await fetch('cancel-order.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({order_id:parseInt(btn.dataset.id)})});
+            const j = await r.json();
+            toast(j.message, j.success?'success':'warning');
+            if(j.success) setTimeout(()=>location.reload(),1200);
+            else { btn.disabled=false; btn.innerHTML='<i class="bi bi-slash-circle"></i> Cancel'; }
+        }catch(e){ toast('Kosa la mtandao.','danger'); btn.disabled=false; btn.innerHTML='<i class="bi bi-slash-circle"></i> Cancel'; }
+    });
 });
 </script>
 JS);
