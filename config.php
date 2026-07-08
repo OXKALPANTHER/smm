@@ -444,7 +444,7 @@ define('MAXIMUM_TOPUP', 10000000);
 define('PRICE_MARKUP_PERCENT', 60);
 
 // Referral reward: the inviter earns this % of a friend's FIRST top-up.
-define('REFERRAL_BONUS_PERCENT', 50);
+define('REFERRAL_BONUS_PERCENT', 20);
 
 // ============================================
 // SUPPORT / COMMUNITY LINKS
@@ -508,7 +508,6 @@ function applyReferralBonus($conn, $depositorId, $depositAmount) {
     $depositAmount = (float)$depositAmount;
     if ($depositorId <= 0 || $depositAmount <= 0) return 0;
 
-    // Who invited this user?
     $stmt = $conn->prepare("SELECT referred_by, username FROM users WHERE id = ?");
     $stmt->bind_param("i", $depositorId);
     $stmt->execute();
@@ -516,24 +515,25 @@ function applyReferralBonus($conn, $depositorId, $depositAmount) {
     $referrerId = (int)($dep['referred_by'] ?? 0);
     if ($referrerId <= 0) return 0;
 
-    // Only on the depositor's FIRST completed top-up (type='credit').
-    $stmt = $conn->prepare("SELECT COUNT(*) c FROM transactions WHERE user_id = ? AND type = 'credit' AND status = 'completed'");
-    $stmt->bind_param("i", $depositorId);
+    $stmt = $conn->prepare("SELECT COUNT(*) c FROM transactions WHERE user_id = ? AND type = 'referral_bonus'");
+    $stmt->bind_param("i", $referrerId);
     $stmt->execute();
-    $completed = (int)($stmt->get_result()->fetch_assoc()['c'] ?? 0);
-    if ($completed !== 1) return 0; // not the first deposit
+    $alreadyAwarded = (int)($stmt->get_result()->fetch_assoc()['c'] ?? 0);
 
-    $pct   = defined('REFERRAL_BONUS_PERCENT') ? (float)REFERRAL_BONUS_PERCENT : 50;
+    if ($alreadyAwarded > 0) {
+        return 0;
+    }
+
+    $pct   = defined('REFERRAL_BONUS_PERCENT') ? (float)REFERRAL_BONUS_PERCENT : 20;
     $bonus = floor($depositAmount * $pct / 100);
     if ($bonus <= 0) return 0;
 
-    // Credit the inviter.
     $stmt = $conn->prepare("UPDATE users SET balance = balance + ? WHERE id = ?");
     $stmt->bind_param("di", $bonus, $referrerId);
     $stmt->execute();
 
     $depName = $dep['username'] ?? ('#' . $depositorId);
-    $desc = "Zawadi ya rufaa: {$pct}% ya deposit ya kwanza ya {$depName}";
+    $desc = "Zawadi ya rufaa: {$pct}% ya deposit ya {$depName}";
     $stmt = $conn->prepare(
         "INSERT INTO transactions (user_id, amount, type, payment_method, gateway, description, external_ref, status, completed_at)
          VALUES (?, ?, 'referral_bonus', 'bonus', 'referral', ?, ?, 'completed', CURRENT_TIMESTAMP)"
