@@ -191,8 +191,15 @@ body.drawer-open .hamburger span:nth-child(3){transform:translateY(-6.4px) rotat
 
 /* toast */
 .toast-wrap{position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:2000;width:calc(100% - 28px);max-width:512px;}
+/* global loading */
+#globalLoader{position:fixed;inset:0;background:rgba(255,255,255,.86);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;z-index:3000;transition:opacity .25s ease;}
+#globalLoader.hidden{opacity:0;pointer-events:none;}
+#globalLoader .loader-card{background:#fff;border-radius:24px;padding:1rem 1.2rem;box-shadow:0 20px 45px rgba(43,54,116,.16);display:flex;align-items:center;gap:.8rem;border:1px solid rgba(108,92,231,.12);}
+#globalLoader .spinner{width:34px;height:34px;border-radius:50%;border:3px solid #e9edf7;border-top-color:var(--primary);animation:spin .9s linear infinite;}
+#globalLoader .loader-text{font-weight:700;color:var(--ink);font-size:.95rem;}
 .skeleton{background:linear-gradient(90deg,#eef1f8 25%,#f7f9ff 50%,#eef1f8 75%);background-size:200% 100%;animation:sk 1.2s infinite;border-radius:10px;height:14px;}
 @keyframes sk{0%{background-position:200% 0}100%{background-position:-200% 0}}
+@keyframes spin{to{transform:rotate(360deg);}}
 </style>
 {$extraHead}
 HTML;
@@ -201,6 +208,7 @@ HTML;
 </head>
 <body class="{$bodyClass}">
 <div class="toast-wrap" id="toastWrap"></div>
+<div id="globalLoader" aria-live="polite" aria-label="Loading"><div class="loader-card"><div class="spinner"></div><div class="loader-text">Loading...</div></div></div>
 HTML;
 }
 
@@ -315,6 +323,28 @@ function toast(msg,type='primary'){
   document.getElementById('toastWrap').appendChild(el);
   setTimeout(()=>{el.style.transition='opacity .4s';el.style.opacity='0';setTimeout(()=>el.remove(),400);},4200);
 }
+(function(){
+  const loader=document.getElementById('globalLoader');
+  if(!loader) return;
+  function showLoader(){ if(loader) loader.classList.remove('hidden'); }
+  function hideLoader(){ if(loader) loader.classList.add('hidden'); }
+  window.addEventListener('beforeunload', showLoader);
+  window.addEventListener('pageshow', hideLoader);
+  document.addEventListener('DOMContentLoaded', ()=> setTimeout(hideLoader, 220));
+  document.addEventListener('click', function(e){
+    const link=e.target.closest('a');
+    if(!link) return;
+    const href=link.getAttribute('href')||'';
+    if(!href || href.startsWith('#') || href.startsWith('javascript:') || link.target==='_' || link.rel==='noopener') return;
+    const sameOrigin = /^https?:\/\//.test(href) ? window.location.origin===new URL(href, window.location.href).origin : true;
+    if(sameOrigin && !link.dataset.noLoader){ showLoader(); }
+  });
+  document.addEventListener('submit', function(e){
+    const form=e.target;
+    if(form && !form.dataset.noLoader){ showLoader(); }
+  });
+  window.addEventListener('load', ()=> setTimeout(hideLoader, 180));
+})();
 </script>
 {$extraScript}
 HTML;
