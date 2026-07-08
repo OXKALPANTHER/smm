@@ -38,6 +38,11 @@ class APIHandler {
      * Configure API settings based on service
      */
     private function configureService($service) {
+        $service = strtolower((string)$service);
+        if (in_array($service, ['premium', 'pro', 'pro-service', 'partner'], true)) {
+            $service = 'fastway';
+        }
+
         switch($service) {
             case 'fastway':
                 $this->api_key    = FASTWAY_API_KEY;

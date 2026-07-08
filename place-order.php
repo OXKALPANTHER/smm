@@ -50,11 +50,17 @@ if ($service_id <= 0 || $quantity <= 0 || $link === '') {
     jsonOut(false, 'Tafadhali jaza huduma, idadi na link.', [], 422);
 }
 
-// Does the user want the alternative (FastWay / "Huduma Pro") provider?
+// Does the user want the premium (hidden) service pool?
 // This must be known up front so we resolve the service and its price from
-// the SAME catalogue we will order against — Boost and FastWay have separate
-// service_id spaces and prices, so resolving from the wrong one mischarges.
+// the SAME catalogue we will order against — Boost and the premium pool have
+// separate service_id spaces and prices, so resolving from the wrong one mischarges.
 $use_fallback = filter_var($input['use_fallback'] ?? false, FILTER_VALIDATE_BOOLEAN);
+$provider_input = strtolower(trim((string)($input['provider'] ?? '')));
+if (in_array($provider_input, ['premium', 'pro', 'pro-service', 'partner'], true)) {
+    $use_fallback = true;
+} elseif ($provider_input === 'boost') {
+    $use_fallback = false;
+}
 
 try {
     // Resolve from the catalogue of the provider we'll actually order against.

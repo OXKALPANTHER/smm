@@ -167,54 +167,13 @@ ui_head('Orders Zangu — ' . APP_NAME, 'app');
 
 <div class="container px-3" style="margin-top:-1.5rem;">
 
-    <!-- Place Order Section (Pro) -->
-    <div class="place-order-section" style="margin-bottom:2.5rem;">
-        <div class="place-order-card">
-            <div class="place-order-header">
-                <div class="place-order-title">
-                    <i class="bi bi-rocket-fill" style="font-size:1.4rem;color:#7c3aed;margin-right:0.5rem;"></i>
-                    <div>
-                        <h5 class="mb-0 fw-bold">Weka Order Mpya</h5>
-                        <p class="mb-0 small text-muted">Jaza huduma, idadi na link kwenye pointi hapa chini</p>
-                    </div>
-                </div>
-                <span class="balance-pill">💰 Salio: <strong><?= number_format($user['balance'], 0) ?> TZS</strong></span>
+    <div class="card-soft" style="margin-bottom:2.5rem;">
+        <div class="d-flex align-items-center justify-content-between gap-2 flex-wrap">
+            <div>
+                <div class="section-title"><span class="section-ico"><i class="bi bi-rocket-fill"></i></span> Dashboard ya Pro</div>
+                <p class="mb-0 small text-muted" style="margin-left:3.1rem;">Kipengele cha kuzalisha na kusimamia huduma cha Pro kimehifadhiwa kwenye dashboard maalum.</p>
             </div>
-
-            <div class="place-order-form">
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Huduma *</label>
-                        <select id="serviceSelect" class="form-control" required>
-                            <option value="">-- Chagua huduma --</option>
-                        </select>
-                        <small class="form-text">Min/Max: <span id="minMax">-</span></small>
-                    </div>
-
-                    <div class="form-group">
-                        <label>Idadi *</label>
-                        <input type="number" id="quantityInput" class="form-control" placeholder="Idadi" required min="1">
-                        <small class="form-text">Bei: <strong><span id="costDisplay">0</span> TZS</strong></small>
-                    </div>
-
-                    <div class="form-group">
-                        <label>Link / URL *</label>
-                        <input type="text" id="linkInput" class="form-control" placeholder="https://..." required>
-                    </div>
-
-                    <div class="form-group">
-                        <label style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0;">
-                            <input type="checkbox" id="useProProvider" style="width:18px;height:18px;cursor:pointer;">
-                            Tumia Huduma Pro
-                        </label>
-                        <small class="form-text">Huduma mbadala inaweza kuwa na bei tofauti</small>
-                    </div>
-
-                    <button class="btn-place-order" id="placeOrderBtn">
-                        <i class="bi bi-send-fill"></i> Weka Order
-                    </button>
-                </div>
-            </div>
+            <a href="pro-dashboard.php" class="btn-grad" style="width:auto;padding:.7rem 1rem;border-radius:999px;font-size:.82rem;">Fungua Dashboard ya Pro</a>
         </div>
     </div>
 
@@ -423,115 +382,6 @@ ui_foot(<<<'JS'
 
     if (empty) empty.style.display = shown ? 'none' : '';
   }));
-})();
-
-// === Order Placement Form ===
-(async () => {
-  const serviceSelect = document.getElementById('serviceSelect');
-  const quantityInput = document.getElementById('quantityInput');
-  const linkInput = document.getElementById('linkInput');
-  const useProProvider = document.getElementById('useProProvider');
-  const placeOrderBtn = document.getElementById('placeOrderBtn');
-  const costDisplay = document.getElementById('costDisplay');
-  const minMaxDisplay = document.getElementById('minMax');
-
-  let services = [];
-
-  // Load services on page load
-  async function loadServices(provider = 'boost') {
-    try {
-      const url = new URL('api-services.php', window.location.href);
-      url.searchParams.set('provider', provider);
-      const r = await fetch(url.toString());
-      const j = await r.json();
-      if (j.success) {
-        services = j.data || [];
-        serviceSelect.innerHTML = '<option value="">-- Chagua huduma --</option>';
-        services.forEach(s => {
-          const opt = document.createElement('option');
-          opt.value = s.id;
-          opt.textContent = `${s.name} (${s.category})`;
-          serviceSelect.appendChild(opt);
-        });
-        updateCost();
-      }
-    } catch (e) {
-      console.error('Failed to load services:', e);
-    }
-  }
-
-  // Calculate cost when service or quantity changes
-  function updateCost() {
-    const serviceId = parseInt(serviceSelect.value);
-    const quantity = parseInt(quantityInput.value) || 0;
-
-    if (!serviceId || !quantity) {
-      costDisplay.textContent = '0';
-      minMaxDisplay.textContent = '-';
-      return;
-    }
-
-    const service = services.find(s => s.id == serviceId);
-    if (service) {
-      const min = Math.max(1, parseInt(service.min) || 1);
-      const max = parseInt(service.max) || 0;
-      const rate = parseFloat(service.rate) || 0;
-      const cost = Math.ceil(quantity * rate);
-
-      minMaxDisplay.textContent = max > 0 ? `${min} - ${max}` : `${min}+`;
-      costDisplay.textContent = cost.toLocaleString();
-    }
-  }
-
-  serviceSelect.addEventListener('change', updateCost);
-  quantityInput.addEventListener('input', updateCost);
-  useProProvider.addEventListener('change', () => {
-    loadServices(useProProvider.checked ? 'fastway' : 'boost');
-  });
-
-  // Place order
-  placeOrderBtn.addEventListener('click', async () => {
-    const serviceId = parseInt(serviceSelect.value);
-    const quantity = parseInt(quantityInput.value) || 0;
-    const link = linkInput.value.trim();
-    const useAlt = useProProvider.checked;
-
-    if (!serviceId || quantity <= 0 || !link) {
-      toast('Tafadhali jaza huduma, idadi na link.', 'warning');
-      return;
-    }
-
-    placeOrderBtn.disabled = true;
-    placeOrderBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Inatuma...';
-
-    try {
-      const r = await fetch('place-order.php', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ service_id: serviceId, quantity, link, use_fallback: useAlt })
-      });
-      const j = await r.json();
-
-      if (j.success) {
-        toast('Order imeweka kwa mafanikio! Akasha inatuma...', 'success');
-        setTimeout(() => location.reload(), 1500);
-      } else if (j.provider_unavailable && j.can_retry_alt) {
-        toast('Huduma ya kawaida haipatikani. Jaribu Huduma Pro?', 'warning');
-        useProProvider.checked = true;
-      } else {
-        toast(j.message || 'Kosa limefanyika.', 'danger');
-      }
-    } catch (e) {
-      toast('Kosa la mtandao.', 'danger');
-      console.error(e);
-    } finally {
-      placeOrderBtn.disabled = false;
-      placeOrderBtn.innerHTML = '<i class="bi bi-send-fill"></i> Weka Order';
-    }
-  });
-
-  // Load services on page load
-  await loadServices();
 })();
 
 // Refill requests

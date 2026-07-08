@@ -215,11 +215,12 @@ function ui_nav($active = 'home', $opts = []) {
     $appName  = APP_NAME;
 
     $links = [
-        'home'    => ['index.php',   'bi-grid-1x2-fill',  'Dashboard'],
-        'orders'  => ['orders.php',  'bi-bag-check-fill', 'Orders Zangu'],
-        'topup'   => ['#',           'bi-wallet2',         'Ongeza Salio'],
-        'howto'   => ['howto.php',   'bi-journal-text',    'Mwongozo'],
-        'profile' => ['profile.php', 'bi-person-fill',     'Profile'],
+        'home'    => ['index.php',      'bi-grid-1x2-fill',  'Dashboard'],
+        'orders'  => ['orders.php',     'bi-bag-check-fill', 'Orders Zangu'],
+        'pro'     => ['pro-dashboard.php', 'bi-rocket-fill', 'Pro Dashboard'],
+        'topup'   => ['#',              'bi-wallet2',        'Ongeza Salio'],
+        'howto'   => ['howto.php',      'bi-journal-text',   'Mwongozo'],
+        'profile' => ['profile.php',    'bi-person-fill',    'Profile'],
     ];
     if ($role === 'admin') {
         $links['admin'] = ['admin.php', 'bi-speedometer2', 'Admin Panel'];

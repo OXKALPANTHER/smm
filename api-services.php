@@ -14,10 +14,12 @@ try {
     $query    = trim($_GET['q'] ?? '');
     $refresh  = isset($_GET['refresh']) && $_GET['refresh'] === 'true';
 
-    // Provider selection: 'boost' (Huduma Kawaida) is the default; 'fastway'
-    // (Huduma Pro) is offered when the primary provider can't place an order.
+    // Provider selection: 'boost' (Huduma Kawaida) is the default; 'premium'
+    // uses the hidden Pro service pool in the background.
     $provider = strtolower(trim($_GET['provider'] ?? 'boost'));
-    if (!in_array($provider, ['boost', 'fastway'], true)) {
+    if (in_array($provider, ['premium', 'pro', 'pro-service', 'partner'], true)) {
+        $provider = 'fastway';
+    } elseif (!in_array($provider, ['boost', 'fastway'], true)) {
         $provider = 'boost';
     }
 
