@@ -440,8 +440,8 @@ define('MINIMUM_TOPUP', 1000);
 define('MAXIMUM_TOPUP', 10000000);
 
 // Profit margin added on top of the provider's real price (percent).
-// e.g. 50 => the user sees & pays 50% more than the API price.
-define('PRICE_MARKUP_PERCENT', 50);
+// e.g. 60 => the user sees & pays 60% more than the API price.
+define('PRICE_MARKUP_PERCENT', 60);
 
 // Referral reward: the inviter earns this % of a friend's FIRST top-up.
 define('REFERRAL_BONUS_PERCENT', 50);

@@ -33,19 +33,32 @@ $orders = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 
 /** Bucket a provider status string into one of our tab groups. */
 function orderGroup($status) {
-    $s = strtolower((string)$status);
-    if (strpos($s, 'complet') !== false || strpos($s, 'partial') !== false) return 'completed';
-    if (strpos($s, 'cancel')  !== false || strpos($s, 'fail') !== false
-        || strpos($s, 'refund') !== false || strpos($s, 'error') !== false)  return 'canceled';
+    $s = normalizeOrderStatus($status);
+    if ($s === 'Completed') return 'completed';
+    if ($s === 'Canceled') return 'canceled';
     return 'active'; // pending / processing / in progress / unknown
+}
+
+function normalizeOrderStatus($status) {
+    $s = strtolower((string)$status);
+    if (strpos($s, 'cancel') !== false || strpos($s, 'fail') !== false
+        || strpos($s, 'refund') !== false || strpos($s, 'error') !== false) {
+        return 'Canceled';
+    }
+    if (strpos($s, 'complet') !== false || strpos($s, 'partial') !== false) {
+        return 'Completed';
+    }
+    if (strpos($s, 'process') !== false || strpos($s, 'progress') !== false || strpos($s, 'in progress') !== false) {
+        return 'Processing';
+    }
+    return 'Pending';
 }
 
 /** Soft badge class for a status. */
 function obadge($status) {
-    $s = strtolower((string)$status);
-    if (strpos($s, 'complet') !== false || strpos($s, 'partial') !== false) return 'badge-success';
-    if (strpos($s, 'cancel')  !== false || strpos($s, 'fail') !== false
-        || strpos($s, 'refund') !== false || strpos($s, 'error') !== false)  return 'badge-danger';
+    $s = normalizeOrderStatus($status);
+    if ($s === 'Completed') return 'badge-success';
+    if ($s === 'Canceled') return 'badge-danger';
     return 'badge-warning';
 }
 
@@ -192,7 +205,7 @@ ui_head('Orders Zangu — ' . APP_NAME, 'app');
                     <div class="form-group">
                         <label style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0;">
                             <input type="checkbox" id="useProProvider" style="width:18px;height:18px;cursor:pointer;">
-                            Tumia Huduma Pro (FastWay)
+                            Tumia Huduma Pro
                         </label>
                         <small class="form-text">Huduma mbadala inaweza kuwa na bei tofauti</small>
                     </div>
@@ -239,8 +252,8 @@ ui_head('Orders Zangu — ' . APP_NAME, 'app');
                 <?php foreach ($ordersByGateway['primary'] as $o): ?>
                     <?php
                         $group       = orderGroup($o['status']);
-                        $isCompleted = strpos(strtolower($o['status']), 'complet') !== false
-                                    || strpos(strtolower($o['status']), 'partial') !== false;
+                        $statusLabel = normalizeOrderStatus($o['status']);
+                        $isCompleted = $statusLabel === 'Completed';
                         $canRefill   = !empty($o['refill_available']) && empty($o['refill_requested']) && $isCompleted;
                     ?>
                     <div class="ocard" data-group="<?= $group ?>" data-search="<?= strtolower(htmlspecialchars($o['id'] . ' ' . $o['service_name'] . ' ' . ($o['link'] ?? ''))) ?>">
@@ -253,14 +266,18 @@ ui_head('Orders Zangu — ' . APP_NAME, 'app');
                                 <?= !empty($o['refill_available']) ? ' · <i class="bi bi-arrow-repeat"></i> refill' : '' ?>
                             </div>
                             <?php if (!empty($o['link'])): ?>
-                                <div class="olink"><i class="bi bi-link-45deg"></i> <?= htmlspecialchars(mb_substr($o['link'], 0, 50)) ?></div>
+                                <div class="olink"><i class="bi bi-link-45deg"></i>
+                                    <a href="<?= htmlspecialchars($o['link']) ?>" target="_blank" rel="noopener noreferrer" style="color:inherit;text-decoration:underline;">
+                                        <?= htmlspecialchars(mb_substr($o['link'], 0, 60)) ?>
+                                    </a>
+                                </div>
                             <?php endif; ?>
                             
                             <!-- Order Progress Bar -->
                             <?= renderProgressBar($o['status'], $o['progress'] ?? null) ?>
                             
                             <div class="mt-2 d-flex align-items-center gap-2 flex-wrap">
-                                <span class="badge-soft <?= obadge($o['status']) ?>"><?= htmlspecialchars($o['status']) ?></span>
+                                <span class="badge-soft <?= obadge($o['status']) ?>"><?= htmlspecialchars($statusLabel) ?></span>
                                 <?php if ($canRefill): ?>
                                     <button class="btn btn-sm refill-btn" data-id="<?= (int)$o['id'] ?>"><i class="bi bi-arrow-repeat"></i> Omba Refill</button>
                                 <?php elseif (!empty($o['refill_requested'])): ?>
@@ -305,8 +322,8 @@ ui_head('Orders Zangu — ' . APP_NAME, 'app');
                 <?php foreach ($ordersByGateway['partner'] as $o): ?>
                     <?php
                         $group       = orderGroup($o['status']);
-                        $isCompleted = strpos(strtolower($o['status']), 'complet') !== false
-                                    || strpos(strtolower($o['status']), 'partial') !== false;
+                        $statusLabel = normalizeOrderStatus($o['status']);
+                        $isCompleted = $statusLabel === 'Completed';
                         $canRefill   = !empty($o['refill_available']) && empty($o['refill_requested']) && $isCompleted;
                     ?>
                     <div class="ocard" data-group="<?= $group ?>" data-search="<?= strtolower(htmlspecialchars($o['id'] . ' ' . $o['service_name'] . ' ' . ($o['link'] ?? ''))) ?>">
@@ -319,14 +336,18 @@ ui_head('Orders Zangu — ' . APP_NAME, 'app');
                                 <?= !empty($o['refill_available']) ? ' · <i class="bi bi-arrow-repeat"></i> refill' : '' ?>
                             </div>
                             <?php if (!empty($o['link'])): ?>
-                                <div class="olink"><i class="bi bi-link-45deg"></i> <?= htmlspecialchars(mb_substr($o['link'], 0, 50)) ?></div>
+                                <div class="olink"><i class="bi bi-link-45deg"></i>
+                                    <a href="<?= htmlspecialchars($o['link']) ?>" target="_blank" rel="noopener noreferrer" style="color:inherit;text-decoration:underline;">
+                                        <?= htmlspecialchars(mb_substr($o['link'], 0, 60)) ?>
+                                    </a>
+                                </div>
                             <?php endif; ?>
                             
                             <!-- Order Progress Bar -->
                             <?= renderProgressBar($o['status'], $o['progress'] ?? null) ?>
                             
                             <div class="mt-2 d-flex align-items-center gap-2 flex-wrap">
-                                <span class="badge-soft <?= obadge($o['status']) ?>"><?= htmlspecialchars($o['status']) ?></span>
+                                <span class="badge-soft <?= obadge($o['status']) ?>"><?= htmlspecialchars($statusLabel) ?></span>
                                 <?php if ($canRefill): ?>
                                     <button class="btn btn-sm refill-btn" data-id="<?= (int)$o['id'] ?>"><i class="bi bi-arrow-repeat"></i> Omba Refill</button>
                                 <?php elseif (!empty($o['refill_requested'])): ?>
@@ -417,9 +438,11 @@ ui_foot(<<<'JS'
   let services = [];
 
   // Load services on page load
-  async function loadServices() {
+  async function loadServices(provider = 'boost') {
     try {
-      const r = await fetch('api-services.php');
+      const url = new URL('api-services.php', window.location.href);
+      url.searchParams.set('provider', provider);
+      const r = await fetch(url.toString());
       const j = await r.json();
       if (j.success) {
         services = j.data || [];
@@ -430,6 +453,7 @@ ui_foot(<<<'JS'
           opt.textContent = `${s.name} (${s.category})`;
           serviceSelect.appendChild(opt);
         });
+        updateCost();
       }
     } catch (e) {
       console.error('Failed to load services:', e);
@@ -461,6 +485,9 @@ ui_foot(<<<'JS'
 
   serviceSelect.addEventListener('change', updateCost);
   quantityInput.addEventListener('input', updateCost);
+  useProProvider.addEventListener('change', () => {
+    loadServices(useProProvider.checked ? 'fastway' : 'boost');
+  });
 
   // Place order
   placeOrderBtn.addEventListener('click', async () => {
