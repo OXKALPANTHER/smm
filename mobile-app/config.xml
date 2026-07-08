@@ -1,0 +1,12 @@
+<?xml version='1.0' encoding='utf-8'?>
+<widget id="com.royalsmm.app" version="1.0.0" xmlns="http://www.w3.org/ns/widgets" xmlns:gap="http://phonegap.com/ns/1.0">
+  <name>Royal SMM</name>
+  <description>Mobile app wrapper for Royal SMM dashboard</description>
+  <author email="support@example.com" href="https://example.com">Royal Team</author>
+  <content src="index.html" />
+  <access origin="*" />
+  <preference name="DisallowOverscroll" value="true" />
+  <preference name="Orientation" value="portrait" />
+  <preference name="Fullscreen" value="false" />
+  <icon src="www/icon.png" />
+</widget>

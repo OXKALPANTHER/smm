@@ -1,0 +1,9 @@
+{
+  "appId": "com.royalsmm.app",
+  "appName": "Royal SMM",
+  "webDir": "www",
+  "bundledWebRuntime": false,
+  "server": {
+    "androidScheme": "https"
+  }
+}
