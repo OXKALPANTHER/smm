@@ -515,12 +515,12 @@ function applyReferralBonus($conn, $depositorId, $depositAmount) {
     $referrerId = (int)($dep['referred_by'] ?? 0);
     if ($referrerId <= 0) return 0;
 
-    $stmt = $conn->prepare("SELECT COUNT(*) c FROM transactions WHERE user_id = ? AND type = 'referral_bonus'");
-    $stmt->bind_param("i", $referrerId);
+    $stmt = $conn->prepare("SELECT COUNT(*) c FROM transactions WHERE user_id = ? AND type = 'credit' AND status = 'completed'");
+    $stmt->bind_param("i", $depositorId);
     $stmt->execute();
-    $alreadyAwarded = (int)($stmt->get_result()->fetch_assoc()['c'] ?? 0);
+    $completedDeposits = (int)($stmt->get_result()->fetch_assoc()['c'] ?? 0);
 
-    if ($alreadyAwarded > 0) {
+    if ($completedDeposits !== 1) {
         return 0;
     }
 
