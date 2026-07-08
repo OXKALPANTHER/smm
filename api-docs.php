@@ -6,7 +6,7 @@
  */
 
 require_once 'config.php';
-requireAdmin();
+requireLogin();
 
 ?>
 <!DOCTYPE html>

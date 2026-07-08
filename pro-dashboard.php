@@ -16,28 +16,27 @@ $username = $user['username'] ?? 'Mteja';
 ui_head('Pro Dashboard — ' . APP_NAME, 'app');
 ?>
 <style>
-.pro-hero{background:linear-gradient(135deg,#6c5ce7 0%,#4834d4 100%);border-radius:28px;padding:1.35rem 1.2rem;color:#fff;box-shadow:0 20px 42px rgba(72,52,212,.28);margin-bottom:1rem;}
-.pro-hero h2{font-weight:800;font-size:1.25rem;margin:0;}
-.pro-hero p{margin:.3rem 0 0;opacity:.9;font-size:.85rem;}
-.pro-card{background:#fff;border-radius:22px;padding:1rem 1.05rem;box-shadow:0 14px 34px rgba(43,54,116,.06);border:1px solid rgba(43,54,116,.04);margin-bottom:1rem;}
-.section-title{font-weight:700;font-size:1rem;display:flex;align-items:center;gap:.6rem;margin-bottom:.2rem;}
-.section-ico{width:40px;height:40px;border-radius:13px;background:linear-gradient(135deg,#6c5ce7,#4834d4);color:#fff;display:flex;align-items:center;justify-content:center;font-size:1.05rem;flex:0 0 auto;}
+.hero{border-radius:26px;padding:1.5rem 1.4rem;color:#fff;position:relative;overflow:hidden;background:linear-gradient(135deg,var(--primary),var(--primary-2));box-shadow:0 18px 40px rgba(72,52,212,.30);margin-bottom:1rem;}
+.hero::after{content:'';position:absolute;right:-40px;top:-40px;width:160px;height:160px;background:rgba(255,255,255,.12);border-radius:50%;}
+.card-soft{background:var(--card);border-radius:26px;padding:1.4rem 1.25rem;box-shadow:0 18px 40px rgba(43,54,116,.06);border:1px solid rgba(43,54,116,.04);margin-bottom:1rem;}
+.section-title{font-weight:700;font-size:1.05rem;display:flex;align-items:center;gap:.55rem;}
+.section-ico{width:40px;height:40px;border-radius:13px;background:linear-gradient(135deg,var(--primary),var(--primary-2));color:#fff;display:flex;align-items:center;justify-content:center;font-size:1.15rem;}
 .stat-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.65rem;margin-top:.8rem;}
 .stat-box{background:#f8faff;border:1px solid #edf0f7;border-radius:16px;padding:.75rem;text-align:center;}
 .stat-box .k{font-size:.62rem;text-transform:uppercase;letter-spacing:.6px;color:#8a93b2;font-weight:700;}
 .stat-box .v{font-size:1rem;font-weight:800;color:#2b3674;margin-top:.2rem;}
-.form-group{display:flex;flex-direction:column;gap:.35rem;margin-bottom:.8rem;}
-.form-group label{font-size:.76rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#6b7280;}
-.form-control,.form-select{border-radius:14px;border:1.5px solid #e9edf7;padding:.75rem .85rem;background:#fafbff;font-size:.9rem;}
-.form-control:focus,.form-select:focus{outline:none;border-color:#6c5ce7;box-shadow:0 0 0 4px rgba(108,92,231,.12);background:#fff;}
-.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:.75rem .85rem;border:1px solid #eceff7;border-radius:14px;background:#f9fbff;}
-.toggle-row input{width:18px;height:18px;accent-color:#6c5ce7;}
-.price-box{background:linear-gradient(135deg,#f3f1ff,#ecfbf8);border:1px dashed rgba(108,92,231,.35);border-radius:18px;padding:1rem;text-align:center;margin-top:.4rem;}
-.price-box .lbl{font-size:.72rem;font-weight:700;color:#8a93b2;text-transform:uppercase;letter-spacing:.5px;}
-.price-box .val{font-size:1.6rem;font-weight:800;color:#4834d4;margin:.2rem 0 .1rem;}
+.form-label{font-weight:600;font-size:.74rem;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:.4rem;}
+.form-control,.form-select{border-radius:15px;border:1.5px solid #e9edf7;padding:.8rem 1rem;background:#fafbff;font-size:.95rem;}
+.form-control:focus,.form-select:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 4px rgba(108,92,231,.12);background:#fff;}
+.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:.75rem .85rem;border:1px solid #eceff7;border-radius:14px;background:#f9fbff;gap:.6rem;flex-wrap:wrap;}
+.toggle-row input{width:18px;height:18px;accent-color:var(--primary);}
+.price-box{background:linear-gradient(135deg,#f3f1ff,#ecfbf8);border:1px dashed rgba(108,92,231,.35);border-radius:20px;padding:1.15rem;text-align:center;margin-top:.4rem;}
+.price-box .lbl{font-size:.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;}
+.price-box .val{font-size:1.6rem;font-weight:800;color:var(--primary-2);margin:.2rem 0 .1rem;}
 .price-box .hint{font-size:.78rem;color:#5a6a85;}
-.btn-pro{width:100%;background:linear-gradient(135deg,#6c5ce7,#4834d4);color:#fff;border:none;border-radius:14px;padding:.8rem 1rem;font-weight:700;display:flex;align-items:center;justify-content:center;gap:.45rem;box-shadow:0 12px 24px rgba(72,52,212,.24);}
-.btn-pro:disabled{opacity:.6;cursor:not-allowed;}
+.btn-grad{background:linear-gradient(135deg,var(--primary),var(--primary-2));border:none;border-radius:15px;padding:.85rem;font-weight:700;color:#fff;width:100%;box-shadow:0 12px 26px rgba(72,52,212,.30);transition:.2s;display:flex;align-items:center;justify-content:center;gap:.5rem;}
+.btn-grad:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 16px 32px rgba(72,52,212,.42);color:#fff;}
+.btn-grad:disabled{opacity:.55;}
 .code-block{background:#111827;color:#f9fafb;border-radius:14px;padding:.9rem;font-size:.8rem;overflow:auto;white-space:pre;}
 .doc-list{margin:0;padding-left:1rem;color:#4b5563;font-size:.85rem;}
 .doc-list li{margin-bottom:.4rem;}
@@ -46,17 +45,17 @@ ui_head('Pro Dashboard — ' . APP_NAME, 'app');
 </style>
 
 <div class="container px-3" style="margin-top:-1.2rem;">
-    <div class="pro-hero">
+    <div class="hero">
         <div class="d-flex align-items-center gap-2">
             <i class="bi bi-rocket-fill" style="font-size:1.4rem;"></i>
             <div>
-                <h2>Pro Reseller Dashboard</h2>
-                <p>Browse premium services, view real prices, and place orders from a polished reseller workspace.</p>
+                <h4 class="fw-bold mb-0">Pro Reseller Dashboard</h4>
+                <p class="mb-0 small opacity-75">Browse premium services, view real prices, and place orders from a polished reseller workspace.</p>
             </div>
         </div>
     </div>
 
-    <div class="pro-card">
+    <div class="card-soft">
         <div class="section-title"><span class="section-ico"><i class="bi bi-speedometer2"></i></span> Dashboard Overview</div>
         <div class="stat-grid">
             <div class="stat-box">
@@ -74,7 +73,7 @@ ui_head('Pro Dashboard — ' . APP_NAME, 'app');
         </div>
     </div>
 
-    <div class="pro-card">
+    <div class="card-soft">
         <div class="section-title"><span class="section-ico"><i class="bi bi-box-seam"></i></span> Service Explorer</div>
         <p class="small-muted mb-3">Choose a service, see its price clearly, and place an order in seconds.</p>
 
@@ -86,20 +85,20 @@ ui_head('Pro Dashboard — ' . APP_NAME, 'app');
             <span class="small-muted">This routes through our premium service pool in the background.</span>
         </div>
 
-        <div class="form-group" style="margin-top:.9rem;">
-            <label for="serviceSelect">Service</label>
+        <div class="mt-3">
+            <label class="form-label" for="serviceSelect">Service</label>
             <select id="serviceSelect" class="form-select" required>
                 <option value="">Loading services...</option>
             </select>
         </div>
 
-        <div class="form-group">
-            <label for="quantityInput">Quantity</label>
+        <div class="mt-3">
+            <label class="form-label" for="quantityInput">Quantity</label>
             <input type="number" id="quantityInput" class="form-control" min="1" value="100" placeholder="Enter quantity">
         </div>
 
-        <div class="form-group">
-            <label for="linkInput">Link / Username</label>
+        <div class="mt-3">
+            <label class="form-label" for="linkInput">Link / Username</label>
             <input type="text" id="linkInput" class="form-control" placeholder="https://...">
         </div>
 
@@ -109,37 +108,26 @@ ui_head('Pro Dashboard — ' . APP_NAME, 'app');
             <div class="hint" id="serviceHint">Choose a service to view pricing and limits.</div>
         </div>
 
-        <button class="btn-pro mt-3" id="placeOrderBtn"><i class="bi bi-send-fill"></i> Place Order</button>
+        <button class="btn-grad mt-3" id="placeOrderBtn"><i class="bi bi-send-fill"></i> Place Order</button>
     </div>
 
-    <div class="pro-card">
-        <div class="section-title"><span class="section-ico"><i class="bi bi-code-square"></i></span> API & Documentation</div>
-        <p class="small-muted mb-3">Use the endpoints below to resell services programmatically.</p>
+    <div class="card-soft">
+        <div class="section-title"><span class="section-ico"><i class="bi bi-key-fill"></i></span> API Access</div>
+        <p class="small-muted mb-3">Open the API center to get your key and documentation.</p>
+        <a href="api-center.php" class="btn-grad" style="width:auto;padding:.7rem 1rem;border-radius:999px;display:inline-flex;">Open API Center</a>
+    </div>
 
-        <div class="mb-3">
-            <div class="fw-bold mb-2">1. Fetch services</div>
-            <div class="code-block">GET /api-services.php?provider=premium</div>
-        </div>
+    <div class="card-soft">
+        <div class="section-title"><span class="section-ico"><i class="bi bi-code-square"></i></span> Quick API Example</div>
+        <div class="code-block">GET /api-services.php?provider=premium
 
-        <div class="mb-3">
-            <div class="fw-bold mb-2">2. Place an order</div>
-            <div class="code-block">POST /place-order.php
+POST /place-order.php
 {
   "service_id": 123,
   "quantity": 100,
   "link": "https://instagram.com/username",
   "provider": "premium"
 }</div>
-        </div>
-
-        <div>
-            <div class="fw-bold mb-2">Response fields</div>
-            <ul class="doc-list">
-                <li>Service name, category, minimum and maximum order size</li>
-                <li>Visible price per 1,000 units and per-unit rate</li>
-                <li>Automatic order creation and balance deduction</li>
-            </ul>
-        </div>
     </div>
 </div>
 

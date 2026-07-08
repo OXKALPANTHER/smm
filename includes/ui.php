@@ -218,6 +218,7 @@ function ui_nav($active = 'home', $opts = []) {
         'home'    => ['index.php',      'bi-grid-1x2-fill',  'Dashboard'],
         'orders'  => ['orders.php',     'bi-bag-check-fill', 'Orders Zangu'],
         'pro'     => ['pro-dashboard.php', 'bi-rocket-fill', 'Pro Dashboard'],
+        'api'     => ['api-center.php', 'bi-key-fill', 'API Center'],
         'topup'   => ['#',              'bi-wallet2',        'Ongeza Salio'],
         'howto'   => ['howto.php',      'bi-journal-text',   'Mwongozo'],
         'profile' => ['profile.php',    'bi-person-fill',    'Profile'],

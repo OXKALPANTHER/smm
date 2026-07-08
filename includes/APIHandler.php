@@ -236,25 +236,30 @@ class APIHandler {
             // Perfect Panel (FastWay) returns the id under `service`; Boost uses `service_id`/`id`.
             $id = $service['service_id'] ?? $service['id'] ?? $service['service'] ?? null;
 
-            // The Boost API returns `price_tzs` = price per 1000 units in TZS
-            // and `rate` = price per 1000 in USD. The app charges in TZS, so the
-            // per-unit rate is price_tzs / 1000.
+            // The Boost API returns `price_tzs` = price per 1000 units in TZS.
+            // FastWay can return USD rates instead, so we convert them to TZS first.
             $price_per_k = (float)($service['price_tzs'] ?? 0);
             $rate_usd = (float)($service['rate'] ?? $service['price'] ?? 0);
+            $provider_price_per_k = 0;
 
-            if ($price_per_k <= 0 && $rate_usd > 0) {
-                // Provider quotes in USD/1000 (e.g. FastWay). Convert to TZS/1000
-                // using the configured exchange rate. The profit margin is applied
-                // uniformly below, so DON'T bake an extra markup in here.
-                $usd_to_tzs = defined('USD_TO_TZS_RATE') ? (float)USD_TO_TZS_RATE : 3500;
-                $price_per_k = $rate_usd * $usd_to_tzs;
+            if ($price_per_k <= 0) {
+                $provider_price_per_k = $rate_usd;
+                if ($provider_price_per_k > 0) {
+                    $usd_to_tzs = defined('USD_TO_TZS_RATE') ? (float)USD_TO_TZS_RATE : 3500;
+                    $price_per_k = $provider_price_per_k * $usd_to_tzs;
+                }
+            } elseif ($price_per_k > 0) {
+                $provider_price_per_k = $price_per_k;
+            }
+
+            if ($provider_price_per_k <= 0 && $price_per_k > 0) {
+                $provider_price_per_k = $price_per_k;
             }
 
             // Apply our profit margin on top of the provider's real price.
             $markup = defined('PRICE_MARKUP_PERCENT') ? (float)PRICE_MARKUP_PERCENT : 0;
-            $price_per_k = $price_per_k * (1 + $markup / 100);
-
-            $per_unit = $price_per_k > 0 ? $price_per_k / 1000 : 0;
+            $customer_price_per_k = $price_per_k > 0 ? $price_per_k * (1 + $markup / 100) : 0;
+            $customer_rate = $customer_price_per_k > 0 ? $customer_price_per_k / 1000 : 0;
 
             $formatted[] = [
                 'id' => $id !== null ? (int)$id : null,
@@ -263,9 +268,11 @@ class APIHandler {
                 'description' => $service['description'] ?? $service['desc'] ?? '',
                 'min' => (int)($service['min'] ?? $service['min_quantity'] ?? $service['minimum'] ?? 10),
                 'max' => (int)($service['max'] ?? $service['max_quantity'] ?? $service['maximum'] ?? 10000),
-                'rate' => round($per_unit, 5),          // per-unit price in TZS
-                'price_per_1000' => round($price_per_k), // TZS per 1000 units
-                'rate_usd' => $rate_usd,                 // provider per-1000 USD rate
+                'rate' => round($customer_rate, 5),               // per-unit customer price in TZS
+                'price_per_1000' => round($customer_price_per_k), // TZS per 1000 units after markup
+                'provider_price_per_1000' => round($provider_price_per_k),
+                'rate_usd' => $rate_usd,                         // provider per-1000 USD rate
+                'markup_percent' => $markup,
                 'currency' => CURRENCY_CODE,
                 'api_id' => $id !== null ? (int)$id : null,
                 'status' => $service['status'] ?? 'active',
