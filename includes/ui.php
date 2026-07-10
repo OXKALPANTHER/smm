@@ -161,7 +161,11 @@ body.auth{
 .badge-danger{background:#fdeee9;color:#c0392b;}
 .badge-secondary{background:#eef1f8;color:#5a6a85;}
 
-/* hamburger button (top-right, animated to X) */
+/* top-right action buttons */
+.nav-bell{position:fixed;top:14px;right:72px;z-index:1300;width:46px;height:46px;border-radius:14px;border:none;background:rgba(255,255,255,.92);backdrop-filter:blur(10px);box-shadow:0 10px 26px rgba(43,54,116,.18);display:flex;align-items:center;justify-content:center;color:var(--primary);font-size:1.05rem;transition:transform .2s,box-shadow .2s;position:fixed;}
+.nav-bell:hover{transform:translateY(-1px);box-shadow:0 14px 30px rgba(43,54,116,.22);color:var(--primary-2);}
+.nav-bell:active{transform:scale(.95);} 
+.nav-bell-badge{position:absolute;top:-3px;right:-3px;min-width:18px;height:18px;border-radius:999px;background:#e74c3c;color:#fff;font-size:.68rem;font-weight:800;display:inline-flex;align-items:center;justify-content:center;padding:0 .2rem;box-shadow:0 6px 12px rgba(231,76,60,.28);}
 .hamburger{position:fixed;top:14px;right:14px;z-index:1300;width:46px;height:46px;border-radius:14px;border:none;background:rgba(255,255,255,.9);backdrop-filter:blur(10px);box-shadow:0 10px 26px rgba(43,54,116,.18);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;cursor:pointer;transition:transform .2s;}
 .hamburger:active{transform:scale(.92);}
 .hamburger span{display:block;width:20px;height:2.4px;border-radius:3px;background:var(--ink);transition:.3s;}
@@ -260,7 +264,13 @@ function ui_nav($active = 'home', $opts = []) {
 <a href="{$waChannel}" target="_blank" rel="noopener" class="drawer-link js-nav-link"><span class="di" style="background:#e7fbef;color:#25D366;"><i class="bi bi-megaphone-fill"></i></span>WhatsApp Channel</a>
 HTML;
 
+    $bellBadge = '';
+    if (!empty($_SESSION['user_id']) && $notificationCount > 0) {
+        $bellBadge = '<span class="nav-bell-badge">' . ($notificationCount > 99 ? '99+' : (int)$notificationCount) . '</span>';
+    }
+
     echo <<<HTML
+<a href="notifications.php" class="nav-bell" aria-label="Notisi" title="Notisi"> <i class="bi bi-bell-fill"></i>{$bellBadge}</a>
 <button class="hamburger" id="navToggle" aria-label="Menu"><span></span><span></span><span></span></button>
 <div class="nav-backdrop" id="navBackdrop"></div>
 <aside class="drawer" id="appDrawer">

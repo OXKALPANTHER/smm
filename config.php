@@ -671,6 +671,55 @@ if (!function_exists('markNotificationRead')) {
     }
 }
 
+if (!function_exists('markAllNotificationsRead')) {
+    function markAllNotificationsRead($user_id) {
+        global $conn;
+        $user_id = (int)$user_id;
+        if ($user_id <= 0) {
+            return false;
+        }
+        $stmt = $conn->prepare(
+            "UPDATE notifications
+             SET status = 'read', read_at = CURRENT_TIMESTAMP
+             WHERE status = 'unread' AND (user_id = ? OR target = 'broadcast')"
+        );
+        $stmt->bind_param("i", $user_id);
+        return $stmt ? $stmt->execute() : false;
+    }
+}
+
+if (!function_exists('deleteNotification')) {
+    function deleteNotification($notification_id, $user_id = null) {
+        global $conn;
+        $notification_id = (int)$notification_id;
+        if ($notification_id <= 0) {
+            return false;
+        }
+        if ($user_id !== null) {
+            $user_id = (int)$user_id;
+            $stmt = $conn->prepare("DELETE FROM notifications WHERE id = ? AND (user_id = ? OR target = 'broadcast')");
+            $stmt->bind_param("ii", $notification_id, $user_id);
+        } else {
+            $stmt = $conn->prepare("DELETE FROM notifications WHERE id = ?");
+            $stmt->bind_param("i", $notification_id);
+        }
+        return $stmt ? $stmt->execute() : false;
+    }
+}
+
+if (!function_exists('deleteAllNotifications')) {
+    function deleteAllNotifications($user_id) {
+        global $conn;
+        $user_id = (int)$user_id;
+        if ($user_id <= 0) {
+            return false;
+        }
+        $stmt = $conn->prepare("DELETE FROM notifications WHERE user_id = ? OR target = 'broadcast'");
+        $stmt->bind_param("i", $user_id);
+        return $stmt ? $stmt->execute() : false;
+    }
+}
+
 /**
  * Award the referral bonus when a referred user makes their FIRST top-up.
  *
