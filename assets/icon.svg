@@ -1,33 +1,108 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 900">
+
   <defs>
+
     <linearGradient id="blue" x1="0%" y1="0%" x2="0%" y2="100%">
       <stop offset="0%" stop-color="#1E88E5"/>
       <stop offset="100%" stop-color="#0D47A1"/>
     </linearGradient>
+
     <linearGradient id="orange" x1="0%" y1="0%" x2="0%" y2="100%">
       <stop offset="0%" stop-color="#FFA726"/>
       <stop offset="100%" stop-color="#F4511E"/>
     </linearGradient>
+
     <filter id="shadow">
-      <feDropShadow dx="0" dy="10" stdDeviation="12" flood-color="#000" flood-opacity=".18"/>
+      <feDropShadow dx="0" dy="10" stdDeviation="12"
+      flood-color="#000" flood-opacity=".18"/>
     </filter>
+
   </defs>
+
+  <!-- Logo -->
   <g transform="translate(150,40) scale(.85)" filter="url(#shadow)">
-    <path fill="url(#blue)" d="M80 80 H360 C420 80 470 125 470 185 C470 235 445 270 415 300 H80Z"/>
-    <path fill="url(#orange)" d="M400 80 C570 90 650 180 650 280 C650 360 610 430 520 500 L80 820 V610 L430 350 C500 300 520 255 520 205 C520 135 475 90 400 80Z"/>
-    <path fill="url(#blue)" d="M360 520 L510 415 L700 820 H510Z"/>
+
+    <!-- Blue Top -->
+    <path fill="url(#blue)"
+      d="M80 80
+         H360
+         C420 80 470 125 470 185
+         C470 235 445 270 415 300
+         H80Z"/>
+
+    <!-- Orange Ribbon -->
+    <path fill="url(#orange)"
+      d="M400 80
+         C570 90 650 180 650 280
+         C650 360 610 430 520 500
+         L80 820
+         V610
+         L430 350
+         C500 300 520 255 520 205
+         C520 135 475 90 400 80Z"/>
+
+    <!-- Blue Leg -->
+    <path fill="url(#blue)"
+      d="M360 520
+         L510 415
+         L700 820
+         H510Z"/>
+
   </g>
-  <text x="450" y="720" text-anchor="middle" font-family="Poppins,Arial,sans-serif" font-size="92" font-weight="800">
-    <tspan fill="url(#blue)">ROYAL </tspan>
-    <tspan fill="url(#orange)">PANEL</tspan>
+
+  <!-- Brand Name -->
+  <text
+      x="450"
+      y="720"
+      text-anchor="middle"
+      font-family="Poppins,Arial,sans-serif"
+      font-size="92"
+      font-weight="800">
+
+      <tspan fill="url(#blue)">ROYAL </tspan>
+      <tspan fill="url(#orange)">PANEL</tspan>
+
   </text>
-  <text x="450" y="765" text-anchor="middle" font-family="Poppins,Arial,sans-serif" font-size="26" letter-spacing="4" fill="#666">SOCIAL MEDIA MARKETING</text>
-  <line x1="110" y1="815" x2="360" y2="815" stroke="url(#blue)" stroke-width="5" stroke-linecap="round"/>
-  <line x1="540" y1="815" x2="790" y2="815" stroke="url(#orange)" stroke-width="5" stroke-linecap="round"/>
+
+  <!-- Subtitle -->
+  <text
+      x="450"
+      y="765"
+      text-anchor="middle"
+      font-family="Poppins,Arial,sans-serif"
+      font-size="26"
+      letter-spacing="4"
+      fill="#666">
+
+      SOCIAL MEDIA MARKETING
+
+  </text>
+
+  <!-- Divider -->
+  <line x1="110" y1="815" x2="360" y2="815"
+        stroke="url(#blue)"
+        stroke-width="5"
+        stroke-linecap="round"/>
+
+  <line x1="540" y1="815" x2="790" y2="815"
+        stroke="url(#orange)"
+        stroke-width="5"
+        stroke-linecap="round"/>
+
+  <!-- Crown -->
   <g transform="translate(450 815)">
-    <path fill="url(#orange)" d="M-28 18 L-42 -18 L-15 -2 L0 -35 L15 -2 L42 -18 L28 18Z"/>
-    <circle cx="-42" cy="-18" r="4" fill="#FFD54F"/>
-    <circle cx="0" cy="-35" r="4" fill="#FFD54F"/>
-    <circle cx="42" cy="-18" r="4" fill="#FFD54F"/>
+      <path fill="url(#orange)"
+      d="M-28 18
+         L-42 -18
+         L-15 -2
+         L0 -35
+         L15 -2
+         L42 -18
+         L28 18Z"/>
+
+      <circle cx="-42" cy="-18" r="4" fill="#FFD54F"/>
+      <circle cx="0" cy="-35" r="4" fill="#FFD54F"/>
+      <circle cx="42" cy="-18" r="4" fill="#FFD54F"/>
   </g>
+
 </svg>
