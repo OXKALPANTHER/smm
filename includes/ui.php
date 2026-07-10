@@ -162,11 +162,12 @@ body.auth{
 .badge-secondary{background:#eef1f8;color:#5a6a85;}
 
 /* top-right action buttons */
-.nav-bell{position:fixed;top:14px;right:72px;z-index:1300;width:46px;height:46px;border-radius:14px;border:none;background:rgba(255,255,255,.92);backdrop-filter:blur(10px);box-shadow:0 10px 26px rgba(43,54,116,.18);display:flex;align-items:center;justify-content:center;color:var(--primary);font-size:1.05rem;transition:transform .2s,box-shadow .2s;position:fixed;}
+.top-actions{position:fixed;top:14px;right:14px;z-index:1600;display:flex;align-items:center;gap:8px;}
+.nav-bell{width:46px;height:46px;border-radius:14px;border:1px solid rgba(108,92,231,.12);background:rgba(255,255,255,.95);backdrop-filter:blur(10px);box-shadow:0 10px 26px rgba(43,54,116,.18);display:flex;align-items:center;justify-content:center;color:var(--primary);font-size:1.05rem;transition:transform .2s,box-shadow .2s;text-decoration:none;position:relative;}
 .nav-bell:hover{transform:translateY(-1px);box-shadow:0 14px 30px rgba(43,54,116,.22);color:var(--primary-2);}
 .nav-bell:active{transform:scale(.95);} 
 .nav-bell-badge{position:absolute;top:-3px;right:-3px;min-width:18px;height:18px;border-radius:999px;background:#e74c3c;color:#fff;font-size:.68rem;font-weight:800;display:inline-flex;align-items:center;justify-content:center;padding:0 .2rem;box-shadow:0 6px 12px rgba(231,76,60,.28);}
-.hamburger{position:fixed;top:14px;right:14px;z-index:1300;width:46px;height:46px;border-radius:14px;border:none;background:rgba(255,255,255,.9);backdrop-filter:blur(10px);box-shadow:0 10px 26px rgba(43,54,116,.18);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;cursor:pointer;transition:transform .2s;}
+.hamburger{width:46px;height:46px;border-radius:14px;border:none;background:rgba(255,255,255,.94);backdrop-filter:blur(10px);box-shadow:0 10px 26px rgba(43,54,116,.18);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;cursor:pointer;transition:transform .2s;}
 .hamburger:active{transform:scale(.92);}
 .hamburger span{display:block;width:20px;height:2.4px;border-radius:3px;background:var(--ink);transition:.3s;}
 body.drawer-open .hamburger span:nth-child(1){transform:translateY(6.4px) rotate(45deg);}
@@ -270,8 +271,10 @@ HTML;
     }
 
     echo <<<HTML
-<a href="notifications.php" class="nav-bell" aria-label="Notisi" title="Notisi"> <i class="bi bi-bell-fill"></i>{$bellBadge}</a>
-<button class="hamburger" id="navToggle" aria-label="Menu"><span></span><span></span><span></span></button>
+<div class="top-actions">
+  <a href="notifications.php" class="nav-bell" aria-label="Notisi" title="Notisi"><i class="bi bi-bell-fill"></i>{$bellBadge}</a>
+  <button class="hamburger" id="navToggle" aria-label="Menu"><span></span><span></span><span></span></button>
+</div>
 <div class="nav-backdrop" id="navBackdrop"></div>
 <aside class="drawer" id="appDrawer">
   <div class="drawer-head">
