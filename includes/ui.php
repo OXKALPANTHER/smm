@@ -11,7 +11,9 @@
  *   ui_foot();                      // closes body/html + loads scripts
  */
 
-if (!defined('APP_NAME')) { define('APP_NAME', 'Royal'); }
+if (!defined('APP_NAME')) {
+  define('APP_NAME', 'Royal');
+}
 
 require_once __DIR__ . '/pwa.php';
 
@@ -20,13 +22,14 @@ require_once __DIR__ . '/pwa.php';
  * <svg> sized to $px (no external CSS, so it renders anywhere). Features curved
  * arches, a jewelled band, a ruby centre gem and a soft highlight for sheen.
  */
-function ui_crown_svg($px = 26) {
-    $px = (int)$px;
-    // Unique gradient ids per size so multiple crowns on one page don't clash.
-    $g  = 'rcg' . $px;   // gold body
-    $gb = 'rcb' . $px;   // band
-    $gh = 'rch' . $px;   // highlight
-    return <<<SVG
+function ui_crown_svg($px = 26)
+{
+  $px = (int) $px;
+  // Unique gradient ids per size so multiple crowns on one page don't clash.
+  $g = 'rcg' . $px;   // gold body
+  $gb = 'rcb' . $px;   // band
+  $gh = 'rch' . $px;   // highlight
+  return <<<SVG
 <svg width="{$px}" height="{$px}" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
   <defs>
     <linearGradient id="{$g}" x1="10" y1="6" x2="34" y2="34" gradientUnits="userSpaceOnUse">
@@ -70,36 +73,38 @@ SVG;
  * @param bool $wordmark show the text wordmark next to the emblem
  * @param int  $size     emblem size in px
  */
-function ui_logo($wordmark = true, $size = 46) {
-    $size   = (int)$size;
-    $radius = (int)round($size * 0.30);
-    $crown  = ui_crown_svg((int)round($size * 0.58));
-    // Rich badge: layered purple gradient, soft drop shadow, inner top sheen
-    // and a thin translucent ring for a polished, app-icon feel.
-    $badge = "<span style=\"position:relative;display:inline-flex;align-items:center;justify-content:center;"
-           . "width:{$size}px;height:{$size}px;border-radius:{$radius}px;flex:0 0 auto;"
-           . "background:linear-gradient(150deg,#8a78ff 0%,#6c5ce7 45%,#4226c9 100%);"
-           . "box-shadow:0 12px 26px rgba(72,52,212,.40),inset 0 1.5px 0 rgba(255,255,255,.45),inset 0 -3px 8px rgba(28,16,90,.35);"
-           . "border:1px solid rgba(255,255,255,.18);\">{$crown}</span>";
-    if (!$wordmark) {
-        return $badge;
-    }
-    $app   = htmlspecialchars(APP_NAME);
-    $wsize = round($size * 0.5, 1);
-    $tsize = round($size * 0.205, 1);
-    $word  = "<span style=\"display:inline-flex;flex-direction:column;justify-content:center;line-height:1;\">"
-           . "<span style=\"font-family:'Poppins',sans-serif;font-weight:800;font-size:{$wsize}px;letter-spacing:-.5px;"
-           . "background:linear-gradient(90deg,#3a2a8c,#6c5ce7);-webkit-background-clip:text;background-clip:text;"
-           . "-webkit-text-fill-color:transparent;color:#3a2a8c;\">{$app}</span>"
-           . "<span style=\"font-family:'Poppins',sans-serif;font-weight:700;font-size:{$tsize}px;letter-spacing:3px;"
-           . "text-transform:uppercase;color:#b8860b;margin-top:2px;\">SMM Panel</span>"
-           . "</span>";
-    return "<span style=\"display:inline-flex;align-items:center;gap:.6rem;\">{$badge}{$word}</span>";
+function ui_logo($wordmark = true, $size = 46)
+{
+  $size = (int) $size;
+  $radius = (int) round($size * 0.30);
+  $crown = ui_crown_svg((int) round($size * 0.58));
+  // Rich badge: layered purple gradient, soft drop shadow, inner top sheen
+  // and a thin translucent ring for a polished, app-icon feel.
+  $badge = "<span style=\"position:relative;display:inline-flex;align-items:center;justify-content:center;"
+    . "width:{$size}px;height:{$size}px;border-radius:{$radius}px;flex:0 0 auto;"
+    . "background:linear-gradient(150deg,#8a78ff 0%,#6c5ce7 45%,#4226c9 100%);"
+    . "box-shadow:0 12px 26px rgba(72,52,212,.40),inset 0 1.5px 0 rgba(255,255,255,.45),inset 0 -3px 8px rgba(28,16,90,.35);"
+    . "border:1px solid rgba(255,255,255,.18);\">{$crown}</span>";
+  if (!$wordmark) {
+    return $badge;
+  }
+  $app = htmlspecialchars(APP_NAME);
+  $wsize = round($size * 0.5, 1);
+  $tsize = round($size * 0.205, 1);
+  $word = "<span style=\"display:inline-flex;flex-direction:column;justify-content:center;line-height:1;\">"
+    . "<span style=\"font-family:'Poppins',sans-serif;font-weight:800;font-size:{$wsize}px;letter-spacing:-.5px;"
+    . "background:linear-gradient(90deg,#3a2a8c,#6c5ce7);-webkit-background-clip:text;background-clip:text;"
+    . "-webkit-text-fill-color:transparent;color:#3a2a8c;\">{$app}</span>"
+    . "<span style=\"font-family:'Poppins',sans-serif;font-weight:700;font-size:{$tsize}px;letter-spacing:3px;"
+    . "text-transform:uppercase;color:#b8860b;margin-top:2px;\">SMM Panel</span>"
+    . "</span>";
+  return "<span style=\"display:inline-flex;align-items:center;gap:.6rem;\">{$badge}{$word}</span>";
 }
 
-function ui_head($title, $bodyClass = 'app', $extraHead = '') {
-    $app = APP_NAME;
-    echo <<<HTML
+function ui_head($title, $bodyClass = 'app', $extraHead = '')
+{
+  $app = APP_NAME;
+  echo <<<HTML
 <!DOCTYPE html>
 <html lang="sw">
 <head>
@@ -208,8 +213,8 @@ body.drawer-open .hamburger span:nth-child(3){transform:translateY(-6.4px) rotat
 </style>
 {$extraHead}
 HTML;
-    pwa_head();
-    echo <<<HTML
+  pwa_head();
+  echo <<<HTML
 </head>
 <body class="{$bodyClass}">
 <div class="toast-wrap" id="toastWrap"></div>
@@ -221,56 +226,57 @@ HTML;
  * Top-right hamburger + slide-in drawer navigation (replaces the bottom nav).
  * $opts['balance'] (optional) shows a balance pill in the drawer header.
  */
-function ui_nav($active = 'home', $opts = []) {
-    $username = $_SESSION['username'] ?? 'Mteja';
-    $role     = $_SESSION['role'] ?? 'user';
-    $initial  = strtoupper(mb_substr($username, 0, 1));
-    $appName  = APP_NAME;
+function ui_nav($active = 'home', $opts = [])
+{
+  $username = $_SESSION['username'] ?? 'Mteja';
+  $role = $_SESSION['role'] ?? 'user';
+  $initial = strtoupper(mb_substr($username, 0, 1));
+  $appName = APP_NAME;
 
-    $notificationCount = isset($_SESSION['user_id']) ? getUnreadNotificationCount($_SESSION['user_id']) : 0;
+  $notificationCount = isset($_SESSION['user_id']) ? getUnreadNotificationCount($_SESSION['user_id']) : 0;
 
-    $links = [
-        'home'    => ['index.php',      'bi-grid-1x2-fill',  'Dashboard'],
-        'orders'  => ['orders.php',     'bi-bag-check-fill', 'Orders Zangu'],
-        'notifications' => ['notifications.php', 'bi-bell-fill', 'Notisi' . ($notificationCount ? ' ('.$notificationCount.')' : '')],
-        'pro'     => ['pro-dashboard.php', 'bi-rocket-fill', 'Pro Dashboard'],
-        'api'     => ['api-center.php', 'bi-key-fill', 'API Center'],
-        'topup'   => ['#',              'bi-wallet2',        'Ongeza Salio'],
-        'howto'   => ['howto.php',      'bi-journal-text',   'Mwongozo'],
-        'profile' => ['profile.php',    'bi-person-fill',    'Profile'],
-    ];
-    if ($role === 'admin') {
-        $links['admin'] = ['admin.php', 'bi-speedometer2', 'Admin Panel'];
-    }
+  $links = [
+    'home' => ['index.php', 'bi-grid-1x2-fill', 'Dashboard'],
+    'orders' => ['orders.php', 'bi-bag-check-fill', 'Orders Zangu'],
+    'notifications' => ['notifications.php', 'bi-bell-fill', 'Notisi' . ($notificationCount ? ' (' . $notificationCount . ')' : '')],
+    'pro' => ['pro-dashboard.php', 'bi-rocket-fill', 'Pro Dashboard'],
+    'api' => ['api-center.php', 'bi-key-fill', 'API Center'],
+    'topup' => ['#', 'bi-wallet2', 'Ongeza Salio'],
+    'howto' => ['howto.php', 'bi-journal-text', 'Mwongozo'],
+    'profile' => ['profile.php', 'bi-person-fill', 'Profile'],
+  ];
+  if ($role === 'admin') {
+    $links['admin'] = ['admin.php', 'bi-speedometer2', 'Admin Panel'];
+  }
 
-    $linksHtml = '';
-    foreach ($links as $key => [$href, $icon, $label]) {
-        $cls  = $active === $key ? 'drawer-link active' : 'drawer-link';
-        $attr = $key === 'topup' ? ' data-bs-toggle="modal" data-bs-target="#topUpModal"' : '';
-        $linksHtml .= "<a href=\"{$href}\"{$attr} class=\"{$cls} js-nav-link\"><span class=\"di\"><i class=\"bi {$icon}\"></i></span>{$label}</a>";
-    }
+  $linksHtml = '';
+  foreach ($links as $key => [$href, $icon, $label]) {
+    $cls = $active === $key ? 'drawer-link active' : 'drawer-link';
+    $attr = $key === 'topup' ? ' data-bs-toggle="modal" data-bs-target="#topUpModal"' : '';
+    $linksHtml .= "<a href=\"{$href}\"{$attr} class=\"{$cls} js-nav-link\"><span class=\"di\"><i class=\"bi {$icon}\"></i></span>{$label}</a>";
+  }
 
-    $balHtml = '';
-    if (isset($opts['balance'])) {
-        $bal = number_format((float)$opts['balance']);
-        $balHtml = "<div class=\"drawer-bal\"><span style=\"font-size:.72rem;opacity:.85;\"><i class=\"bi bi-wallet2 me-1\"></i>Salio</span><strong>{$bal} TZS</strong></div>";
-    }
+  $balHtml = '';
+  if (isset($opts['balance'])) {
+    $bal = number_format((float) $opts['balance']);
+    $balHtml = "<div class=\"drawer-bal\"><span style=\"font-size:.72rem;opacity:.85;\"><i class=\"bi bi-wallet2 me-1\"></i>Salio</span><strong>{$bal} TZS</strong></div>";
+  }
 
-    // Support / community (WhatsApp group + channel)
-    $waGroup   = defined('WHATSAPP_GROUP_URL')   ? WHATSAPP_GROUP_URL   : '#';
-    $waChannel = defined('WHATSAPP_CHANNEL_URL') ? WHATSAPP_CHANNEL_URL : '#';
-    $supportHtml = <<<HTML
+  // Support / community (WhatsApp group + channel)
+  $waGroup = defined('WHATSAPP_GROUP_URL') ? WHATSAPP_GROUP_URL : '#';
+  $waChannel = defined('WHATSAPP_CHANNEL_URL') ? WHATSAPP_CHANNEL_URL : '#';
+  $supportHtml = <<<HTML
 <div style="padding:.6rem .85rem .1rem;font-size:.64rem;font-weight:700;letter-spacing:.6px;color:#8a93b2;text-transform:uppercase;">Msaada &amp; Jamii</div>
 <a href="{$waGroup}" target="_blank" rel="noopener" class="drawer-link js-nav-link"><span class="di" style="background:#e7fbef;color:#25D366;"><i class="bi bi-whatsapp"></i></span>WhatsApp Group</a>
 <a href="{$waChannel}" target="_blank" rel="noopener" class="drawer-link js-nav-link"><span class="di" style="background:#e7fbef;color:#25D366;"><i class="bi bi-megaphone-fill"></i></span>WhatsApp Channel</a>
 HTML;
 
-    $bellBadge = '';
-    if (!empty($_SESSION['user_id']) && $notificationCount > 0) {
-        $bellBadge = '<span class="nav-bell-badge">' . ($notificationCount > 99 ? '99+' : (int)$notificationCount) . '</span>';
-    }
+  $bellBadge = '';
+  if (!empty($_SESSION['user_id']) && $notificationCount > 0) {
+    $bellBadge = '<span class="nav-bell-badge">' . ($notificationCount > 99 ? '99+' : (int) $notificationCount) . '</span>';
+  }
 
-    echo <<<HTML
+  echo <<<HTML
 <div class="top-actions">
   <a href="notifications.php" class="nav-bell" aria-label="Notisi" title="Notisi"><i class="bi bi-bell-fill"></i>{$bellBadge}</a>
   <button class="hamburger" id="navToggle" aria-label="Menu"><span></span><span></span><span></span></button>
@@ -307,10 +313,14 @@ HTML;
 }
 
 // Backward-compatible alias
-function ui_bottom_nav($active = 'home') { ui_nav($active); }
+function ui_bottom_nav($active = 'home')
+{
+  ui_nav($active);
+}
 
-function ui_topup_modal() {
-    echo <<<HTML
+function ui_topup_modal()
+{
+  echo <<<HTML
 <div class="modal fade" id="topUpModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered modal-fullscreen-sm-down">
     <div class="modal-content rounded-4 overflow-hidden border-0">
@@ -327,8 +337,9 @@ function ui_topup_modal() {
 HTML;
 }
 
-function ui_foot($extraScript = '') {
-    echo <<<HTML
+function ui_foot($extraScript = '')
+{
+  echo <<<HTML
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
 function toast(msg,type='primary'){
@@ -364,8 +375,8 @@ function toast(msg,type='primary'){
 </script>
 {$extraScript}
 HTML;
-    pwa_foot();
-    echo <<<HTML
+  pwa_foot();
+  echo <<<HTML
 </body>
 </html>
 HTML;

@@ -18,16 +18,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['change_password'])) {
     $row = $stmt->get_result()->fetch_assoc();
 
     if (!$row || !password_verify($old, $row['password'])) {
-        $flash = 'Neno siri la zamani si sahihi.'; $flash_type = 'danger';
+        $flash = 'Neno siri la zamani si sahihi.';
+        $flash_type = 'danger';
     } elseif (strlen($new) < PASSWORD_MIN_LENGTH) {
-        $flash = 'Neno siri jipya liwe na herufi angalau ' . PASSWORD_MIN_LENGTH . '.'; $flash_type = 'danger';
+        $flash = 'Neno siri jipya liwe na herufi angalau ' . PASSWORD_MIN_LENGTH . '.';
+        $flash_type = 'danger';
     } else {
         $hash = password_hash($new, PASSWORD_DEFAULT);
         $stmt = $conn->prepare("UPDATE users SET password = ? WHERE id = ?");
         $stmt->bind_param("si", $hash, $user_id);
         $stmt->execute();
         logActivity($user_id, 'password_changed', 'User changed password');
-        $flash = 'Neno siri limebadilishwa kikamilifu.'; $flash_type = 'success';
+        $flash = 'Neno siri limebadilishwa kikamilifu.';
+        $flash_type = 'success';
     }
 }
 
@@ -41,18 +44,18 @@ $user = $stmt->get_result()->fetch_assoc();
 $stmt = $conn->prepare("SELECT COUNT(*) c FROM users WHERE referred_by = ?");
 $stmt->bind_param("i", $user_id);
 $stmt->execute();
-$refCount = (int)($stmt->get_result()->fetch_assoc()['c'] ?? 0);
+$refCount = (int) ($stmt->get_result()->fetch_assoc()['c'] ?? 0);
 
 $stmt = $conn->prepare("SELECT COALESCE(SUM(amount),0) s FROM transactions WHERE user_id = ? AND type = 'referral_bonus'");
 $stmt->bind_param("i", $user_id);
 $stmt->execute();
-$refEarned = (float)($stmt->get_result()->fetch_assoc()['s'] ?? 0);
+$refEarned = (float) ($stmt->get_result()->fetch_assoc()['s'] ?? 0);
 
 $refCode = $user['referral_code'] ?? '';
 $refLink = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' ? 'https' : 'http')
-         . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost')
-         . dirname($_SERVER['PHP_SELF'] ?? '/')
-         . '/register.php?ref=' . urlencode($refCode);
+    . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost')
+    . dirname($_SERVER['PHP_SELF'] ?? '/')
+    . '/register.php?ref=' . urlencode($refCode);
 $refLink = preg_replace('#(?<!:)//+#', '/', $refLink);
 $refLink = preg_replace('#^(https?):/#', '$1://', $refLink);
 
@@ -67,31 +70,102 @@ $stmt->bind_param("i", $user_id);
 $stmt->execute();
 $orders = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 
-$spent = 0; $done = 0;
+$spent = 0;
+$done = 0;
 foreach ($orders as $o) {
-    $spent += (float)$o['price'];
-    if (strpos(strtolower($o['status']), 'complet') !== false) $done++;
+    $spent += (float) $o['price'];
+    if (strpos(strtolower($o['status']), 'complet') !== false)
+        $done++;
 }
 
-function pbadge($status) {
+function pbadge($status)
+{
     $s = strtolower($status);
-    if (strpos($s,'complet')!==false) return 'badge-success';
-    if (strpos($s,'pend')!==false || strpos($s,'process')!==false || strpos($s,'progress')!==false) return 'badge-warning';
-    if (strpos($s,'cancel')!==false || strpos($s,'fail')!==false) return 'badge-danger';
+    if (strpos($s, 'complet') !== false)
+        return 'badge-success';
+    if (strpos($s, 'pend') !== false || strpos($s, 'process') !== false || strpos($s, 'progress') !== false)
+        return 'badge-warning';
+    if (strpos($s, 'cancel') !== false || strpos($s, 'fail') !== false)
+        return 'badge-danger';
     return 'badge-secondary';
 }
 
 ui_head('Profile — ' . APP_NAME, 'app');
 ?>
 <style>
-.profile-hero{background:linear-gradient(135deg,var(--primary),var(--primary-2));border-radius:0 0 30px 30px;padding:1.8rem 1.3rem 2.2rem;color:#fff;box-shadow:0 12px 30px rgba(72,52,212,.3);}
-.avatar{width:74px;height:74px;background:rgba(255,255,255,.2);border-radius:22px;display:flex;align-items:center;justify-content:center;font-size:2.2rem;border:2px solid rgba(255,255,255,.3);}
-.btn-logout{background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.3);border-radius:30px;color:#fff;padding:.45rem 1rem;font-size:.8rem;}
-.stat-mini{background:#fff;border-radius:18px;padding:1rem;box-shadow:0 8px 22px rgba(43,54,116,.05);display:flex;align-items:center;gap:.7rem;}
-.stat-ico{width:42px;height:42px;border-radius:13px;display:flex;align-items:center;justify-content:center;font-size:1.25rem;}
-.order-item{display:flex;align-items:center;gap:.8rem;padding:.7rem 0;border-bottom:1px solid #f0f2f8;}
-.order-item:last-child{border-bottom:none;}
-.order-ico{width:40px;height:40px;border-radius:12px;background:#f0f2fb;color:var(--primary);display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex:0 0 auto;}
+    .profile-hero {
+        background: linear-gradient(135deg, var(--primary), var(--primary-2));
+        border-radius: 0 0 30px 30px;
+        padding: 1.8rem 1.3rem 2.2rem;
+        color: #fff;
+        box-shadow: 0 12px 30px rgba(72, 52, 212, .3);
+    }
+
+    .avatar {
+        width: 74px;
+        height: 74px;
+        background: rgba(255, 255, 255, .2);
+        border-radius: 22px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2.2rem;
+        border: 2px solid rgba(255, 255, 255, .3);
+    }
+
+    .btn-logout {
+        background: rgba(255, 255, 255, .2);
+        border: 1px solid rgba(255, 255, 255, .3);
+        border-radius: 30px;
+        color: #fff;
+        padding: .45rem 1rem;
+        font-size: .8rem;
+    }
+
+    .stat-mini {
+        background: #fff;
+        border-radius: 18px;
+        padding: 1rem;
+        box-shadow: 0 8px 22px rgba(43, 54, 116, .05);
+        display: flex;
+        align-items: center;
+        gap: .7rem;
+    }
+
+    .stat-ico {
+        width: 42px;
+        height: 42px;
+        border-radius: 13px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.25rem;
+    }
+
+    .order-item {
+        display: flex;
+        align-items: center;
+        gap: .8rem;
+        padding: .7rem 0;
+        border-bottom: 1px solid #f0f2f8;
+    }
+
+    .order-item:last-child {
+        border-bottom: none;
+    }
+
+    .order-ico {
+        width: 40px;
+        height: 40px;
+        border-radius: 12px;
+        background: #f0f2fb;
+        color: var(--primary);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.1rem;
+        flex: 0 0 auto;
+    }
 </style>
 
 <div class="profile-hero">
@@ -114,45 +188,104 @@ ui_head('Profile — ' . APP_NAME, 'app');
 
     <!-- Stats -->
     <div class="row g-2 mb-3">
-        <div class="col-6"><div class="stat-mini"><div class="stat-ico" style="background:#eef0ff;color:var(--primary)"><i class="bi bi-wallet2"></i></div><div><div class="text-muted" style="font-size:.66rem;text-transform:uppercase;">Salio</div><div class="fw-bold"><?= number_format($user['balance']) ?> TZS</div></div></div></div>
-        <div class="col-3"><div class="stat-mini"><div><div class="text-muted" style="font-size:.66rem;text-transform:uppercase;">Orders</div><div class="fw-bold"><?= count($orders) ?></div></div></div></div>
-        <div class="col-3"><div class="stat-mini"><div><div class="text-muted" style="font-size:.66rem;text-transform:uppercase;">Done</div><div class="fw-bold text-success"><?= $done ?></div></div></div></div>
+        <div class="col-6">
+            <div class="stat-mini">
+                <div class="stat-ico" style="background:#eef0ff;color:var(--primary)"><i class="bi bi-wallet2"></i>
+                </div>
+                <div>
+                    <div class="text-muted" style="font-size:.66rem;text-transform:uppercase;">Salio</div>
+                    <div class="fw-bold"><?= number_format($user['balance']) ?> TZS</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-3">
+            <div class="stat-mini">
+                <div>
+                    <div class="text-muted" style="font-size:.66rem;text-transform:uppercase;">Orders</div>
+                    <div class="fw-bold"><?= count($orders) ?></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-3">
+            <div class="stat-mini">
+                <div>
+                    <div class="text-muted" style="font-size:.66rem;text-transform:uppercase;">Done</div>
+                    <div class="fw-bold text-success"><?= $done ?></div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Account info -->
     <div class="card-soft mb-3">
-        <div class="section-title mb-3"><div class="section-ico"><i class="bi bi-person-vcard"></i></div> Taarifa za Akaunti</div>
-        <div class="d-flex justify-content-between py-2 border-bottom"><span class="text-muted small">Namba ya Simu</span><span class="fw-semibold"><?= htmlspecialchars($user['phone'] ?: '—') ?></span></div>
-        <div class="d-flex justify-content-between py-2 border-bottom"><span class="text-muted small">Jumla Imetumika</span><span class="fw-semibold"><?= number_format($spent) ?> TZS</span></div>
-        <div class="d-flex justify-content-between py-2"><span class="text-muted small">Mwanachama Tangu</span><span class="fw-semibold"><?= date('M Y', strtotime($user['created_at'])) ?></span></div>
+        <div class="section-title mb-3">
+            <div class="section-ico"><i class="bi bi-person-vcard"></i></div> Taarifa za Akaunti
+        </div>
+        <div class="d-flex justify-content-between py-2 border-bottom"><span class="text-muted small">Namba ya
+                Simu</span><span class="fw-semibold"><?= htmlspecialchars($user['phone'] ?: '—') ?></span></div>
+        <div class="d-flex justify-content-between py-2 border-bottom"><span class="text-muted small">Jumla
+                Imetumika</span><span class="fw-semibold"><?= number_format($spent) ?> TZS</span></div>
+        <div class="d-flex justify-content-between py-2"><span class="text-muted small">Mwanachama Tangu</span><span
+                class="fw-semibold"><?= date('M Y', strtotime($user['created_at'])) ?></span></div>
     </div>
 
     <!-- Invite friends / referral -->
     <div class="card-soft mb-3">
-        <div class="section-title mb-2"><div class="section-ico" style="background:linear-gradient(135deg,#00b894,#00cec9)"><i class="bi bi-gift"></i></div> Karibisha Marafiki</div>
-        <p class="text-muted mb-3" style="font-size:.82rem;">Mwalike rafiki kwa link yako. Akijiunga na kuweka <strong>deposit ya kwanza</strong>, wewe unapata <strong><?= (int)REFERRAL_BONUS_PERCENT ?>%</strong> ya kiasi alichoweka — moja kwa moja kwenye salio lako!</p>
+        <div class="section-title mb-2">
+            <div class="section-ico" style="background:linear-gradient(135deg,#00b894,#00cec9)"><i
+                    class="bi bi-gift"></i></div> Karibisha Marafiki
+        </div>
+        <p class="text-muted mb-3" style="font-size:.82rem;">Mwalike rafiki kwa link yako. Akijiunga na kuweka
+            <strong>deposit ya kwanza</strong>, wewe unapata <strong><?= (int) REFERRAL_BONUS_PERCENT ?>%</strong> ya
+            kiasi alichoweka — moja kwa moja kwenye salio lako!</p>
 
         <div class="row g-2 mb-3">
-            <div class="col-6"><div class="stat-mini"><div class="stat-ico" style="background:#e7fbef;color:#00b894"><i class="bi bi-people-fill"></i></div><div><div class="text-muted" style="font-size:.66rem;text-transform:uppercase;">Marafiki</div><div class="fw-bold"><?= $refCount ?></div></div></div></div>
-            <div class="col-6"><div class="stat-mini"><div class="stat-ico" style="background:#fff6e5;color:#b8860b"><i class="bi bi-cash-coin"></i></div><div><div class="text-muted" style="font-size:.66rem;text-transform:uppercase;">Umepata</div><div class="fw-bold"><?= number_format($refEarned) ?> TZS</div></div></div></div>
+            <div class="col-6">
+                <div class="stat-mini">
+                    <div class="stat-ico" style="background:#e7fbef;color:#00b894"><i class="bi bi-people-fill"></i>
+                    </div>
+                    <div>
+                        <div class="text-muted" style="font-size:.66rem;text-transform:uppercase;">Marafiki</div>
+                        <div class="fw-bold"><?= $refCount ?></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6">
+                <div class="stat-mini">
+                    <div class="stat-ico" style="background:#fff6e5;color:#b8860b"><i class="bi bi-cash-coin"></i></div>
+                    <div>
+                        <div class="text-muted" style="font-size:.66rem;text-transform:uppercase;">Umepata</div>
+                        <div class="fw-bold"><?= number_format($refEarned) ?> TZS</div>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <label class="form-label">Referral code yako</label>
         <div class="d-flex align-items-center gap-2 mb-2">
-            <input type="text" id="refCode" class="form-control" value="<?= htmlspecialchars($refCode) ?>" readonly style="font-weight:700;letter-spacing:1px;">
-            <button class="btn-grad" style="width:auto;padding:.7rem 1rem;" onclick="copyRef('<?= htmlspecialchars($refLink, ENT_QUOTES) ?>')"><i class="bi bi-clipboard"></i></button>
+            <input type="text" id="refCode" class="form-control" value="<?= htmlspecialchars($refCode) ?>" readonly
+                style="font-weight:700;letter-spacing:1px;">
+            <button class="btn-grad" style="width:auto;padding:.7rem 1rem;"
+                onclick="copyRef('<?= htmlspecialchars($refLink, ENT_QUOTES) ?>')"><i
+                    class="bi bi-clipboard"></i></button>
         </div>
-        <a id="waShare" data-link="<?= htmlspecialchars($refLink, ENT_QUOTES) ?>" class="btn d-flex align-items-center justify-content-center gap-2" target="_blank" rel="noopener" style="background:#25D366;color:#fff;border-radius:14px;font-weight:600;padding:.7rem;">
+        <a id="waShare" data-link="<?= htmlspecialchars($refLink, ENT_QUOTES) ?>"
+            class="btn d-flex align-items-center justify-content-center gap-2" target="_blank" rel="noopener"
+            style="background:#25D366;color:#fff;border-radius:14px;font-weight:600;padding:.7rem;">
             <i class="bi bi-whatsapp"></i> Share kwa WhatsApp
         </a>
     </div>
 
     <!-- Change password -->
     <div class="card-soft mb-3">
-        <div class="section-title mb-3"><div class="section-ico"><i class="bi bi-shield-lock"></i></div> Badilisha Neno Siri</div>
+        <div class="section-title mb-3">
+            <div class="section-ico"><i class="bi bi-shield-lock"></i></div> Badilisha Neno Siri
+        </div>
         <form method="post">
-            <input type="password" name="old_password" class="form-control mb-2" placeholder="Neno siri la zamani" required>
-            <input type="password" name="new_password" class="form-control mb-3" placeholder="Neno siri jipya (min <?= PASSWORD_MIN_LENGTH ?>)" required>
+            <input type="password" name="old_password" class="form-control mb-2" placeholder="Neno siri la zamani"
+                required>
+            <input type="password" name="new_password" class="form-control mb-3"
+                placeholder="Neno siri jipya (min <?= PASSWORD_MIN_LENGTH ?>)" required>
             <button class="btn-grad" name="change_password"><i class="bi bi-check2-circle"></i> Badilisha</button>
         </form>
     </div>
@@ -160,29 +293,45 @@ ui_head('Profile — ' . APP_NAME, 'app');
     <!-- Orders -->
     <div class="card-soft mb-3">
         <div class="d-flex align-items-center justify-content-between mb-3">
-            <div class="section-title" style="font-size:.98rem;"><div class="section-ico" style="width:34px;height:34px;font-size:1rem;"><i class="bi bi-clock-history"></i></div> Historia ya Orders</div>
-            <a href="profile.php?sync=1" class="btn btn-sm" style="background:#eef0ff;color:#4834d4;border:none;border-radius:20px;font-size:.7rem;font-weight:600;padding:.25rem .7rem;"><i class="bi bi-arrow-clockwise"></i> Sasisha</a>
+            <div class="section-title" style="font-size:.98rem;">
+                <div class="section-ico" style="width:34px;height:34px;font-size:1rem;"><i
+                        class="bi bi-clock-history"></i></div> Historia ya Orders
+            </div>
+            <a href="profile.php?sync=1" class="btn btn-sm"
+                style="background:#eef0ff;color:#4834d4;border:none;border-radius:20px;font-size:.7rem;font-weight:600;padding:.25rem .7rem;"><i
+                    class="bi bi-arrow-clockwise"></i> Sasisha</a>
         </div>
         <?php if (empty($orders)): ?>
-            <div class="text-center text-muted py-4" style="font-size:.85rem;"><i class="bi bi-inbox fs-2 d-block mb-2 opacity-50"></i>Hakuna orders bado.</div>
+            <div class="text-center text-muted py-4" style="font-size:.85rem;"><i
+                    class="bi bi-inbox fs-2 d-block mb-2 opacity-50"></i>Hakuna orders bado.</div>
         <?php else: ?>
             <?php foreach ($orders as $o): ?>
                 <?php
-                    $isCompleted = strpos(strtolower($o['status']),'complet')!==false || strpos(strtolower($o['status']),'partial')!==false;
-                    $canRefill = !empty($o['refill_available']) && empty($o['refill_requested']) && $isCompleted;
+                $isCompleted = strpos(strtolower($o['status']), 'complet') !== false || strpos(strtolower($o['status']), 'partial') !== false;
+                $canRefill = !empty($o['refill_available']) && empty($o['refill_requested']) && $isCompleted;
                 ?>
                 <div class="order-item">
                     <div class="order-ico"><i class="bi bi-bag-check"></i></div>
                     <div class="flex-grow-1">
-                        <div class="fw-semibold" style="font-size:.82rem;line-height:1.2;"><?= htmlspecialchars(mb_substr($o['service_name'],0,42)) ?></div>
-                        <div class="text-muted" style="font-size:.7rem;">#<?= $o['id'] ?> · <?= number_format($o['quantity']) ?> · <?= number_format($o['price']) ?> TZS<?= !empty($o['refill_available']) ? ' · <i class="bi bi-arrow-repeat"></i> refill' : '' ?></div>
+                        <div class="fw-semibold" style="font-size:.82rem;line-height:1.2;">
+                            <?= htmlspecialchars(mb_substr($o['service_name'], 0, 42)) ?></div>
+                        <div class="text-muted" style="font-size:.7rem;">#<?= $o['id'] ?> · <?= number_format($o['quantity']) ?>
+                            · <?= number_format($o['price']) ?>
+                            TZS<?= !empty($o['refill_available']) ? ' · <i class="bi bi-arrow-repeat"></i> refill' : '' ?></div>
                         <?php if (isset($o['delivered_quantity']) || isset($o['remaining_quantity'])): ?>
-                            <div class="text-muted" style="font-size:.7rem;">Imetumwa: <?= number_format($o['delivered_quantity'] ?? 0) ?> · Zimebaki: <?= number_format($o['remaining_quantity'] ?? ($o['quantity'] - ($o['delivered_quantity'] ?? 0))) ?></div>
+                            <div class="text-muted" style="font-size:.7rem;">Imetumwa:
+                                <?= number_format($o['delivered_quantity'] ?? 0) ?> · Zimebaki:
+                                <?= number_format($o['remaining_quantity'] ?? ($o['quantity'] - ($o['delivered_quantity'] ?? 0))) ?>
+                            </div>
                         <?php endif; ?>
                         <?php if ($canRefill): ?>
-                            <button class="btn btn-sm mt-1 refill-btn" data-id="<?= (int)$o['id'] ?>" style="background:#e4faf3;color:#00876a;border:none;border-radius:20px;font-size:.68rem;font-weight:600;padding:.2rem .7rem;"><i class="bi bi-arrow-repeat"></i> Omba Refill</button>
+                            <button class="btn btn-sm mt-1 refill-btn" data-id="<?= (int) $o['id'] ?>"
+                                style="background:#e4faf3;color:#00876a;border:none;border-radius:20px;font-size:.68rem;font-weight:600;padding:.2rem .7rem;"><i
+                                    class="bi bi-arrow-repeat"></i> Omba Refill</button>
                         <?php elseif (!empty($o['refill_requested'])): ?>
-                            <span class="badge-soft badge-warning mt-1 d-inline-block" style="font-size:.66rem;"><i class="bi bi-hourglass-split"></i> Refill: <?= htmlspecialchars($o['refill_status'] ?: 'requested') ?></span>
+                            <span class="badge-soft badge-warning mt-1 d-inline-block" style="font-size:.66rem;"><i
+                                    class="bi bi-hourglass-split"></i> Refill:
+                                <?= htmlspecialchars($o['refill_status'] ?: 'requested') ?></span>
                         <?php endif; ?>
                     </div>
                     <span class="badge-soft <?= pbadge($o['status']) ?>"><?= htmlspecialchars($o['status']) ?></span>

@@ -10,7 +10,8 @@
  * talks to whichever single provider it was constructed with.
  */
 
-class APIHandler {
+class APIHandler
+{
     private $service;
     private $api_key;
     private $base_url;
@@ -22,7 +23,8 @@ class APIHandler {
     private $last_error = '';
     private $last_response_code = 0;
 
-    public function __construct($service = 'boost') {
+    public function __construct($service = 'boost')
+    {
         $this->service = strtolower($service);
         $this->cache_dir = __DIR__ . '/../data/cache';
 
@@ -37,46 +39,47 @@ class APIHandler {
     /**
      * Configure API settings based on service
      */
-    private function configureService($service) {
-        $service = strtolower((string)$service);
+    private function configureService($service)
+    {
+        $service = strtolower((string) $service);
         if (in_array($service, ['premium', 'pro', 'pro-service', 'partner'], true)) {
             $service = 'fastway';
         }
 
-        switch($service) {
+        switch ($service) {
             case 'fastway':
-                $this->api_key    = FASTWAY_API_KEY;
-                $this->base_url   = FASTWAY_API_BASE_URL;
-                $this->timeout    = FASTWAY_API_TIMEOUT;
+                $this->api_key = FASTWAY_API_KEY;
+                $this->base_url = FASTWAY_API_BASE_URL;
+                $this->timeout = FASTWAY_API_TIMEOUT;
                 $this->verify_ssl = FASTWAY_API_VERIFY_SSL;
-                $this->protocol   = 'perfectpanel';
+                $this->protocol = 'perfectpanel';
                 break;
             case 'boost':
-                $this->api_key    = BOOST_API_KEY;
-                $this->base_url   = BOOST_API_BASE_URL;
-                $this->timeout    = BOOST_API_TIMEOUT;
+                $this->api_key = BOOST_API_KEY;
+                $this->base_url = BOOST_API_BASE_URL;
+                $this->timeout = BOOST_API_TIMEOUT;
                 $this->verify_ssl = BOOST_API_VERIFY_SSL;
-                $this->protocol   = 'boost';
+                $this->protocol = 'boost';
                 break;
             case 'smmdaddy':
-                $this->api_key    = SMMDADDY_API_KEY;
-                $this->base_url   = SMMDADDY_API_BASE_URL;
-                $this->timeout    = SMMDADDY_API_TIMEOUT;
+                $this->api_key = SMMDADDY_API_KEY;
+                $this->base_url = SMMDADDY_API_BASE_URL;
+                $this->timeout = SMMDADDY_API_TIMEOUT;
                 $this->verify_ssl = true;
-                $this->protocol   = 'perfectpanel'; // smmdaddy is also Perfect Panel
+                $this->protocol = 'perfectpanel'; // smmdaddy is also Perfect Panel
                 break;
             case 'mpesa':
-                $this->api_key    = MPESA_API_TOKEN;
-                $this->base_url   = MPESA_BASE_URL;
-                $this->timeout    = MPESA_TIMEOUT;
+                $this->api_key = MPESA_API_TOKEN;
+                $this->base_url = MPESA_BASE_URL;
+                $this->timeout = MPESA_TIMEOUT;
                 $this->verify_ssl = true;
-                $this->protocol   = 'boost';
+                $this->protocol = 'boost';
                 break;
             case 'stripe':
-                $this->api_key    = STRIPE_SECRET_KEY;
-                $this->base_url   = 'https://api.stripe.com/v1';
+                $this->api_key = STRIPE_SECRET_KEY;
+                $this->base_url = 'https://api.stripe.com/v1';
                 $this->verify_ssl = true;
-                $this->protocol   = 'boost';
+                $this->protocol = 'boost';
                 break;
             default:
                 throw new Exception("Unknown service: $service");
@@ -84,7 +87,8 @@ class APIHandler {
     }
 
     /** Which provider this handler talks to (e.g. 'fastway', 'boost'). */
-    public function getProvider() {
+    public function getProvider()
+    {
         return $this->service;
     }
 
@@ -94,20 +98,21 @@ class APIHandler {
      *
      * Usage: $result = APIHandler::withFallback('placeOrder', $id, $link, $qty);
      */
-    public static function withFallback($method, ...$args) {
+    public static function withFallback($method, ...$args)
+    {
         $providers = json_decode(SMM_PROVIDERS, true) ?: ['boost', 'fastway'];
         $lastError = null;
-        
+
         foreach ($providers as $provider) {
             try {
                 $handler = new self($provider);
-                
+
                 if (!method_exists($handler, $method)) {
                     continue;
                 }
-                
+
                 $result = call_user_func_array([$handler, $method], $args);
-                
+
                 // Check if the result indicates success
                 if (is_array($result) && isset($result['success']) && $result['success']) {
                     error_log("API call successful with provider: $provider, method: $method");
@@ -117,29 +122,30 @@ class APIHandler {
                     error_log("API call returned data from provider: $provider, method: $method");
                     return $result;
                 }
-                
+
                 $lastError = $result['error'] ?? 'Unknown error';
                 error_log("API call failed with $provider/$method: " . json_encode($result));
-                
+
             } catch (Exception $e) {
                 $lastError = $e->getMessage();
                 error_log("Exception with $provider/$method: " . $e->getMessage());
             }
         }
-        
+
         // All services failed
         return [
             'success' => false,
             'error' => "All providers failed. Last error: $lastError",
         ];
     }
-    
+
     /**
      * Get services for a platform (or all). The Boost API ignores the
      * `category` query param and always returns the full catalogue, so we
      * cache the full formatted list once and filter by platform in PHP.
      */
-    public function getServices($platform = null, $use_cache = true) {
+    public function getServices($platform = null, $use_cache = true)
+    {
         $all = $this->getAllServices($use_cache);
 
         if (!$platform) {
@@ -159,7 +165,8 @@ class APIHandler {
     /**
      * Fetch and cache the full formatted service catalogue.
      */
-    public function getAllServices($use_cache = true) {
+    public function getAllServices($use_cache = true)
+    {
         // Cache key is per-provider so Boost and FastWay catalogues never
         // overwrite each other's cache file. Bumped to v6 so the current 60%
         // markup is applied immediately to newly fetched services.
@@ -175,7 +182,7 @@ class APIHandler {
         if ($this->protocol === 'perfectpanel') {
             // Perfect Panel (FastWay): single endpoint, POST key + action=services.
             $response = $this->requestFormEncoded('', 'POST', [
-                'key'    => $this->api_key,
+                'key' => $this->api_key,
                 'action' => 'services',
             ]);
         } else {
@@ -199,11 +206,12 @@ class APIHandler {
 
         return [];
     }
-    
+
     /**
      * Extract services data from various API response formats
      */
-    private function extractServicesFromResponse($data) {
+    private function extractServicesFromResponse($data)
+    {
         // Try different common API response structures
         if (isset($data['services'])) {
             return $data['services'];
@@ -215,18 +223,19 @@ class APIHandler {
             // Might be an array of services directly
             return $data;
         }
-        
+
         return [];
     }
-    
+
     /**
      * Format services for consistency
      */
-    private function formatServices($services) {
+    private function formatServices($services)
+    {
         if (!is_array($services)) {
             return [];
         }
-        
+
         $formatted = [];
         foreach ($services as $service) {
             if (!is_array($service)) {
@@ -238,14 +247,14 @@ class APIHandler {
 
             // The Boost API returns `price_tzs` = price per 1000 units in TZS.
             // FastWay can return USD rates instead, so we convert them to TZS first.
-            $price_per_k = (float)($service['price_tzs'] ?? 0);
-            $rate_usd = (float)($service['rate'] ?? $service['price'] ?? 0);
+            $price_per_k = (float) ($service['price_tzs'] ?? 0);
+            $rate_usd = (float) ($service['rate'] ?? $service['price'] ?? 0);
             $provider_price_per_k = 0;
 
             if ($price_per_k <= 0) {
                 $provider_price_per_k = $rate_usd;
                 if ($provider_price_per_k > 0) {
-                    $usd_to_tzs = defined('USD_TO_TZS_RATE') ? (float)USD_TO_TZS_RATE : 3500;
+                    $usd_to_tzs = defined('USD_TO_TZS_RATE') ? (float) USD_TO_TZS_RATE : 3500;
                     $price_per_k = $provider_price_per_k * $usd_to_tzs;
                 }
             } elseif ($price_per_k > 0) {
@@ -259,26 +268,26 @@ class APIHandler {
             // Apply our profit margin on top of the provider's real price.
             // Default to 60% when the constant is missing or unset so the UI
             // always shows the intended customer-facing price.
-            $markup = defined('PRICE_MARKUP_PERCENT') && (float)PRICE_MARKUP_PERCENT > 0
-                ? (float)PRICE_MARKUP_PERCENT
+            $markup = defined('PRICE_MARKUP_PERCENT') && (float) PRICE_MARKUP_PERCENT > 0
+                ? (float) PRICE_MARKUP_PERCENT
                 : 60;
             $customer_price_per_k = $price_per_k > 0 ? $price_per_k * (1 + $markup / 100) : 0;
             $customer_rate = $customer_price_per_k > 0 ? $customer_price_per_k / 1000 : 0;
 
             $formatted[] = [
-                'id' => $id !== null ? (int)$id : null,
+                'id' => $id !== null ? (int) $id : null,
                 'name' => $service['name'] ?? $service['service_name'] ?? $service['title'] ?? 'Unknown',
                 'category' => $service['category'] ?? $service['platform'] ?? $service['type'] ?? 'General',
                 'description' => $service['description'] ?? $service['desc'] ?? '',
-                'min' => (int)($service['min'] ?? $service['min_quantity'] ?? $service['minimum'] ?? 10),
-                'max' => (int)($service['max'] ?? $service['max_quantity'] ?? $service['maximum'] ?? 10000),
+                'min' => (int) ($service['min'] ?? $service['min_quantity'] ?? $service['minimum'] ?? 10),
+                'max' => (int) ($service['max'] ?? $service['max_quantity'] ?? $service['maximum'] ?? 10000),
                 'rate' => round($customer_rate, 5),               // per-unit customer price in TZS
                 'price_per_1000' => round($customer_price_per_k), // TZS per 1000 units after markup
                 'provider_price_per_1000' => round($provider_price_per_k),
                 'rate_usd' => $rate_usd,                         // provider per-1000 USD rate
                 'markup_percent' => $markup,
                 'currency' => CURRENCY_CODE,
-                'api_id' => $id !== null ? (int)$id : null,
+                'api_id' => $id !== null ? (int) $id : null,
                 'status' => $service['status'] ?? 'active',
                 'refill' => !empty($service['refill']),
                 'cancel' => !empty($service['cancel']),
@@ -287,20 +296,21 @@ class APIHandler {
 
         return $formatted;
     }
-    
+
     /**
      * Place an order
      */
-    public function placeOrder($service_id, $link, $quantity, $email = null) {
+    public function placeOrder($service_id, $link, $quantity, $email = null)
+    {
         // Different providers expect different formats
         if ($this->protocol === 'perfectpanel') {
             // FastWay: Perfect Panel uses form-encoded POST with key+action
             $data = [
-                'key'      => $this->api_key,
-                'action'   => 'add',
-                'service'  => (int)$service_id,
-                'link'     => $link,
-                'quantity' => (int)$quantity,
+                'key' => $this->api_key,
+                'action' => 'add',
+                'service' => (int) $service_id,
+                'link' => $link,
+                'quantity' => (int) $quantity,
             ];
             if ($email) {
                 $data['email'] = $email;
@@ -311,55 +321,56 @@ class APIHandler {
         } else {
             // Boost API: JSON with service_id, username_or_link, quantity
             $data = [
-                'service_id'       => (int)$service_id,
+                'service_id' => (int) $service_id,
                 'username_or_link' => $link,
-                'quantity'         => (int)$quantity,
-                'source'           => 'web',
+                'quantity' => (int) $quantity,
+                'source' => 'web',
             ];
             if ($email) {
                 $data['email'] = $email;
             }
-            
+
             $response = $this->request('/order', 'POST', $data);
         }
-        
+
         $body = $response['data'] ?? [];
 
         if ($response['success'] && empty($body['error'])) {
             return [
-                'success'  => true,
+                'success' => true,
                 'order_id' => $body['fastwayOrderId'] ?? $body['order_id'] ?? $body['id'] ?? $body['order'] ?? null,
-                'status'   => $body['status'] ?? 'Pending',
-                'charge'   => $body['charge'] ?? null,
-                'data'     => $body,
+                'status' => $body['status'] ?? 'Pending',
+                'charge' => $body['charge'] ?? null,
+                'data' => $body,
             ];
         }
 
         return [
             'success' => false,
-            'error'   => $body['error'] ?? $response['error'] ?? 'Order failed',
-            'data'    => $body,
+            'error' => $body['error'] ?? $response['error'] ?? 'Order failed',
+            'data' => $body,
         ];
     }
-    
+
     /**
      * Make form-encoded API request (for Perfect Panel / FastWay)
      */
-    private function requestFormEncoded($endpoint, $method = 'POST', $data = null, $params = []) {
+    private function requestFormEncoded($endpoint, $method = 'POST', $data = null, $params = [])
+    {
         $url = rtrim($this->base_url, '/') . $endpoint;
-        
+
         // Add query parameters
         if (!empty($params)) {
             $url .= '?' . http_build_query($params);
         }
-        
+
         $ch = curl_init();
-        
+
         $headers = [
             'Content-Type: application/x-www-form-urlencoded',
             'User-Agent: Royal/' . APP_VERSION,
         ];
-        
+
         curl_setopt_array($ch, [
             CURLOPT_URL => $url,
             CURLOPT_RETURNTRANSFER => true,
@@ -370,7 +381,7 @@ class APIHandler {
             CURLOPT_FOLLOWLOCATION => true,
             CURLOPT_MAXREDIRS => 5,
         ]);
-        
+
         if ($method !== 'GET') {
             curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $method);
             if ($data) {
@@ -378,13 +389,13 @@ class APIHandler {
                 curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($data));
             }
         }
-        
+
         $response = curl_exec($ch);
         $this->last_response_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         $error = curl_error($ch);
-        
+
         curl_close($ch);
-        
+
         if ($error) {
             $this->last_error = $error;
             error_log("CURL Error: $error (Endpoint: $endpoint)");
@@ -394,15 +405,15 @@ class APIHandler {
                 'code' => $this->last_response_code
             ];
         }
-        
+
         $decoded = json_decode($response, true);
         $success = $this->last_response_code >= 200 && $this->last_response_code < 300;
-        
+
         if (!$success) {
             $this->last_error = $decoded['error'] ?? $decoded['message'] ?? 'API Error';
             error_log("API Error ($method $endpoint): " . json_encode($decoded));
         }
-        
+
         return [
             'success' => $success,
             'code' => $this->last_response_code,
@@ -410,21 +421,22 @@ class APIHandler {
             'error' => !$success ? $this->last_error : null
         ];
     }
-    
+
     /**
      * Check order status
      */
-    public function getOrderStatus($order_id) {
+    public function getOrderStatus($order_id)
+    {
         if ($this->protocol === 'perfectpanel') {
             // Perfect Panel (FastWay): POST key + action=status + order id.
             $response = $this->requestFormEncoded('', 'POST', [
-                'key'    => $this->api_key,
+                'key' => $this->api_key,
                 'action' => 'status',
-                'order'  => (int)$order_id,
+                'order' => (int) $order_id,
             ]);
         } else {
             // Boost: GET /order/{id}.
-            $response = $this->request('/order/' . rawurlencode((string)$order_id));
+            $response = $this->request('/order/' . rawurlencode((string) $order_id));
         }
 
         if (empty($response['success'])) {
@@ -433,7 +445,7 @@ class APIHandler {
 
         // The order object may sit at the top level or be nested under
         // `order` / `data`, depending on the provider's response shape.
-        $body  = is_array($response['data'] ?? null) ? $response['data'] : [];
+        $body = is_array($response['data'] ?? null) ? $response['data'] : [];
         $order = $body;
         if (isset($body['order']) && is_array($body['order'])) {
             $order = $body['order'];
@@ -447,74 +459,76 @@ class APIHandler {
             ?? $body['status']
             ?? 'unknown';
 
-        $quantity = isset($order['quantity']) ? (int)$order['quantity'] : null;
+        $quantity = isset($order['quantity']) ? (int) $order['quantity'] : null;
         $remaining = null;
         if (isset($order['remains'])) {
-            $remaining = (int)$order['remains'];
+            $remaining = (int) $order['remains'];
         } elseif (isset($order['remaining'])) {
-            $remaining = (int)$order['remaining'];
+            $remaining = (int) $order['remaining'];
         } elseif (isset($order['remains_count'])) {
-            $remaining = (int)$order['remains_count'];
+            $remaining = (int) $order['remains_count'];
         } elseif (isset($order['left'])) {
-            $remaining = (int)$order['left'];
+            $remaining = (int) $order['left'];
         }
 
         $delivered = null;
         if (isset($order['delivered'])) {
-            $delivered = (int)$order['delivered'];
+            $delivered = (int) $order['delivered'];
         } elseif (isset($order['delivered_quantity'])) {
-            $delivered = (int)$order['delivered_quantity'];
+            $delivered = (int) $order['delivered_quantity'];
         } elseif (isset($order['received'])) {
-            $delivered = (int)$order['received'];
+            $delivered = (int) $order['received'];
         } elseif ($quantity !== null && $remaining !== null) {
             $delivered = max(0, $quantity - $remaining);
         }
 
         return [
-            'success'   => true,
-            'status'    => is_string($status) ? trim($status) : 'unknown',
-            'progress'  => $order['progress'] ?? $order['remains'] ?? 0,
+            'success' => true,
+            'status' => is_string($status) ? trim($status) : 'unknown',
+            'progress' => $order['progress'] ?? $order['remains'] ?? 0,
             'remaining' => $remaining,
             'delivered' => $delivered,
-            'data'      => $body,
+            'data' => $body,
         ];
     }
-    
+
     /**
      * Get account balance
      */
-    public function getBalance($currency = 'TZS') {
+    public function getBalance($currency = 'TZS')
+    {
         $response = $this->request('/balance');
 
         if ($response['success']) {
             $data = $response['data'] ?? [];
             if (isset($data['balances'][$currency])) {
-                return (float)$data['balances'][$currency];
+                return (float) $data['balances'][$currency];
             }
-            return (float)($data['balance'] ?? 0);
+            return (float) ($data['balance'] ?? 0);
         }
 
         return 0;
     }
-    
+
     /**
      * Make API request with proper headers and error handling
      */
-    private function request($endpoint, $method = 'GET', $data = null, $params = []) {
+    private function request($endpoint, $method = 'GET', $data = null, $params = [])
+    {
         $url = rtrim($this->base_url, '/') . $endpoint;
-        
+
         // Add query parameters
         if (!empty($params)) {
             $url .= '?' . http_build_query($params);
         }
-        
+
         $ch = curl_init();
-        
+
         $headers = [
             'Content-Type: application/json',
             'User-Agent: Royal/' . APP_VERSION,
         ];
-        
+
         // Add authentication. The Boost API authenticates order/balance
         // endpoints via the X-API-Key header (Bearer is only tolerated on
         // the public /services endpoint).
@@ -522,7 +536,7 @@ class APIHandler {
         if ($this->service === 'boost') {
             $headers[] = 'Authorization: Bearer ' . $this->api_key;
         }
-        
+
         curl_setopt_array($ch, [
             CURLOPT_URL => $url,
             CURLOPT_RETURNTRANSFER => true,
@@ -533,20 +547,20 @@ class APIHandler {
             CURLOPT_FOLLOWLOCATION => true,
             CURLOPT_MAXREDIRS => 5,
         ]);
-        
+
         if ($method !== 'GET') {
             curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $method);
             if ($data) {
                 curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
             }
         }
-        
+
         $response = curl_exec($ch);
         $this->last_response_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         $error = curl_error($ch);
-        
+
         curl_close($ch);
-        
+
         if ($error) {
             $this->last_error = $error;
             error_log("CURL Error: $error (Endpoint: $endpoint)");
@@ -556,15 +570,15 @@ class APIHandler {
                 'code' => $this->last_response_code
             ];
         }
-        
+
         $decoded = json_decode($response, true);
         $success = $this->last_response_code >= 200 && $this->last_response_code < 300;
-        
+
         if (!$success) {
             $this->last_error = $decoded['error'] ?? $decoded['message'] ?? 'API Error';
             error_log("API Error ($method $endpoint): " . json_encode($decoded));
         }
-        
+
         return [
             'success' => $success,
             'code' => $this->last_response_code,
@@ -572,69 +586,75 @@ class APIHandler {
             'error' => !$success ? $this->last_error : null
         ];
     }
-    
+
     /**
      * Get cached data
      */
-    private function getCache($key) {
+    private function getCache($key)
+    {
         $file = $this->cache_dir . '/' . md5($key) . '.cache';
-        
+
         if (file_exists($file)) {
             $data = json_decode(file_get_contents($file), true);
-            
+
             if (isset($data['expires']) && $data['expires'] > time()) {
                 return $data['value'];
             }
-            
+
             @unlink($file);
         }
-        
+
         return false;
     }
-    
+
     /**
      * Set cache
      */
-    private function setCache($key, $value) {
+    private function setCache($key, $value)
+    {
         $file = $this->cache_dir . '/' . md5($key) . '.cache';
-        
+
         $data = [
             'value' => $value,
             'expires' => time() + $this->cache_duration,
             'created' => time()
         ];
-        
+
         @file_put_contents($file, json_encode($data));
     }
-    
+
     /**
      * Clear cache
      */
-    public function clearCache() {
+    public function clearCache()
+    {
         $files = glob($this->cache_dir . '/*.cache');
-        foreach ((array)$files as $file) {
+        foreach ((array) $files as $file) {
             @unlink($file);
         }
     }
-    
+
     /**
      * Get last error
      */
-    public function getLastError() {
+    public function getLastError()
+    {
         return $this->last_error;
     }
-    
+
     /**
      * Get last response code
      */
-    public function getLastResponseCode() {
+    public function getLastResponseCode()
+    {
         return $this->last_response_code;
     }
-    
+
     /**
      * Test API connection
      */
-    public function testConnection() {
+    public function testConnection()
+    {
         $response = $this->request('/services');
         return $response['success'];
     }

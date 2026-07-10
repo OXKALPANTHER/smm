@@ -4,7 +4,9 @@
 // Guard: only execute once per request. Prevents "Constant already defined"
 // warnings and double session_start() if config.php is pulled in more than once
 // (some server setups resolve the include path so require_once can't dedupe).
-if (defined('ROYAL_CONFIG_LOADED')) { return; }
+if (defined('ROYAL_CONFIG_LOADED')) {
+    return;
+}
 define('ROYAL_CONFIG_LOADED', true);
 
 // In production, never let stray warnings/notices corrupt output or headers.
@@ -20,9 +22,15 @@ if (session_status() === PHP_SESSION_NONE) {
 // The app uses the MYSQLI_ASSOC constant with the PDO compat layer. When the
 // mysqli extension isn't loaded (e.g. the Docker image), define it ourselves so
 // fetch_all(MYSQLI_ASSOC) doesn't fatal on PHP 8.
-if (!defined('MYSQLI_ASSOC')) { define('MYSQLI_ASSOC', 1); }
-if (!defined('MYSQLI_NUM'))   { define('MYSQLI_NUM', 2); }
-if (!defined('MYSQLI_BOTH'))  { define('MYSQLI_BOTH', 3); }
+if (!defined('MYSQLI_ASSOC')) {
+    define('MYSQLI_ASSOC', 1);
+}
+if (!defined('MYSQLI_NUM')) {
+    define('MYSQLI_NUM', 2);
+}
+if (!defined('MYSQLI_BOTH')) {
+    define('MYSQLI_BOTH', 3);
+}
 
 // ============================================
 // ENVIRONMENT & SECURITY SETTINGS
@@ -48,7 +56,7 @@ define('DEBUG_MODE', false);
 //   DB_NAME=postgres
 //   DB_USER=postgres.xxxxxxxx
 //   DB_PASS=your-db-password
-$requestedDbDriver = strtolower((string)(getenv('DB_DRIVER') ?: 'sqlite'));
+$requestedDbDriver = strtolower((string) (getenv('DB_DRIVER') ?: 'sqlite'));
 $effectiveDbDriver = $requestedDbDriver === 'pgsql' && extension_loaded('pdo_pgsql') ? 'pgsql' : 'sqlite';
 define('DB_PATH', __DIR__ . '/data/booster.db');
 
@@ -70,7 +78,7 @@ try {
             $name = getenv('DB_NAME') ?: 'postgres';
             $user = getenv('DB_USER');
             $pass = getenv('DB_PASS');
-            $dsn  = "pgsql:host={$host};port={$port};dbname={$name};sslmode=require";
+            $dsn = "pgsql:host={$host};port={$port};dbname={$name};sslmode=require";
 
             $pdo = new PDO($dsn, $user, $pass, [
                 PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
@@ -126,21 +134,23 @@ try {
 /**
  * Cross-driver date() expression for grouping/formatting by day.
  */
-function db_date_expr($col) {
+function db_date_expr($col)
+{
     return DB_DRIVER === 'pgsql' ? "CAST({$col} AS DATE)" : "DATE({$col})";
 }
 
 /**
  * Initialize SQLite database with schema
  */
-function initializeSQLiteDatabase($pdo) {
+function initializeSQLiteDatabase($pdo)
+{
     try {
         // Check if tables exist
         $result = $pdo->query("SELECT name FROM sqlite_master WHERE type='table' AND name='users'");
         if ($result->fetch()) {
             return; // Database already initialized
         }
-        
+
         // Create tables
         $pdo->exec("
             CREATE TABLE users (
@@ -273,19 +283,20 @@ function initializeSQLiteDatabase($pdo) {
  * can issue these blindly. Keep this list in sync with the orders columns the
  * app writes to (see place-order.php and order-sync.php).
  */
-function ensurePgRuntimeColumns($pdo) {
+function ensurePgRuntimeColumns($pdo)
+{
     $additions = [
-        'refill_available'    => "SMALLINT DEFAULT 0",
-        'refill_requested'    => "SMALLINT DEFAULT 0",
-        'refill_status'       => "TEXT",
+        'refill_available' => "SMALLINT DEFAULT 0",
+        'refill_requested' => "SMALLINT DEFAULT 0",
+        'refill_status' => "TEXT",
         'refill_requested_at' => "TIMESTAMPTZ",
-        'provider'            => "TEXT DEFAULT 'boost'",
+        'provider' => "TEXT DEFAULT 'boost'",
         // Provider lane shown on the orders page (primary = Kawaida,
         // partner = Pro/FastWay). The order INSERT depends on this column;
         // without it every order INSERT aborts the transaction and rolls back.
-        'gateway'             => "TEXT DEFAULT 'primary'",
-        'delivered_quantity'   => "INT DEFAULT 0",
-        'remaining_quantity'   => "INT DEFAULT 0",
+        'gateway' => "TEXT DEFAULT 'primary'",
+        'delivered_quantity' => "INT DEFAULT 0",
+        'remaining_quantity' => "INT DEFAULT 0",
     ];
     foreach ($additions as $name => $def) {
         try {
@@ -296,7 +307,8 @@ function ensurePgRuntimeColumns($pdo) {
     }
 }
 
-function ensurePgRuntimeTables($pdo) {
+function ensurePgRuntimeTables($pdo)
+{
     try {
         $pdo->exec("CREATE TABLE IF NOT EXISTS notifications (
             id SERIAL PRIMARY KEY,
@@ -321,7 +333,8 @@ function ensurePgRuntimeTables($pdo) {
 /**
  * Add columns introduced after the initial schema (idempotent).
  */
-function ensureNotificationsTable($pdo) {
+function ensureNotificationsTable($pdo)
+{
     try {
         $result = $pdo->query("SELECT name FROM sqlite_master WHERE type='table' AND name='notifications'");
         if (!$result->fetch()) {
@@ -346,26 +359,27 @@ function ensureNotificationsTable($pdo) {
     }
 }
 
-function ensureRuntimeColumns($pdo) {
+function ensureRuntimeColumns($pdo)
+{
     try {
         $cols = [];
         foreach ($pdo->query("PRAGMA table_info(orders)") as $c) {
             $cols[$c['name']] = true;
         }
         $additions = [
-            'refill_available'    => "INTEGER DEFAULT 0",
-            'refill_requested'    => "INTEGER DEFAULT 0",
-            'refill_status'       => "TEXT",
+            'refill_available' => "INTEGER DEFAULT 0",
+            'refill_requested' => "INTEGER DEFAULT 0",
+            'refill_status' => "TEXT",
             'refill_requested_at' => "DATETIME",
             // Which SMM provider this order was placed with, so status syncs and
             // refunds route to the right API. Existing rows default to 'boost'.
-            'provider'            => "TEXT DEFAULT 'boost'",
+            'provider' => "TEXT DEFAULT 'boost'",
             // Provider lane used by the orders page (primary = Kawaida,
             // partner = Pro/FastWay). The order INSERT and orders.php both
             // depend on this column; without it every order INSERT rolls back.
-            'gateway'             => "TEXT DEFAULT 'primary'",
-            'delivered_quantity'   => "INTEGER DEFAULT 0",
-            'remaining_quantity'   => "INTEGER DEFAULT 0",
+            'gateway' => "TEXT DEFAULT 'primary'",
+            'delivered_quantity' => "INTEGER DEFAULT 0",
+            'remaining_quantity' => "INTEGER DEFAULT 0",
         ];
         foreach ($additions as $name => $def) {
             if (!isset($cols[$name])) {
@@ -383,26 +397,26 @@ function ensureRuntimeColumns($pdo) {
 // Keys are the lowercase keyword matched against the provider's service
 // name + category (see APIHandler::getServices). Order is the display order.
 define('PLATFORMS', json_encode([
-    'instagram'  => ['name' => 'Instagram',  'icon' => 'fab fa-instagram'],
-    'tiktok'     => ['name' => 'TikTok',     'icon' => 'fab fa-tiktok'],
-    'facebook'   => ['name' => 'Facebook',   'icon' => 'fab fa-facebook'],
-    'youtube'    => ['name' => 'YouTube',    'icon' => 'fab fa-youtube'],
-    'twitter'    => ['name' => 'Twitter/X',  'icon' => 'fab fa-x-twitter'],
-    'telegram'   => ['name' => 'Telegram',   'icon' => 'fab fa-telegram'],
-    'whatsapp'   => ['name' => 'WhatsApp',   'icon' => 'fab fa-whatsapp'],
-    'spotify'    => ['name' => 'Spotify',    'icon' => 'fab fa-spotify'],
-    'threads'    => ['name' => 'Threads',    'icon' => 'fab fa-threads'],
-    'snapchat'   => ['name' => 'Snapchat',   'icon' => 'fab fa-snapchat'],
-    'linkedin'   => ['name' => 'LinkedIn',   'icon' => 'fab fa-linkedin'],
-    'pinterest'  => ['name' => 'Pinterest',  'icon' => 'fab fa-pinterest'],
-    'discord'    => ['name' => 'Discord',    'icon' => 'fab fa-discord'],
-    'twitch'     => ['name' => 'Twitch',     'icon' => 'fab fa-twitch'],
+    'instagram' => ['name' => 'Instagram', 'icon' => 'fab fa-instagram'],
+    'tiktok' => ['name' => 'TikTok', 'icon' => 'fab fa-tiktok'],
+    'facebook' => ['name' => 'Facebook', 'icon' => 'fab fa-facebook'],
+    'youtube' => ['name' => 'YouTube', 'icon' => 'fab fa-youtube'],
+    'twitter' => ['name' => 'Twitter/X', 'icon' => 'fab fa-x-twitter'],
+    'telegram' => ['name' => 'Telegram', 'icon' => 'fab fa-telegram'],
+    'whatsapp' => ['name' => 'WhatsApp', 'icon' => 'fab fa-whatsapp'],
+    'spotify' => ['name' => 'Spotify', 'icon' => 'fab fa-spotify'],
+    'threads' => ['name' => 'Threads', 'icon' => 'fab fa-threads'],
+    'snapchat' => ['name' => 'Snapchat', 'icon' => 'fab fa-snapchat'],
+    'linkedin' => ['name' => 'LinkedIn', 'icon' => 'fab fa-linkedin'],
+    'pinterest' => ['name' => 'Pinterest', 'icon' => 'fab fa-pinterest'],
+    'discord' => ['name' => 'Discord', 'icon' => 'fab fa-discord'],
+    'twitch' => ['name' => 'Twitch', 'icon' => 'fab fa-twitch'],
     'soundcloud' => ['name' => 'SoundCloud', 'icon' => 'fab fa-soundcloud'],
-    'reddit'     => ['name' => 'Reddit',     'icon' => 'fab fa-reddit'],
-    'google'     => ['name' => 'Google',     'icon' => 'fab fa-google'],
-    'kick'       => ['name' => 'Kick',       'icon' => 'fas fa-broadcast-tower'],
-    'audiomack'  => ['name' => 'Audiomack',  'icon' => 'fas fa-music'],
-    'shazam'     => ['name' => 'Shazam',     'icon' => 'fas fa-music'],
+    'reddit' => ['name' => 'Reddit', 'icon' => 'fab fa-reddit'],
+    'google' => ['name' => 'Google', 'icon' => 'fab fa-google'],
+    'kick' => ['name' => 'Kick', 'icon' => 'fas fa-broadcast-tower'],
+    'audiomack' => ['name' => 'Audiomack', 'icon' => 'fas fa-music'],
+    'shazam' => ['name' => 'Shazam', 'icon' => 'fas fa-music'],
 ]));
 
 // ============================================
@@ -424,7 +438,7 @@ define('FASTWAY_API_VERIFY_SSL', true);
 
 // USD -> TZS conversion for providers that quote in USD (FastWay). Applied to
 // the provider's raw rate BEFORE PRICE_MARKUP_PERCENT is added.
-define('USD_TO_TZS_RATE', (float)(getenv('USD_TO_TZS_RATE') ?: 3500));
+define('USD_TO_TZS_RATE', (float) (getenv('USD_TO_TZS_RATE') ?: 3500));
 
 // SMM providers in priority order: primary first, fallback after.
 define('SMM_PROVIDERS', json_encode(['boost', 'fastway']));
@@ -534,7 +548,7 @@ define('REFERRAL_BONUS_PERCENT', 20);
 // SUPPORT / COMMUNITY LINKS
 // ============================================
 define('WHATSAPP_SUPPORT_PHONE', '255627417402'); // direct chat (wa.me)
-define('WHATSAPP_GROUP_URL',   'https://chat.whatsapp.com/IPY94YyDh8N4qUx1yN3zj5');
+define('WHATSAPP_GROUP_URL', 'https://chat.whatsapp.com/IPY94YyDh8N4qUx1yN3zj5');
 define('WHATSAPP_CHANNEL_URL', 'https://whatsapp.com/channel/0029VbAjawl9MF8vQQa0ZT32');
 
 // ============================================
@@ -544,7 +558,8 @@ define('WHATSAPP_CHANNEL_URL', 'https://whatsapp.com/channel/0029VbAjawl9MF8vQQa
 /**
  * Sanitize input
  */
-function sanitize($data) {
+function sanitize($data)
+{
     if (is_array($data)) {
         return array_map('sanitize', $data);
     }
@@ -554,21 +569,24 @@ function sanitize($data) {
 /**
  * Validate email
  */
-function validateEmail($email) {
+function validateEmail($email)
+{
     return filter_var($email, FILTER_VALIDATE_EMAIL) !== false;
 }
 
 /**
  * Generate unique token
  */
-function generateToken($length = 32) {
+function generateToken($length = 32)
+{
     return bin2hex(random_bytes($length / 2));
 }
 
 /**
  * Log activities
  */
-function logActivity($user_id, $action, $details = '', $status = 'success') {
+function logActivity($user_id, $action, $details = '', $status = 'success')
+{
     global $conn;
     $stmt = $conn->prepare("INSERT INTO activity_logs (user_id, action, details, status) VALUES (?, ?, ?, ?)");
     $stmt->bind_param("isss", $user_id, $action, $details, $status);
@@ -576,20 +594,21 @@ function logActivity($user_id, $action, $details = '', $status = 'success') {
 }
 
 if (!function_exists('createNotification')) {
-    function createNotification($user_id, $title, $message, $type = 'info', $target = 'user', $metadata = null) {
+    function createNotification($user_id, $title, $message, $type = 'info', $target = 'user', $metadata = null)
+    {
         global $conn;
-        $title = trim((string)$title);
-        $message = trim((string)$message);
+        $title = trim((string) $title);
+        $message = trim((string) $message);
         $type = in_array($type, ['info', 'success', 'warning', 'danger'], true) ? $type : 'info';
         $target = in_array($target, ['user', 'broadcast', 'admin'], true) ? $target : 'user';
         $status = 'unread';
-        $meta = is_array($metadata) ? json_encode($metadata, JSON_UNESCAPED_UNICODE) : trim((string)$metadata);
+        $meta = is_array($metadata) ? json_encode($metadata, JSON_UNESCAPED_UNICODE) : trim((string) $metadata);
 
         if ($user_id === null) {
             $stmt = $conn->prepare("INSERT INTO notifications (user_id, title, message, type, target, status, metadata) VALUES (NULL, ?, ?, ?, ?, ?, ?)");
             $stmt->bind_param("ssssss", $title, $message, $type, $target, $status, $meta);
         } else {
-            $user_id = (int)$user_id;
+            $user_id = (int) $user_id;
             $stmt = $conn->prepare("INSERT INTO notifications (user_id, title, message, type, target, status, metadata) VALUES (?, ?, ?, ?, ?, ?, ?)");
             $stmt->bind_param("issssss", $user_id, $title, $message, $type, $target, $status, $meta);
         }
@@ -599,9 +618,10 @@ if (!function_exists('createNotification')) {
 }
 
 if (!function_exists('getUserNotifications')) {
-    function getUserNotifications($user_id, $limit = 100) {
+    function getUserNotifications($user_id, $limit = 100)
+    {
         global $conn;
-        $user_id = (int)$user_id;
+        $user_id = (int) $user_id;
         $stmt = $conn->prepare(
             "SELECT n.*, u.username FROM notifications n
              LEFT JOIN users u ON u.id = n.user_id
@@ -616,7 +636,8 @@ if (!function_exists('getUserNotifications')) {
 }
 
 if (!function_exists('getNotifications')) {
-    function getNotifications($limit = 200) {
+    function getNotifications($limit = 200)
+    {
         global $conn;
         $stmt = $conn->prepare(
             "SELECT n.*, u.username FROM notifications n
@@ -631,28 +652,30 @@ if (!function_exists('getNotifications')) {
 }
 
 if (!function_exists('getUnreadNotificationCount')) {
-    function getUnreadNotificationCount($user_id) {
+    function getUnreadNotificationCount($user_id)
+    {
         global $conn;
-        $user_id = (int)$user_id;
+        $user_id = (int) $user_id;
         $stmt = $conn->prepare(
             "SELECT COUNT(*) c FROM notifications
              WHERE status = 'unread' AND (user_id = ? OR target = 'broadcast')"
         );
         $stmt->bind_param("i", $user_id);
         $stmt->execute();
-        return (int)($stmt->get_result()->fetch_assoc()['c'] ?? 0);
+        return (int) ($stmt->get_result()->fetch_assoc()['c'] ?? 0);
     }
 }
 
 if (!function_exists('markNotificationRead')) {
-    function markNotificationRead($notification_id, $user_id = null) {
+    function markNotificationRead($notification_id, $user_id = null)
+    {
         global $conn;
-        $notification_id = (int)$notification_id;
+        $notification_id = (int) $notification_id;
         if ($notification_id <= 0) {
             return false;
         }
         if ($user_id !== null) {
-            $user_id = (int)$user_id;
+            $user_id = (int) $user_id;
             $stmt = $conn->prepare(
                 "UPDATE notifications
                  SET status = 'read', read_at = CURRENT_TIMESTAMP
@@ -672,9 +695,10 @@ if (!function_exists('markNotificationRead')) {
 }
 
 if (!function_exists('markAllNotificationsRead')) {
-    function markAllNotificationsRead($user_id) {
+    function markAllNotificationsRead($user_id)
+    {
         global $conn;
-        $user_id = (int)$user_id;
+        $user_id = (int) $user_id;
         if ($user_id <= 0) {
             return false;
         }
@@ -689,14 +713,15 @@ if (!function_exists('markAllNotificationsRead')) {
 }
 
 if (!function_exists('deleteNotification')) {
-    function deleteNotification($notification_id, $user_id = null) {
+    function deleteNotification($notification_id, $user_id = null)
+    {
         global $conn;
-        $notification_id = (int)$notification_id;
+        $notification_id = (int) $notification_id;
         if ($notification_id <= 0) {
             return false;
         }
         if ($user_id !== null) {
-            $user_id = (int)$user_id;
+            $user_id = (int) $user_id;
             $stmt = $conn->prepare("DELETE FROM notifications WHERE id = ? AND (user_id = ? OR target = 'broadcast')");
             $stmt->bind_param("ii", $notification_id, $user_id);
         } else {
@@ -708,9 +733,10 @@ if (!function_exists('deleteNotification')) {
 }
 
 if (!function_exists('deleteAllNotifications')) {
-    function deleteAllNotifications($user_id) {
+    function deleteAllNotifications($user_id)
+    {
         global $conn;
-        $user_id = (int)$user_id;
+        $user_id = (int) $user_id;
         if ($user_id <= 0) {
             return false;
         }
@@ -732,30 +758,34 @@ if (!function_exists('deleteAllNotifications')) {
  * @param float $depositAmount the completed deposit amount
  * @return float the bonus credited (0 if none)
  */
-function applyReferralBonus($conn, $depositorId, $depositAmount) {
-    $depositorId = (int)$depositorId;
-    $depositAmount = (float)$depositAmount;
-    if ($depositorId <= 0 || $depositAmount <= 0) return 0;
+function applyReferralBonus($conn, $depositorId, $depositAmount)
+{
+    $depositorId = (int) $depositorId;
+    $depositAmount = (float) $depositAmount;
+    if ($depositorId <= 0 || $depositAmount <= 0)
+        return 0;
 
     $stmt = $conn->prepare("SELECT referred_by, username FROM users WHERE id = ?");
     $stmt->bind_param("i", $depositorId);
     $stmt->execute();
     $dep = $stmt->get_result()->fetch_assoc();
-    $referrerId = (int)($dep['referred_by'] ?? 0);
-    if ($referrerId <= 0) return 0;
+    $referrerId = (int) ($dep['referred_by'] ?? 0);
+    if ($referrerId <= 0)
+        return 0;
 
     $stmt = $conn->prepare("SELECT COUNT(*) c FROM transactions WHERE user_id = ? AND type = 'credit' AND status = 'completed'");
     $stmt->bind_param("i", $depositorId);
     $stmt->execute();
-    $completedDeposits = (int)($stmt->get_result()->fetch_assoc()['c'] ?? 0);
+    $completedDeposits = (int) ($stmt->get_result()->fetch_assoc()['c'] ?? 0);
 
     if ($completedDeposits !== 1) {
         return 0;
     }
 
-    $pct   = defined('REFERRAL_BONUS_PERCENT') ? (float)REFERRAL_BONUS_PERCENT : 20;
+    $pct = defined('REFERRAL_BONUS_PERCENT') ? (float) REFERRAL_BONUS_PERCENT : 20;
     $bonus = floor($depositAmount * $pct / 100);
-    if ($bonus <= 0) return 0;
+    if ($bonus <= 0)
+        return 0;
 
     $stmt = $conn->prepare("UPDATE users SET balance = balance + ? WHERE id = ?");
     $stmt->bind_param("di", $bonus, $referrerId);
@@ -778,7 +808,8 @@ function applyReferralBonus($conn, $depositorId, $depositAmount) {
 /**
  * Get user by ID
  */
-function getUser($user_id) {
+function getUser($user_id)
+{
     global $conn;
     $stmt = $conn->prepare("SELECT * FROM users WHERE id = ?");
     $stmt->bind_param("i", $user_id);
@@ -789,9 +820,11 @@ function getUser($user_id) {
 /**
  * Check if user is admin
  */
-function isAdmin($user_id = null) {
+function isAdmin($user_id = null)
+{
     $uid = $user_id ?? ($_SESSION['user_id'] ?? null);
-    if (!$uid) return false;
+    if (!$uid)
+        return false;
     $user = getUser($uid);
     return $user && $user['role'] === 'admin';
 }
@@ -799,14 +832,16 @@ function isAdmin($user_id = null) {
 /**
  * Check if user is logged in
  */
-function isLoggedIn() {
+function isLoggedIn()
+{
     return isset($_SESSION['user_id']);
 }
 
 /**
  * Redirect if not logged in
  */
-function requireLogin() {
+function requireLogin()
+{
     if (!isLoggedIn()) {
         header("Location: login.php");
         exit;
@@ -816,7 +851,8 @@ function requireLogin() {
 /**
  * Redirect if not admin
  */
-function requireAdmin() {
+function requireAdmin()
+{
     if (!isLoggedIn() || !isAdmin()) {
         header("Location: login.php");
         exit;
@@ -826,14 +862,16 @@ function requireAdmin() {
 /**
  * Format currency
  */
-function formatCurrency($amount) {
+function formatCurrency($amount)
+{
     return CURRENCY_SYMBOL . ' ' . number_format($amount, 2, '.', ',');
 }
 
 /**
  * API Response Helper
  */
-function apiResponse($success, $message = '', $data = null, $code = 200) {
+function apiResponse($success, $message = '', $data = null, $code = 200)
+{
     http_response_code($code);
     header('Content-Type: application/json');
     return json_encode([
@@ -847,12 +885,13 @@ function apiResponse($success, $message = '', $data = null, $code = 200) {
 /**
  * Make API Call with advanced features
  */
-function makeAPICall($service, $endpoint, $method = 'GET', $data = null, $headers = []) {
+function makeAPICall($service, $endpoint, $method = 'GET', $data = null, $headers = [])
+{
     $api_key = '';
     $base_url = '';
     $timeout = 30;
-    
-    switch($service) {
+
+    switch ($service) {
         case 'boost':
             $api_key = BOOST_API_KEY;
             $base_url = BOOST_API_BASE_URL;
@@ -870,10 +909,10 @@ function makeAPICall($service, $endpoint, $method = 'GET', $data = null, $header
         default:
             return ['success' => false, 'error' => 'Unknown service'];
     }
-    
+
     $url = $base_url . $endpoint;
     $ch = curl_init();
-    
+
     $default_headers = [
         'Content-Type: application/json',
         // Without Accept: application/json, Laravel APIs (e.g. PalmPesa) treat
@@ -882,9 +921,9 @@ function makeAPICall($service, $endpoint, $method = 'GET', $data = null, $header
         'Authorization: Bearer ' . $api_key,
         'User-Agent: ' . APP_NAME . '/' . APP_VERSION
     ];
-    
+
     $headers = array_merge($default_headers, $headers);
-    
+
     curl_setopt_array($ch, [
         CURLOPT_URL => $url,
         CURLOPT_RETURNTRANSFER => true,
@@ -892,24 +931,24 @@ function makeAPICall($service, $endpoint, $method = 'GET', $data = null, $header
         CURLOPT_HTTPHEADER => $headers,
         CURLOPT_SSL_VERIFYPEER => defined('BOOST_API_VERIFY_SSL') ? BOOST_API_VERIFY_SSL : true,
     ]);
-    
+
     if ($method === 'POST' || $method === 'PUT') {
         curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $method);
         if ($data) {
             curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
         }
     }
-    
+
     $response = curl_exec($ch);
     $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     $error = curl_error($ch);
-    
+
     curl_close($ch);
-    
+
     if ($error) {
         return ['success' => false, 'error' => $error, 'code' => $http_code];
     }
-    
+
     return [
         'success' => $http_code >= 200 && $http_code < 300,
         'code' => $http_code,
@@ -921,7 +960,8 @@ function makeAPICall($service, $endpoint, $method = 'GET', $data = null, $header
  * Call API with automatic fallback from Fastway to Boost
  * Usage: $result = callApiWithFallback('getServices', 'instagram');
  */
-function callApiWithFallback($method, ...$args) {
+function callApiWithFallback($method, ...$args)
+{
     require_once __DIR__ . '/includes/APIHandler.php';
     return APIHandler::withFallback($method, ...$args);
 }

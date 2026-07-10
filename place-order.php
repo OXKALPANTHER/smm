@@ -15,7 +15,8 @@ require_once 'includes/APIHandler.php';
 
 header('Content-Type: application/json');
 
-function jsonOut($success, $message, $extra = [], $code = 200) {
+function jsonOut($success, $message, $extra = [], $code = 200)
+{
     http_response_code($code);
     echo json_encode(array_merge([
         'success' => $success,
@@ -41,10 +42,10 @@ if (empty($input)) {
     }
 }
 
-$user_id    = $_SESSION['user_id'];
-$service_id = (int)($input['service_id'] ?? 0);
-$quantity   = (int)($input['quantity'] ?? 0);
-$link       = trim($input['link'] ?? '');
+$user_id = $_SESSION['user_id'];
+$service_id = (int) ($input['service_id'] ?? 0);
+$quantity = (int) ($input['quantity'] ?? 0);
+$link = trim($input['link'] ?? '');
 
 if ($service_id <= 0 || $quantity <= 0 || $link === '') {
     jsonOut(false, 'Tafadhali jaza huduma, idadi na link.', [], 422);
@@ -55,7 +56,7 @@ if ($service_id <= 0 || $quantity <= 0 || $link === '') {
 // the SAME catalogue we will order against — Boost and the premium pool have
 // separate service_id spaces and prices, so resolving from the wrong one mischarges.
 $use_fallback = filter_var($input['use_fallback'] ?? false, FILTER_VALIDATE_BOOLEAN);
-$provider_input = strtolower(trim((string)($input['provider'] ?? '')));
+$provider_input = strtolower(trim((string) ($input['provider'] ?? '')));
 if (in_array($provider_input, ['premium', 'pro', 'pro-service', 'partner'], true)) {
     $use_fallback = true;
 } elseif ($provider_input === 'boost') {
@@ -73,7 +74,7 @@ try {
     // Resolve the service from the live catalogue (authoritative price/limits).
     $service = null;
     foreach ($services as $s) {
-        if ((int)$s['id'] === $service_id) {
+        if ((int) $s['id'] === $service_id) {
             $service = $s;
             break;
         }
@@ -83,17 +84,18 @@ try {
         jsonOut(false, 'Huduma haijapatikana au haipatikani tena.', [], 404);
     }
 
-    $min  = max(1, (int)$service['min']);
-    $max  = (int)$service['max'];
-    $rate = (float)$service['rate']; // per-unit TZS
+    $min = max(1, (int) $service['min']);
+    $max = (int) $service['max'];
+    $rate = (float) $service['rate']; // per-unit TZS
 
     if ($quantity < $min || ($max > 0 && $quantity > $max)) {
         jsonOut(false, "Idadi lazima iwe kati ya {$min} na {$max}.", [
-            'min' => $min, 'max' => $max,
+            'min' => $min,
+            'max' => $max,
         ], 422);
     }
 
-    $cost = (int)ceil($quantity * $rate);
+    $cost = (int) ceil($quantity * $rate);
     if ($cost <= 0) {
         jsonOut(false, 'Bei ya huduma hii haipatikani.', [], 422);
     }
@@ -103,13 +105,13 @@ try {
     $stmt->bind_param("i", $user_id);
     $stmt->execute();
     $u = $stmt->get_result()->fetch_assoc();
-    $balance = (float)($u['balance'] ?? 0);
-    $email   = $u['email'] ?? null;
+    $balance = (float) ($u['balance'] ?? 0);
+    $email = $u['email'] ?? null;
 
     if ($cost > $balance) {
         jsonOut(false, 'Salio lako halitoshi kukamilisha order hii.', [
             'required' => $cost,
-            'balance'  => $balance,
+            'balance' => $balance,
         ], 402);
     }
 
@@ -132,7 +134,7 @@ try {
         if (!$result['success']) {
             // Primary failed - ask user if they want to try alternative provider
             logActivity($user_id, 'order_attempt_primary_failed', $service['name'] . ' - ' . ($result['error'] ?? ''), 'failed');
-            
+
             jsonOut(false, 'Huduma yetu ya kawaida haipatikani kwa sasa. Ingekuwa na njia nyingine ya kukamilisha order hii?', [
                 'provider_unavailable' => true,
                 'can_retry_alt' => true,
@@ -150,7 +152,7 @@ try {
 
         if (!$result['success']) {
             logActivity($user_id, 'order_attempt_fallback_failed', $service['name'] . ' - ' . ($result['error'] ?? ''), 'failed');
-            
+
             // Both providers failed - suggest similar orders
             jsonOut(false, 'Huduma hii haiwezi kutengenezwa kwa sasa. Tafadhali jaribu huduma nyingine.', [
                 'both_failed' => true,
@@ -162,7 +164,7 @@ try {
     }
 
     $external_id = $result['order_id'] ?? null;
-    $status      = $result['status'] ?? 'Pending';
+    $status = $result['status'] ?? 'Pending';
 
     // 2) Provider accepted -> record locally and charge the user atomically.
     $conn->begin_transaction();
@@ -172,9 +174,11 @@ try {
         // transaction, so we MUST detect it here — otherwise commit() runs as a
         // silent ROLLBACK and we'd wrongly report success with nothing saved.
         $stmt = $conn->prepare("UPDATE users SET balance = balance - ? WHERE id = ?");
-        if (!$stmt) throw new Exception('prepare failed (balance): ' . ($conn->error ?? ''));
+        if (!$stmt)
+            throw new Exception('prepare failed (balance): ' . ($conn->error ?? ''));
         $stmt->bind_param("di", $cost, $user_id);
-        if (!$stmt->execute()) throw new Exception('balance update failed: ' . ($stmt->error ?? ''));
+        if (!$stmt->execute())
+            throw new Exception('balance update failed: ' . ($stmt->error ?? ''));
 
         $stmt = $conn->prepare(
             "INSERT INTO orders
@@ -183,8 +187,9 @@ try {
                  link, gateway, refill_available, delivered_quantity, remaining_quantity)
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
         );
-        if (!$stmt) throw new Exception('prepare failed (orders): ' . ($conn->error ?? ''));
-        $ext = $external_id !== null ? (string)$external_id : null;
+        if (!$stmt)
+            throw new Exception('prepare failed (orders): ' . ($conn->error ?? ''));
+        $ext = $external_id !== null ? (string) $external_id : null;
         $refillAvail = !empty($service['refill']) ? 1 : 0;
         $gateway = $use_fallback ? 'partner' : 'primary';
         $initialProgress = 10; // Start at 10% for newly placed orders
@@ -192,11 +197,24 @@ try {
         $remainingQty = $quantity;
         $stmt->bind_param(
             "iisssidisssiii",
-            $user_id, $service_id, $service['name'], $service['category'],
-            $platform, $quantity, $cost, $status, $initialProgress, $ext,
-            $link, $gateway, $refillAvail, $deliveredQty, $remainingQty
+            $user_id,
+            $service_id,
+            $service['name'],
+            $service['category'],
+            $platform,
+            $quantity,
+            $cost,
+            $status,
+            $initialProgress,
+            $ext,
+            $link,
+            $gateway,
+            $refillAvail,
+            $deliveredQty,
+            $remainingQty
         );
-        if (!$stmt->execute()) throw new Exception('order insert failed: ' . ($stmt->error ?? ''));
+        if (!$stmt->execute())
+            throw new Exception('order insert failed: ' . ($stmt->error ?? ''));
         $order_id = $conn->insert_id();
 
         $desc = "Order #{$order_id} - {$service['name']}";
@@ -206,9 +224,11 @@ try {
                 (user_id, order_id, amount, type, payment_method, gateway, description, external_ref, status, completed_at)
              VALUES (?, ?, ?, 'debit', 'balance', ?, ?, ?, 'completed', CURRENT_TIMESTAMP)"
         );
-        if (!$stmt) throw new Exception('prepare failed (transactions): ' . ($conn->error ?? ''));
+        if (!$stmt)
+            throw new Exception('prepare failed (transactions): ' . ($conn->error ?? ''));
         $stmt->bind_param("iidss", $user_id, $order_id, $cost, $gateway_dup, $desc, $ext);
-        if (!$stmt->execute()) throw new Exception('transaction insert failed: ' . ($stmt->error ?? ''));
+        if (!$stmt->execute())
+            throw new Exception('transaction insert failed: ' . ($stmt->error ?? ''));
 
         $conn->commit();
     } catch (Exception $e) {
@@ -221,7 +241,7 @@ try {
         error_log("Local order persistence FAILED (provider order $external_id placed but NOT saved!): " . $e->getMessage());
         jsonOut(false, 'Order imeshindikana kuhifadhiwa kwa sasa. Hujakatwa pesa — tafadhali wasiliana na support kabla ya kujaribu tena.', [
             'external_order_id' => $external_id,
-            'save_failed'       => true,
+            'save_failed' => true,
         ], 500);
     }
 
@@ -237,11 +257,11 @@ try {
     );
 
     jsonOut(true, 'Order imefanikiwa!', [
-        'order_id'          => $order_id,
+        'order_id' => $order_id,
         'external_order_id' => $external_id,
-        'status'            => $status,
-        'cost'              => $cost,
-        'new_balance'       => $balance - $cost,
+        'status' => $status,
+        'cost' => $cost,
+        'new_balance' => $balance - $cost,
     ]);
 
 } catch (Exception $e) {
