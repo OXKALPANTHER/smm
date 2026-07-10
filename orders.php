@@ -14,7 +14,8 @@ requireLogin();
 $user_id = $_SESSION['user_id'];
 
 // Pull the latest status from the provider before rendering.
-syncUserOrders($conn, $user_id, isset($_GET['sync']));
+$orderNotifications = [];
+syncUserOrders($conn, $user_id, isset($_GET['sync']), $orderNotifications);
 
 // User (for the nav balance pill).
 $stmt = $conn->prepare("SELECT username, balance FROM users WHERE id = ?");
@@ -25,7 +26,8 @@ $user = $stmt->get_result()->fetch_assoc();
 // All orders, newest first.
 $stmt = $conn->prepare(
     "SELECT id, service_id, service_name, platform, quantity, price, status, progress, external_order_id,
-            link, created_at, refill_available, refill_requested, refill_status, gateway
+            link, created_at, refill_available, refill_requested, refill_status, gateway,
+            delivered_quantity, remaining_quantity
        FROM orders WHERE user_id = ? ORDER BY id DESC"
 );
 $stmt->bind_param("i", $user_id);
@@ -266,6 +268,11 @@ ui_head('Orders Zangu — ' . APP_NAME, 'app');
                             
                             <!-- Order Progress Bar -->
                             <?= renderProgressBar($o['status'], $o['progress'] ?? null) ?>
+                            <?php if (isset($o['delivered_quantity']) || isset($o['remaining_quantity'])): ?>
+                                <div class="text-muted" style="font-size:.8rem;margin-top:.35rem;">
+                                    Imetumwa: <?= number_format($o['delivered_quantity'] ?? 0) ?> · Zimebaki: <?= number_format($o['remaining_quantity'] ?? ($o['quantity'] - ($o['delivered_quantity'] ?? 0))) ?>
+                                </div>
+                            <?php endif; ?>
                             
                             <div class="mt-2 d-flex align-items-center gap-2 flex-wrap">
                                 <span class="badge-soft <?= obadge($o['status']) ?>"><?= htmlspecialchars($statusLabel) ?></span>
@@ -341,6 +348,11 @@ ui_head('Orders Zangu — ' . APP_NAME, 'app');
                             
                             <!-- Order Progress Bar -->
                             <?= renderProgressBar($o['status'], $o['progress'] ?? null) ?>
+                            <?php if (isset($o['delivered_quantity']) || isset($o['remaining_quantity'])): ?>
+                                <div class="text-muted" style="font-size:.8rem;margin-top:.35rem;">
+                                    Imetumwa: <?= number_format($o['delivered_quantity'] ?? 0) ?> · Zimebaki: <?= number_format($o['remaining_quantity'] ?? ($o['quantity'] - ($o['delivered_quantity'] ?? 0))) ?>
+                                </div>
+                            <?php endif; ?>
                             
                             <div class="mt-2 d-flex align-items-center gap-2 flex-wrap">
                                 <span class="badge-soft <?= obadge($o['status']) ?>"><?= htmlspecialchars($statusLabel) ?></span>
@@ -371,6 +383,12 @@ ui_nav('orders', ['balance' => $user['balance']]);
 ui_topup_modal();
 ui_foot(<<<'JS'
 <script>
+(function(){
+  const notes = <?= json_encode($orderNotifications, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>;
+  if(Array.isArray(notes)){
+    notes.forEach(n=>{ if(n && n.message){ toast(n.message, n.type || 'primary'); } });
+  }
+})();
 // Tab and search filtering
 (function(){
   const searchInput = document.getElementById('searchInput');

@@ -81,6 +81,8 @@ CREATE TABLE orders (
     gateway           TEXT DEFAULT 'primary',
     link              TEXT NOT NULL,
     notes             TEXT,
+    delivered_quantity INTEGER DEFAULT 0,
+    remaining_quantity INTEGER DEFAULT 0,
     refund_requested  SMALLINT DEFAULT 0,
     refund_reason     TEXT,
     refund_amount     NUMERIC(15,2),

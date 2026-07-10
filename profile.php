@@ -58,10 +58,11 @@ $refLink = preg_replace('#^(https?):/#', '$1://', $refLink);
 
 // Refresh order statuses from the live provider before displaying them.
 require_once 'includes/order-sync.php';
-syncUserOrders($conn, $user_id, isset($_GET['sync']));
+$orderNotifications = [];
+syncUserOrders($conn, $user_id, isset($_GET['sync']), $orderNotifications);
 
 // Orders
-$stmt = $conn->prepare("SELECT id, service_name, platform, quantity, price, status, external_order_id, created_at, refill_available, refill_requested, refill_status FROM orders WHERE user_id = ? ORDER BY id DESC");
+$stmt = $conn->prepare("SELECT id, service_name, platform, quantity, price, status, external_order_id, created_at, refill_available, refill_requested, refill_status, delivered_quantity, remaining_quantity FROM orders WHERE user_id = ? ORDER BY id DESC");
 $stmt->bind_param("i", $user_id);
 $stmt->execute();
 $orders = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
@@ -175,6 +176,9 @@ ui_head('Profile — ' . APP_NAME, 'app');
                     <div class="flex-grow-1">
                         <div class="fw-semibold" style="font-size:.82rem;line-height:1.2;"><?= htmlspecialchars(mb_substr($o['service_name'],0,42)) ?></div>
                         <div class="text-muted" style="font-size:.7rem;">#<?= $o['id'] ?> · <?= number_format($o['quantity']) ?> · <?= number_format($o['price']) ?> TZS<?= !empty($o['refill_available']) ? ' · <i class="bi bi-arrow-repeat"></i> refill' : '' ?></div>
+                        <?php if (isset($o['delivered_quantity']) || isset($o['remaining_quantity'])): ?>
+                            <div class="text-muted" style="font-size:.7rem;">Imetumwa: <?= number_format($o['delivered_quantity'] ?? 0) ?> · Zimebaki: <?= number_format($o['remaining_quantity'] ?? ($o['quantity'] - ($o['delivered_quantity'] ?? 0))) ?></div>
+                        <?php endif; ?>
                         <?php if ($canRefill): ?>
                             <button class="btn btn-sm mt-1 refill-btn" data-id="<?= (int)$o['id'] ?>" style="background:#e4faf3;color:#00876a;border:none;border-radius:20px;font-size:.68rem;font-weight:600;padding:.2rem .7rem;"><i class="bi bi-arrow-repeat"></i> Omba Refill</button>
                         <?php elseif (!empty($o['refill_requested'])): ?>
@@ -193,6 +197,12 @@ ui_nav('profile', ['balance' => $user['balance']]);
 ui_topup_modal();
 ui_foot(<<<'JS'
 <script>
+(function(){
+  const notes = <?= json_encode($orderNotifications, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>;
+  if(Array.isArray(notes)){
+    notes.forEach(n=>{ if(n && n.message){ toast(n.message, n.type || 'primary'); } });
+  }
+})();
 // Referral: copy link + WhatsApp share
 function copyRef(link){
   navigator.clipboard.writeText(link).then(()=>toast('Link imenakiliwa!','success'))

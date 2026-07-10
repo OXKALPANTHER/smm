@@ -52,6 +52,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $_SESSION['user_id']  = $conn->insert_id();
                 $_SESSION['username'] = $username;
                 $_SESSION['role']     = 'user';
+                createNotification(
+                    $_SESSION['user_id'], 
+                    'Karibu kwa ' . APP_NAME,
+                    'Akaunti yako imeundwa kwa mafanikio. Karibu kwenye jukwaa letu ambapo unaweza kuagiza huduma, kuongeza salio, na kufuatilia maagizo yako kwa urahisi.',
+                    'success',
+                    'user',
+                    ['source' => 'registration']
+                );
                 header("Location: index.php");
                 exit;
             } else {

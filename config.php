@@ -76,9 +76,9 @@ try {
         // otherwise an order INSERT referencing a missing column (e.g. gateway)
         // aborts the whole transaction on Postgres and silently rolls back the
         // balance deduction — the order is never saved yet the user sees success.
+        ensurePgRuntimeTables($pdo);
         ensurePgRuntimeColumns($pdo);
     } else {
-        // ---- SQLite (local default) ----
         if (!is_dir(__DIR__ . '/data')) {
             mkdir(__DIR__ . '/data', 0755, true);
         }
@@ -90,10 +90,10 @@ try {
         $pdo->query('SELECT 1');
         initializeSQLiteDatabase($pdo);
         ensureRuntimeColumns($pdo);
+        ensureNotificationsTable($pdo);
     }
 
     // Wrap PDO with MySQLi compatibility layer
-    require_once __DIR__ . '/includes/MySQLiCompat.php';
     $conn = new MySQLiCompatibility($pdo);
 
     if (ENVIRONMENT === 'development') {
@@ -162,6 +162,8 @@ function initializeSQLiteDatabase($pdo) {
                 link TEXT NOT NULL,
                 notes TEXT,
                 gateway TEXT DEFAULT 'primary',
+                delivered_quantity INTEGER DEFAULT 0,
+                remaining_quantity INTEGER DEFAULT 0,
                 refund_requested INTEGER DEFAULT 0,
                 refund_reason TEXT,
                 refund_amount REAL,
@@ -220,13 +222,29 @@ function initializeSQLiteDatabase($pdo) {
                 is_active INTEGER DEFAULT 1,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP
             );
-            
+
+            CREATE TABLE notifications (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+                title TEXT NOT NULL,
+                message TEXT NOT NULL,
+                type TEXT DEFAULT 'info',
+                target TEXT DEFAULT 'user',
+                status TEXT DEFAULT 'unread',
+                metadata TEXT,
+                read_at DATETIME,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            );
+
             CREATE INDEX idx_users_email ON users(email);
             CREATE INDEX idx_users_referral_code ON users(referral_code);
             CREATE INDEX idx_orders_user_id ON orders(user_id);
             CREATE INDEX idx_orders_status ON orders(status);
             CREATE INDEX idx_transactions_user_id ON transactions(user_id);
             CREATE INDEX idx_activity_logs_user_id ON activity_logs(user_id);
+            CREATE INDEX idx_notifications_user_id ON notifications(user_id);
+            CREATE INDEX idx_notifications_status ON notifications(status);
+            CREATE INDEX idx_notifications_created_at ON notifications(created_at);
         ");
     } catch (Exception $e) {
         // Tables may already exist, ignore
@@ -251,6 +269,8 @@ function ensurePgRuntimeColumns($pdo) {
         // partner = Pro/FastWay). The order INSERT depends on this column;
         // without it every order INSERT aborts the transaction and rolls back.
         'gateway'             => "TEXT DEFAULT 'primary'",
+        'delivered_quantity'   => "INT DEFAULT 0",
+        'remaining_quantity'   => "INT DEFAULT 0",
     ];
     foreach ($additions as $name => $def) {
         try {
@@ -261,9 +281,56 @@ function ensurePgRuntimeColumns($pdo) {
     }
 }
 
+function ensurePgRuntimeTables($pdo) {
+    try {
+        $pdo->exec("CREATE TABLE IF NOT EXISTS notifications (
+            id SERIAL PRIMARY KEY,
+            user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+            title TEXT NOT NULL,
+            message TEXT NOT NULL,
+            type TEXT DEFAULT 'info',
+            target TEXT DEFAULT 'user',
+            status TEXT DEFAULT 'unread',
+            metadata JSONB,
+            read_at TIMESTAMPTZ,
+            created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+        )");
+        $pdo->exec("CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id)");
+        $pdo->exec("CREATE INDEX IF NOT EXISTS idx_notifications_status ON notifications(status)");
+        $pdo->exec("CREATE INDEX IF NOT EXISTS idx_notifications_created_at ON notifications(created_at)");
+    } catch (Exception $e) {
+        error_log("ensurePgRuntimeTables: " . $e->getMessage());
+    }
+}
+
 /**
  * Add columns introduced after the initial schema (idempotent).
  */
+function ensureNotificationsTable($pdo) {
+    try {
+        $result = $pdo->query("SELECT name FROM sqlite_master WHERE type='table' AND name='notifications'");
+        if (!$result->fetch()) {
+            $pdo->exec("CREATE TABLE notifications (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+                title TEXT NOT NULL,
+                message TEXT NOT NULL,
+                type TEXT DEFAULT 'info',
+                target TEXT DEFAULT 'user',
+                status TEXT DEFAULT 'unread',
+                metadata TEXT,
+                read_at DATETIME,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )");
+            $pdo->exec("CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id)");
+            $pdo->exec("CREATE INDEX IF NOT EXISTS idx_notifications_status ON notifications(status)");
+            $pdo->exec("CREATE INDEX IF NOT EXISTS idx_notifications_created_at ON notifications(created_at)");
+        }
+    } catch (Exception $e) {
+        error_log('ensureNotificationsTable: ' . $e->getMessage());
+    }
+}
+
 function ensureRuntimeColumns($pdo) {
     try {
         $cols = [];
@@ -282,6 +349,8 @@ function ensureRuntimeColumns($pdo) {
             // partner = Pro/FastWay). The order INSERT and orders.php both
             // depend on this column; without it every order INSERT rolls back.
             'gateway'             => "TEXT DEFAULT 'primary'",
+            'delivered_quantity'   => "INTEGER DEFAULT 0",
+            'remaining_quantity'   => "INTEGER DEFAULT 0",
         ];
         foreach ($additions as $name => $def) {
             if (!isset($cols[$name])) {
@@ -491,6 +560,92 @@ function logActivity($user_id, $action, $details = '', $status = 'success') {
     return $stmt->execute();
 }
 
+function createNotification($user_id, $title, $message, $type = 'info', $target = 'user', $metadata = null) {
+    global $conn;
+    $title = trim((string)$title);
+    $message = trim((string)$message);
+    $type = in_array($type, ['info', 'success', 'warning', 'danger'], true) ? $type : 'info';
+    $target = in_array($target, ['user', 'broadcast', 'admin'], true) ? $target : 'user';
+    $status = 'unread';
+    $meta = is_array($metadata) ? json_encode($metadata, JSON_UNESCAPED_UNICODE) : trim((string)$metadata);
+
+    if ($user_id === null) {
+        $stmt = $conn->prepare("INSERT INTO notifications (user_id, title, message, type, target, status, metadata) VALUES (NULL, ?, ?, ?, ?, ?, ?)");
+        $stmt->bind_param("ssssss", $title, $message, $type, $target, $status, $meta);
+    } else {
+        $user_id = (int)$user_id;
+        $stmt = $conn->prepare("INSERT INTO notifications (user_id, title, message, type, target, status, metadata) VALUES (?, ?, ?, ?, ?, ?, ?)");
+        $stmt->bind_param("issssss", $user_id, $title, $message, $type, $target, $status, $meta);
+    }
+
+    return $stmt ? $stmt->execute() : false;
+}
+
+function getUserNotifications($user_id, $limit = 100) {
+    global $conn;
+    $user_id = (int)$user_id;
+    $stmt = $conn->prepare(
+        "SELECT n.*, u.username FROM notifications n
+         LEFT JOIN users u ON u.id = n.user_id
+         WHERE (n.user_id = ? OR n.target = 'broadcast')
+         ORDER BY n.created_at DESC
+         LIMIT ?"
+    );
+    $stmt->bind_param("ii", $user_id, $limit);
+    $stmt->execute();
+    return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+}
+
+function getNotifications($limit = 200) {
+    global $conn;
+    $stmt = $conn->prepare(
+        "SELECT n.*, u.username FROM notifications n
+         LEFT JOIN users u ON u.id = n.user_id
+         ORDER BY n.created_at DESC
+         LIMIT ?"
+    );
+    $stmt->bind_param("i", $limit);
+    $stmt->execute();
+    return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+}
+
+function getUnreadNotificationCount($user_id) {
+    global $conn;
+    $user_id = (int)$user_id;
+    $stmt = $conn->prepare(
+        "SELECT COUNT(*) c FROM notifications
+         WHERE status = 'unread' AND (user_id = ? OR target = 'broadcast')"
+    );
+    $stmt->bind_param("i", $user_id);
+    $stmt->execute();
+    return (int)($stmt->get_result()->fetch_assoc()['c'] ?? 0);
+}
+
+function markNotificationRead($notification_id, $user_id = null) {
+    global $conn;
+    $notification_id = (int)$notification_id;
+    if ($notification_id <= 0) {
+        return false;
+    }
+    if ($user_id !== null) {
+        $user_id = (int)$user_id;
+        $stmt = $conn->prepare(
+            "UPDATE notifications
+             SET status = 'read', read_at = CURRENT_TIMESTAMP
+             WHERE id = ? AND (user_id = ? OR target = 'broadcast')"
+        );
+        $stmt->bind_param("ii", $notification_id, $user_id);
+    } else {
+        $stmt = $conn->prepare(
+            "UPDATE notifications
+             SET status = 'read', read_at = CURRENT_TIMESTAMP
+             WHERE id = ?"
+        );
+        $stmt->bind_param("i", $notification_id);
+    }
+    return $stmt ? $stmt->execute() : false;
+}
+
 /**
  * Award the referral bonus when a referred user makes their FIRST top-up.
  *
@@ -555,6 +710,56 @@ function getUser($user_id) {
     $stmt->bind_param("i", $user_id);
     $stmt->execute();
     return $stmt->get_result()->fetch_assoc();
+}
+
+function getNotifications($limit = 200) {
+    global $conn;
+    $stmt = $conn->prepare(
+        "SELECT n.*, u.username FROM notifications n
+         LEFT JOIN users u ON u.id = n.user_id
+         ORDER BY n.created_at DESC
+         LIMIT ?"
+    );
+    $stmt->bind_param("i", $limit);
+    $stmt->execute();
+    return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+}
+
+function getUnreadNotificationCount($user_id) {
+    global $conn;
+    $user_id = (int)$user_id;
+    $stmt = $conn->prepare(
+        "SELECT COUNT(*) c FROM notifications
+         WHERE status = 'unread' AND (user_id = ? OR target = 'broadcast')"
+    );
+    $stmt->bind_param("i", $user_id);
+    $stmt->execute();
+    return (int)($stmt->get_result()->fetch_assoc()['c'] ?? 0);
+}
+
+function markNotificationRead($notification_id, $user_id = null) {
+    global $conn;
+    $notification_id = (int)$notification_id;
+    if ($notification_id <= 0) {
+        return false;
+    }
+    if ($user_id !== null) {
+        $user_id = (int)$user_id;
+        $stmt = $conn->prepare(
+            "UPDATE notifications
+             SET status = 'read', read_at = CURRENT_TIMESTAMP
+             WHERE id = ? AND (user_id = ? OR target = 'broadcast')"
+        );
+        $stmt->bind_param("ii", $notification_id, $user_id);
+    } else {
+        $stmt = $conn->prepare(
+            "UPDATE notifications
+             SET status = 'read', read_at = CURRENT_TIMESTAMP
+             WHERE id = ?"
+        );
+        $stmt->bind_param("i", $notification_id);
+    }
+    return $stmt ? $stmt->execute() : false;
 }
 
 /**

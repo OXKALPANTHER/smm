@@ -22,7 +22,8 @@ require_once __DIR__ . '/APIHandler.php';
  * @param bool  $force   bypass the per-session throttle (e.g. manual refresh)
  * @return int           number of orders whose status changed
  */
-function syncUserOrders($conn, $user_id, $force = false) {
+function syncUserOrders($conn, $user_id, $force = false, array &$notifications = []) {
+    $notifications = [];
     $user_id = (int)$user_id;
     if ($user_id <= 0) {
         return 0;
@@ -41,7 +42,8 @@ function syncUserOrders($conn, $user_id, $force = false) {
     // Pull orders that can still change. Anything already in a final state is
     // skipped (and never re-refunded).
     $stmt = $conn->prepare(
-        "SELECT id, external_order_id, status, price, refund_amount, gateway
+        "SELECT id, external_order_id, status, price, refund_amount, gateway,
+                quantity, delivered_quantity, remaining_quantity
            FROM orders
           WHERE user_id = ?
             AND external_order_id IS NOT NULL
@@ -93,39 +95,90 @@ function syncUserOrders($conn, $user_id, $force = false) {
             continue;
         }
 
-        $low         = strtolower($newStatus);
+        $low = strtolower($newStatus);
         $isCompleted = strpos($low, 'complet') !== false;
+        $isPartial   = strpos($low, 'partial') !== false;
         $isCanceled  = strpos($low, 'cancel') !== false || strpos($low, 'refund') !== false;
         $unchanged   = strcasecmp($newStatus, (string)$o['status']) === 0;
 
-        if ($unchanged && !$isCanceled) {
+        $orderQuantity = (int)($o['quantity'] ?? 0);
+        $existingDelivered = (int)($o['delivered_quantity'] ?? 0);
+        $existingRemaining = (int)($o['remaining_quantity'] ?? 0);
+
+        $remainingQty = null;
+        $deliveredQty = null;
+        if (isset($info['remaining'])) {
+            $remainingQty = (int)$info['remaining'];
+        }
+        if (isset($info['delivered'])) {
+            $deliveredQty = (int)$info['delivered'];
+        }
+        if ($remainingQty === null && isset($info['remains'])) {
+            $remainingQty = (int)$info['remains'];
+        }
+        if ($remainingQty === null && isset($info['remains_count'])) {
+            $remainingQty = (int)$info['remains_count'];
+        }
+        if ($remainingQty === null && isset($info['left'])) {
+            $remainingQty = (int)$info['left'];
+        }
+        if ($deliveredQty === null && isset($info['delivered_quantity'])) {
+            $deliveredQty = (int)$info['delivered_quantity'];
+        }
+        if ($deliveredQty === null && isset($info['received'])) {
+            $deliveredQty = (int)$info['received'];
+        }
+        if ($deliveredQty === null && $orderQuantity > 0 && $remainingQty !== null) {
+            $deliveredQty = max(0, $orderQuantity - $remainingQty);
+        }
+        if ($remainingQty === null && $orderQuantity > 0 && $deliveredQty !== null) {
+            $remainingQty = max(0, $orderQuantity - $deliveredQty);
+        }
+
+        if ($unchanged && !$isCanceled && $deliveredQty === $existingDelivered && $remainingQty === $existingRemaining) {
             continue; // nothing to do
         }
 
         $conn->begin_transaction();
         try {
+            $updatedDelivered = $deliveredQty !== null ? $deliveredQty : $existingDelivered;
+            $updatedRemaining = $remainingQty !== null ? $remainingQty : $existingRemaining;
             if ($isCompleted) {
+                if ($remainingQty === null && $orderQuantity > 0) {
+                    $updatedRemaining = 0;
+                }
+                if ($deliveredQty === null && $orderQuantity > 0) {
+                    $updatedDelivered = $orderQuantity;
+                }
+
                 $stmt = $conn->prepare(
                     "UPDATE orders
                         SET status = ?, progress = 100,
-                            completed_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+                            completed_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP,
+                            delivered_quantity = ?, remaining_quantity = ?
                       WHERE id = ?"
                 );
-                $stmt->bind_param("si", $newStatus, $o['id']);
+                $stmt->bind_param("siii", $newStatus, $updatedDelivered, $updatedRemaining, $o['id']);
                 $stmt->execute();
 
-            } elseif ($isCanceled && $o['refund_amount'] === null) {
-                // Provider canceled/refunded -> return the money once.
-                $price = (float)$o['price'];
+                $notifications[] = [
+                    'type' => 'success',
+                    'message' => "Order #{$o['id']} imekamilika: {$newStatus}.",
+                ];
 
+            } elseif ($isCanceled && $o['refund_amount'] === null) {
+                $price = (float)$o['price'];
+                $updatedDelivered = $deliveredQty !== null ? $deliveredQty : $existingDelivered;
+                $updatedRemaining = $remainingQty !== null ? $remainingQty : $existingRemaining;
                 $stmt = $conn->prepare(
                     "UPDATE orders
                         SET status = ?, refund_amount = ?,
                             refund_reason = 'Provider canceled/refunded',
-                            updated_at = CURRENT_TIMESTAMP
+                            updated_at = CURRENT_TIMESTAMP,
+                            delivered_quantity = ?, remaining_quantity = ?
                       WHERE id = ?"
                 );
-                $stmt->bind_param("sdi", $newStatus, $price, $o['id']);
+                $stmt->bind_param("sdiii", $newStatus, $price, $updatedDelivered, $updatedRemaining, $o['id']);
                 $stmt->execute();
 
                 $stmt = $conn->prepare("UPDATE users SET balance = balance + ? WHERE id = ?");
@@ -147,6 +200,11 @@ function syncUserOrders($conn, $user_id, $force = false) {
                 logActivity($user_id, 'order_refunded',
                     "Order #{$o['id']} refunded {$price} TZS (provider: {$newStatus})", 'success');
 
+                $notifications[] = [
+                    'type' => 'danger',
+                    'message' => "Order #{$o['id']} imekatizwa/imirudishwa: {$newStatus}.",
+                ];
+
             } else {
                 // In progress / processing / partial-but-not-final etc.
                 // Calculate progress based on status keywords
@@ -159,11 +217,22 @@ function syncUserOrders($conn, $user_id, $force = false) {
                     $progress = 20; // waiting in queue
                 }
                 
+                $updatedDelivered = $deliveredQty !== null ? $deliveredQty : $existingDelivered;
+                $updatedRemaining = $remainingQty !== null ? $remainingQty : $existingRemaining;
                 $stmt = $conn->prepare(
-                    "UPDATE orders SET status = ?, progress = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?"
+                    "UPDATE orders SET status = ?, progress = ?, updated_at = CURRENT_TIMESTAMP,
+                        delivered_quantity = ?, remaining_quantity = ?
+                      WHERE id = ?"
                 );
-                $stmt->bind_param("sii", $newStatus, $progress, $o['id']);
+                $stmt->bind_param("siiii", $newStatus, $progress, $updatedDelivered, $updatedRemaining, $o['id']);
                 $stmt->execute();
+
+                if (strpos($low, 'delay') !== false || strpos($low, 'late') !== false || strpos($low, 'hold') !== false) {
+                    $notifications[] = [
+                        'type' => 'warning',
+                        'message' => "Order #{$o['id']} inaonekana kuchelewa: {$newStatus}.",
+                    ];
+                }
             }
 
             $conn->commit();

@@ -85,6 +85,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $reply(true, 'Refill status imesasishwa.');
                 break;
 
+            case 'send_notification':
+                $target = in_array($in['target'] ?? '', ['user', 'broadcast', 'admin'], true) ? $in['target'] : 'user';
+                $userId = null;
+                if ($target === 'user') {
+                    $userId = (int)($in['user_id'] ?? 0);
+                    if ($userId <= 0) {
+                        $reply(false, 'Chagua mtumiaji sahihi.');
+                    }
+                    $userRow = $conn->prepare("SELECT id FROM users WHERE id = ?");
+                    $userRow->bind_param("i", $userId);
+                    $userRow->execute();
+                    if (!$userRow->get_result()->fetch_assoc()) {
+                        $reply(false, 'Mtumiaji haapatikani.');
+                    }
+                }
+                $title = trim((string)($in['title'] ?? ''));
+                $message = trim((string)($in['message'] ?? ''));
+                $type = in_array($in['type'] ?? '', ['info', 'success', 'warning', 'danger'], true) ? $in['type'] : 'info';
+                if ($title === '' || $message === '') {
+                    $reply(false, 'Jaza kichwa na ujumbe.');
+                }
+                if (!createNotification($userId, $title, $message, $type, $target, ['sender' => $admin_id])) {
+                    $reply(false, 'Haikuweza kutuma notisi.');
+                }
+                logActivity($admin_id, 'admin_send_notification', "Sent notification to {$target} user_id={$userId}");
+                $reply(true, 'Notification imetumwa.');
+                break;
+
             default:
                 $reply(false, 'Kitendo hakijulikani.');
         }
@@ -122,6 +150,9 @@ $platRows = $conn->query("SELECT platform, COUNT(*) c FROM orders GROUP BY platf
 $refills = $conn->query("SELECT o.id, o.service_name, o.quantity, o.link, o.refill_status, o.refill_requested_at, u.username
                          FROM orders o LEFT JOIN users u ON o.user_id = u.id
                          WHERE o.refill_requested = 1 ORDER BY o.refill_requested_at DESC")->fetch_all(MYSQLI_ASSOC);
+
+$notifications = getNotifications(60);
+$unreadNotifications = getUnreadNotificationCount($admin_id);
 
 // 7-day order trend
 $trend = [];
@@ -214,6 +245,7 @@ body.admin{background:#f4f7fe;}
     <a href="#users" class="nav-link"><i class="bi bi-people"></i> Users</a>
     <a href="#orders" class="nav-link"><i class="bi bi-bag-check"></i> Orders</a>
     <a href="#refills" class="nav-link"><i class="bi bi-arrow-repeat"></i> Refills<?= count($refills) ? ' <span class="badge bg-danger rounded-pill ms-1">'.count($refills).'</span>' : '' ?></a>
+    <a href="notifications.php" class="nav-link"><i class="bi bi-bell"></i> Notifications<?= $unreadNotifications ? ' <span class="badge bg-danger rounded-pill ms-1">'.number_format($unreadNotifications).'</span>' : '' ?></a>
     <a href="api-docs.php" class="nav-link"><i class="bi bi-file-code"></i> API Docs</a>
     <a href="index.php" class="nav-link"><i class="bi bi-box-arrow-up-right"></i> User Site</a>
     <a href="logout.php" class="nav-link"><i class="bi bi-box-arrow-right"></i> Logout</a>

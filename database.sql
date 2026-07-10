@@ -57,6 +57,8 @@ CREATE TABLE orders (
     provider VARCHAR(30) DEFAULT 'boost',
     link TEXT NOT NULL,
     notes TEXT,
+    delivered_quantity INT DEFAULT 0,
+    remaining_quantity INT DEFAULT 0,
     refund_requested BOOLEAN DEFAULT FALSE,
     refund_reason TEXT,
     refund_amount DECIMAL(15,2),

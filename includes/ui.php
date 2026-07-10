@@ -222,9 +222,12 @@ function ui_nav($active = 'home', $opts = []) {
     $initial  = strtoupper(mb_substr($username, 0, 1));
     $appName  = APP_NAME;
 
+    $notificationCount = isset($_SESSION['user_id']) ? getUnreadNotificationCount($_SESSION['user_id']) : 0;
+
     $links = [
         'home'    => ['index.php',      'bi-grid-1x2-fill',  'Dashboard'],
         'orders'  => ['orders.php',     'bi-bag-check-fill', 'Orders Zangu'],
+        'notifications' => ['notifications.php', 'bi-bell-fill', 'Notisi' . ($notificationCount ? ' ('.$notificationCount.')' : '')],
         'pro'     => ['pro-dashboard.php', 'bi-rocket-fill', 'Pro Dashboard'],
         'api'     => ['api-center.php', 'bi-key-fill', 'API Center'],
         'topup'   => ['#',              'bi-wallet2',        'Ongeza Salio'],

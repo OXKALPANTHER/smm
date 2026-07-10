@@ -443,11 +443,36 @@ class APIHandler {
             ?? $body['status']
             ?? 'unknown';
 
+        $quantity = isset($order['quantity']) ? (int)$order['quantity'] : null;
+        $remaining = null;
+        if (isset($order['remains'])) {
+            $remaining = (int)$order['remains'];
+        } elseif (isset($order['remaining'])) {
+            $remaining = (int)$order['remaining'];
+        } elseif (isset($order['remains_count'])) {
+            $remaining = (int)$order['remains_count'];
+        } elseif (isset($order['left'])) {
+            $remaining = (int)$order['left'];
+        }
+
+        $delivered = null;
+        if (isset($order['delivered'])) {
+            $delivered = (int)$order['delivered'];
+        } elseif (isset($order['delivered_quantity'])) {
+            $delivered = (int)$order['delivered_quantity'];
+        } elseif (isset($order['received'])) {
+            $delivered = (int)$order['received'];
+        } elseif ($quantity !== null && $remaining !== null) {
+            $delivered = max(0, $quantity - $remaining);
+        }
+
         return [
-            'success'  => true,
-            'status'   => is_string($status) ? trim($status) : 'unknown',
-            'progress' => $order['progress'] ?? $order['remains'] ?? 0,
-            'data'     => $body,
+            'success'   => true,
+            'status'    => is_string($status) ? trim($status) : 'unknown',
+            'progress'  => $order['progress'] ?? $order['remains'] ?? 0,
+            'remaining' => $remaining,
+            'delivered' => $delivered,
+            'data'      => $body,
         ];
     }
     
