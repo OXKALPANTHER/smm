@@ -48,37 +48,50 @@ define('DEBUG_MODE', false);
 //   DB_NAME=postgres
 //   DB_USER=postgres.xxxxxxxx
 //   DB_PASS=your-db-password
-define('DB_DRIVER', getenv('DB_DRIVER') ?: 'sqlite');
+$requestedDbDriver = strtolower((string)(getenv('DB_DRIVER') ?: 'sqlite'));
+$effectiveDbDriver = $requestedDbDriver === 'pgsql' && extension_loaded('pdo_pgsql') ? 'pgsql' : 'sqlite';
 define('DB_PATH', __DIR__ . '/data/booster.db');
 
 // Supabase REST API Credentials (optional, for REST integrations)
 define('SUPABASE_URL', getenv('SUPABASE_URL') ?: 'https://urrdrmyewuvfzqjuceng.supabase.co');
 define('SUPABASE_ANON_KEY', getenv('SUPABASE_ANON_KEY') ?: 'sb_publishable_hDDdvKmEw560zXvS6_8fQQ_UiU8-bsh');
 
+require_once __DIR__ . '/includes/MySQLiCompat.php';
+
 // Create database connection with error handling
 try {
-    if (DB_DRIVER === 'pgsql') {
-        // ---- PostgreSQL / Supabase ----
-        $host = getenv('DB_HOST');
-        $port = getenv('DB_PORT') ?: '5432';
-        $name = getenv('DB_NAME') ?: 'postgres';
-        $user = getenv('DB_USER');
-        $pass = getenv('DB_PASS');
-        $dsn  = "pgsql:host={$host};port={$port};dbname={$name};sslmode=require";
+    $pdo = null;
 
-        $pdo = new PDO($dsn, $user, $pass, [
-            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-        ]);
-        $pdo->query('SELECT 1');
-        // Schema is created once via supabase_schema.sql in the SQL editor.
-        // We still reconcile columns added after that schema was first applied,
-        // otherwise an order INSERT referencing a missing column (e.g. gateway)
-        // aborts the whole transaction on Postgres and silently rolls back the
-        // balance deduction — the order is never saved yet the user sees success.
-        ensurePgRuntimeTables($pdo);
-        ensurePgRuntimeColumns($pdo);
-    } else {
+    if ($effectiveDbDriver === 'pgsql') {
+        try {
+            // ---- PostgreSQL / Supabase ----
+            $host = getenv('DB_HOST');
+            $port = getenv('DB_PORT') ?: '5432';
+            $name = getenv('DB_NAME') ?: 'postgres';
+            $user = getenv('DB_USER');
+            $pass = getenv('DB_PASS');
+            $dsn  = "pgsql:host={$host};port={$port};dbname={$name};sslmode=require";
+
+            $pdo = new PDO($dsn, $user, $pass, [
+                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+            ]);
+            $pdo->query('SELECT 1');
+            // Schema is created once via supabase_schema.sql in the SQL editor.
+            // We still reconcile columns added after that schema was first applied,
+            // otherwise an order INSERT referencing a missing column (e.g. gateway)
+            // aborts the whole transaction on Postgres and silently rolls back the
+            // balance deduction — the order is never saved yet the user sees success.
+            ensurePgRuntimeTables($pdo);
+            ensurePgRuntimeColumns($pdo);
+        } catch (Exception $e) {
+            error_log("Postgres connection failed: " . $e->getMessage());
+            $effectiveDbDriver = 'sqlite';
+            $pdo = null;
+        }
+    }
+
+    if ($pdo === null) {
         if (!is_dir(__DIR__ . '/data')) {
             mkdir(__DIR__ . '/data', 0755, true);
         }
@@ -92,6 +105,8 @@ try {
         ensureRuntimeColumns($pdo);
         ensureNotificationsTable($pdo);
     }
+
+    define('DB_DRIVER', $effectiveDbDriver);
 
     // Wrap PDO with MySQLi compatibility layer
     $conn = new MySQLiCompatibility($pdo);
