@@ -161,9 +161,9 @@ class APIHandler {
      */
     public function getAllServices($use_cache = true) {
         // Cache key is per-provider so Boost and FastWay catalogues never
-        // overwrite each other's cache file. Bumped to v5 when the USD->TZS
-        // conversion was switched to USD_TO_TZS_RATE + single markup.
-        $cache_key = "services_all_v5_" . $this->service;
+        // overwrite each other's cache file. Bumped to v6 so the current 60%
+        // markup is applied immediately to newly fetched services.
+        $cache_key = "services_all_v6_" . $this->service;
 
         if ($use_cache) {
             $cached = $this->getCache($cache_key);
@@ -257,7 +257,11 @@ class APIHandler {
             }
 
             // Apply our profit margin on top of the provider's real price.
-            $markup = defined('PRICE_MARKUP_PERCENT') ? (float)PRICE_MARKUP_PERCENT : 0;
+            // Default to 60% when the constant is missing or unset so the UI
+            // always shows the intended customer-facing price.
+            $markup = defined('PRICE_MARKUP_PERCENT') && (float)PRICE_MARKUP_PERCENT > 0
+                ? (float)PRICE_MARKUP_PERCENT
+                : 60;
             $customer_price_per_k = $price_per_k > 0 ? $price_per_k * (1 + $markup / 100) : 0;
             $customer_rate = $customer_price_per_k > 0 ? $customer_price_per_k / 1000 : 0;
 
