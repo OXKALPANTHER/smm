@@ -560,90 +560,100 @@ function logActivity($user_id, $action, $details = '', $status = 'success') {
     return $stmt->execute();
 }
 
-function createNotification($user_id, $title, $message, $type = 'info', $target = 'user', $metadata = null) {
-    global $conn;
-    $title = trim((string)$title);
-    $message = trim((string)$message);
-    $type = in_array($type, ['info', 'success', 'warning', 'danger'], true) ? $type : 'info';
-    $target = in_array($target, ['user', 'broadcast', 'admin'], true) ? $target : 'user';
-    $status = 'unread';
-    $meta = is_array($metadata) ? json_encode($metadata, JSON_UNESCAPED_UNICODE) : trim((string)$metadata);
+if (!function_exists('createNotification')) {
+    function createNotification($user_id, $title, $message, $type = 'info', $target = 'user', $metadata = null) {
+        global $conn;
+        $title = trim((string)$title);
+        $message = trim((string)$message);
+        $type = in_array($type, ['info', 'success', 'warning', 'danger'], true) ? $type : 'info';
+        $target = in_array($target, ['user', 'broadcast', 'admin'], true) ? $target : 'user';
+        $status = 'unread';
+        $meta = is_array($metadata) ? json_encode($metadata, JSON_UNESCAPED_UNICODE) : trim((string)$metadata);
 
-    if ($user_id === null) {
-        $stmt = $conn->prepare("INSERT INTO notifications (user_id, title, message, type, target, status, metadata) VALUES (NULL, ?, ?, ?, ?, ?, ?)");
-        $stmt->bind_param("ssssss", $title, $message, $type, $target, $status, $meta);
-    } else {
-        $user_id = (int)$user_id;
-        $stmt = $conn->prepare("INSERT INTO notifications (user_id, title, message, type, target, status, metadata) VALUES (?, ?, ?, ?, ?, ?, ?)");
-        $stmt->bind_param("issssss", $user_id, $title, $message, $type, $target, $status, $meta);
+        if ($user_id === null) {
+            $stmt = $conn->prepare("INSERT INTO notifications (user_id, title, message, type, target, status, metadata) VALUES (NULL, ?, ?, ?, ?, ?, ?)");
+            $stmt->bind_param("ssssss", $title, $message, $type, $target, $status, $meta);
+        } else {
+            $user_id = (int)$user_id;
+            $stmt = $conn->prepare("INSERT INTO notifications (user_id, title, message, type, target, status, metadata) VALUES (?, ?, ?, ?, ?, ?, ?)");
+            $stmt->bind_param("issssss", $user_id, $title, $message, $type, $target, $status, $meta);
+        }
+
+        return $stmt ? $stmt->execute() : false;
     }
-
-    return $stmt ? $stmt->execute() : false;
 }
 
-function getUserNotifications($user_id, $limit = 100) {
-    global $conn;
-    $user_id = (int)$user_id;
-    $stmt = $conn->prepare(
-        "SELECT n.*, u.username FROM notifications n
-         LEFT JOIN users u ON u.id = n.user_id
-         WHERE (n.user_id = ? OR n.target = 'broadcast')
-         ORDER BY n.created_at DESC
-         LIMIT ?"
-    );
-    $stmt->bind_param("ii", $user_id, $limit);
-    $stmt->execute();
-    return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
-}
-
-function getNotifications($limit = 200) {
-    global $conn;
-    $stmt = $conn->prepare(
-        "SELECT n.*, u.username FROM notifications n
-         LEFT JOIN users u ON u.id = n.user_id
-         ORDER BY n.created_at DESC
-         LIMIT ?"
-    );
-    $stmt->bind_param("i", $limit);
-    $stmt->execute();
-    return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
-}
-
-function getUnreadNotificationCount($user_id) {
-    global $conn;
-    $user_id = (int)$user_id;
-    $stmt = $conn->prepare(
-        "SELECT COUNT(*) c FROM notifications
-         WHERE status = 'unread' AND (user_id = ? OR target = 'broadcast')"
-    );
-    $stmt->bind_param("i", $user_id);
-    $stmt->execute();
-    return (int)($stmt->get_result()->fetch_assoc()['c'] ?? 0);
-}
-
-function markNotificationRead($notification_id, $user_id = null) {
-    global $conn;
-    $notification_id = (int)$notification_id;
-    if ($notification_id <= 0) {
-        return false;
-    }
-    if ($user_id !== null) {
+if (!function_exists('getUserNotifications')) {
+    function getUserNotifications($user_id, $limit = 100) {
+        global $conn;
         $user_id = (int)$user_id;
         $stmt = $conn->prepare(
-            "UPDATE notifications
-             SET status = 'read', read_at = CURRENT_TIMESTAMP
-             WHERE id = ? AND (user_id = ? OR target = 'broadcast')"
+            "SELECT n.*, u.username FROM notifications n
+             LEFT JOIN users u ON u.id = n.user_id
+             WHERE (n.user_id = ? OR n.target = 'broadcast')
+             ORDER BY n.created_at DESC
+             LIMIT ?"
         );
-        $stmt->bind_param("ii", $notification_id, $user_id);
-    } else {
-        $stmt = $conn->prepare(
-            "UPDATE notifications
-             SET status = 'read', read_at = CURRENT_TIMESTAMP
-             WHERE id = ?"
-        );
-        $stmt->bind_param("i", $notification_id);
+        $stmt->bind_param("ii", $user_id, $limit);
+        $stmt->execute();
+        return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
     }
-    return $stmt ? $stmt->execute() : false;
+}
+
+if (!function_exists('getNotifications')) {
+    function getNotifications($limit = 200) {
+        global $conn;
+        $stmt = $conn->prepare(
+            "SELECT n.*, u.username FROM notifications n
+             LEFT JOIN users u ON u.id = n.user_id
+             ORDER BY n.created_at DESC
+             LIMIT ?"
+        );
+        $stmt->bind_param("i", $limit);
+        $stmt->execute();
+        return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    }
+}
+
+if (!function_exists('getUnreadNotificationCount')) {
+    function getUnreadNotificationCount($user_id) {
+        global $conn;
+        $user_id = (int)$user_id;
+        $stmt = $conn->prepare(
+            "SELECT COUNT(*) c FROM notifications
+             WHERE status = 'unread' AND (user_id = ? OR target = 'broadcast')"
+        );
+        $stmt->bind_param("i", $user_id);
+        $stmt->execute();
+        return (int)($stmt->get_result()->fetch_assoc()['c'] ?? 0);
+    }
+}
+
+if (!function_exists('markNotificationRead')) {
+    function markNotificationRead($notification_id, $user_id = null) {
+        global $conn;
+        $notification_id = (int)$notification_id;
+        if ($notification_id <= 0) {
+            return false;
+        }
+        if ($user_id !== null) {
+            $user_id = (int)$user_id;
+            $stmt = $conn->prepare(
+                "UPDATE notifications
+                 SET status = 'read', read_at = CURRENT_TIMESTAMP
+                 WHERE id = ? AND (user_id = ? OR target = 'broadcast')"
+            );
+            $stmt->bind_param("ii", $notification_id, $user_id);
+        } else {
+            $stmt = $conn->prepare(
+                "UPDATE notifications
+                 SET status = 'read', read_at = CURRENT_TIMESTAMP
+                 WHERE id = ?"
+            );
+            $stmt->bind_param("i", $notification_id);
+        }
+        return $stmt ? $stmt->execute() : false;
+    }
 }
 
 /**
