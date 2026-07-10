@@ -227,6 +227,14 @@ try {
 
     $provider_used = $use_fallback ? 'partner_service' : 'primary_service';
     logActivity($user_id, 'order_placed', "Order #{$order_id} ({$service['name']}) x{$quantity} = {$cost} TZS via {$provider_used}");
+    createNotification(
+        $user_id,
+        'Order imefanikiwa',
+        "Order #{$order_id} ya {$service['name']} imepokelewa na imehifadhiwa kwa mafanikio.",
+        'success',
+        'user',
+        ['order_id' => $order_id, 'source' => 'order_placed']
+    );
 
     jsonOut(true, 'Order imefanikiwa!', [
         'order_id'          => $order_id,

@@ -127,6 +127,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $stmt->execute();
                     // Award referral bonus if this is the user's first deposit
                     applyReferralBonus($conn, $row['user_id'], $row['amount']);
+                    createNotification(
+                        $row['user_id'],
+                        'Top-up imekamilika',
+                        'Malipo yako yamekamilika na salio lako limeongezwa kwa mafanikio.',
+                        'success',
+                        'user',
+                        ['source' => 'topup']
+                    );
                     $conn->commit();
                 }
             } elseif ($status === 'FAILED') {

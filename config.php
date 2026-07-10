@@ -712,56 +712,6 @@ function getUser($user_id) {
     return $stmt->get_result()->fetch_assoc();
 }
 
-function getNotifications($limit = 200) {
-    global $conn;
-    $stmt = $conn->prepare(
-        "SELECT n.*, u.username FROM notifications n
-         LEFT JOIN users u ON u.id = n.user_id
-         ORDER BY n.created_at DESC
-         LIMIT ?"
-    );
-    $stmt->bind_param("i", $limit);
-    $stmt->execute();
-    return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
-}
-
-function getUnreadNotificationCount($user_id) {
-    global $conn;
-    $user_id = (int)$user_id;
-    $stmt = $conn->prepare(
-        "SELECT COUNT(*) c FROM notifications
-         WHERE status = 'unread' AND (user_id = ? OR target = 'broadcast')"
-    );
-    $stmt->bind_param("i", $user_id);
-    $stmt->execute();
-    return (int)($stmt->get_result()->fetch_assoc()['c'] ?? 0);
-}
-
-function markNotificationRead($notification_id, $user_id = null) {
-    global $conn;
-    $notification_id = (int)$notification_id;
-    if ($notification_id <= 0) {
-        return false;
-    }
-    if ($user_id !== null) {
-        $user_id = (int)$user_id;
-        $stmt = $conn->prepare(
-            "UPDATE notifications
-             SET status = 'read', read_at = CURRENT_TIMESTAMP
-             WHERE id = ? AND (user_id = ? OR target = 'broadcast')"
-        );
-        $stmt->bind_param("ii", $notification_id, $user_id);
-    } else {
-        $stmt = $conn->prepare(
-            "UPDATE notifications
-             SET status = 'read', read_at = CURRENT_TIMESTAMP
-             WHERE id = ?"
-        );
-        $stmt->bind_param("i", $notification_id);
-    }
-    return $stmt ? $stmt->execute() : false;
-}
-
 /**
  * Check if user is admin
  */

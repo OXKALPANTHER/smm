@@ -288,6 +288,78 @@ body.admin{background:#f4f7fe;}
         <div class="col-md-4"><div class="stat-card"><div class="lbl">Pending Orders</div><div class="val" style="color:#b8860b"><?= number_format($statusCounts['pending']) ?></div></div></div>
     </div>
 
+    <div class="row g-3 mb-4">
+        <div class="col-lg-7">
+            <div class="panel">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="fw-bold mb-0"><i class="bi bi-send-fill text-primary"></i> Tuma Notisi kwa Wateja</h5>
+                    <span class="badge-soft badge-secondary">Admin Composer</span>
+                </div>
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <label class="form-label">Mpokeaji</label>
+                        <select class="form-select" id="notificationTarget">
+                            <option value="user">Mteja mmoja</option>
+                            <option value="broadcast">Wote</option>
+                            <option value="admin">Wafanyakazi/Admin</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3" id="userSelectWrap">
+                        <label class="form-label">Chagua mtumiaji</label>
+                        <select class="form-select" id="notificationUserId">
+                            <option value="">-- Chagua --</option>
+                            <?php foreach ($users as $u): ?>
+                                <option value="<?= (int)$u['id'] ?>"><?= htmlspecialchars($u['username']) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Aina</label>
+                        <select class="form-select" id="notificationType">
+                            <option value="info">Info</option>
+                            <option value="success">Success</option>
+                            <option value="warning">Warning</option>
+                            <option value="danger">Danger</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Kichwa</label>
+                        <input type="text" class="form-control" id="notificationTitle" placeholder="Mfano: Update ya mfumo">
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <label class="form-label">Ujumbe</label>
+                    <textarea class="form-control" id="notificationMessage" rows="4" placeholder="Andika ujumbe wa notisi..."></textarea>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mt-3 flex-wrap gap-2">
+                    <small class="text-muted">Notisi zitatumwa moja kwa moja kwenye mfumo wa ndani na zinaweza kuonekana kwenye ukurasa wa notisi.</small>
+                    <button class="btn-grad" style="width:auto;padding:.65rem 1.2rem;" onclick="sendNotification()"><i class="bi bi-send"></i> Tuma</button>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-5">
+            <div class="panel">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="fw-bold mb-0"><i class="bi bi-bell-fill text-warning"></i> Notisi za hivi karibuni</h5>
+                    <span class="badge-soft badge-warning"><?= number_format(count($notifications)) ?> total</span>
+                </div>
+                <div class="d-flex flex-column gap-2">
+                    <?php foreach (array_slice($notifications, 0, 8) as $n): ?>
+                        <div class="border rounded-4 p-2" style="background:#fbfcff;">
+                            <div class="d-flex justify-content-between align-items-start gap-2">
+                                <div>
+                                    <div class="fw-semibold small"><?= htmlspecialchars($n['title'] ?? 'Notification') ?></div>
+                                    <div class="text-muted small"><?= htmlspecialchars(mb_substr($n['message'] ?? '',0,90)) ?></div>
+                                </div>
+                                <span class="badge-soft badge-<?= htmlspecialchars($n['type'] ?? 'info') ?>"><?= htmlspecialchars($n['type'] ?? 'info') ?></span>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Refill requests -->
     <div class="panel mb-4" id="refills">
         <h5 class="fw-bold mb-3"><i class="bi bi-arrow-repeat text-primary"></i> Refill Requests (<?= count($refills) ?>)</h5>
@@ -491,6 +563,28 @@ async function setRefill(id,refill_status){
   toast(j.message, j.success?'success':'danger');
   if(j.success) setTimeout(()=>location.reload(),900);
 }
+
+async function sendNotification(){
+  const target=document.getElementById('notificationTarget').value;
+  const userId=document.getElementById('notificationUserId').value;
+  const type=document.getElementById('notificationType').value;
+  const title=document.getElementById('notificationTitle').value.trim();
+  const message=document.getElementById('notificationMessage').value.trim();
+  if(!title || !message){ return toast('Jaza kichwa na ujumbe wa notisi.','warning'); }
+  if(target==='user' && !userId){ return toast('Chagua mtumiaji wa kutuma notisi.','warning'); }
+  const j=await postAction({action:'send_notification',target,user_id:userId,title,message,type});
+  toast(j.message, j.success?'success':'danger');
+  if(j.success){ document.getElementById('notificationTitle').value=''; document.getElementById('notificationMessage').value=''; }
+}
+
+const targetSelect=document.getElementById('notificationTarget');
+const userSelectWrap=document.getElementById('userSelectWrap');
+function toggleUserSelector(){
+  if(!userSelectWrap) return;
+  userSelectWrap.style.display = targetSelect.value === 'user' ? '' : 'none';
+}
+targetSelect.addEventListener('change', toggleUserSelector);
+toggleUserSelector();
 JS
 . '</script>';
 
