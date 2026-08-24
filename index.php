@@ -1,4 +1,5 @@
 <?php
+// Performance direction: keep the dashboard’s familiar server-rendered flow and defer nonessential payment content until requested.
 require_once 'config.php';
 require_once 'includes/ui.php';
 requireLogin();
@@ -80,7 +81,10 @@ function statusBadge($status) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title><?= APP_NAME ?> — Weka Order</title>
 
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
@@ -487,7 +491,7 @@ function statusBadge($status) {
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body p-0">
-                <iframe src="topup.php" class="w-100" style="height: 600px; border: none;"></iframe>
+                <iframe src="about:blank" data-src="topup.php" loading="lazy" title="Ongeza salio" class="w-100" style="height: 600px; border: none;"></iframe>
             </div>
         </div>
     </div>
@@ -496,6 +500,7 @@ function statusBadge($status) {
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script src="assets/lazy-topup.js"></script>
 
 <script>
 let userBalance = <?= json_encode($tzsBalance) ?>;
