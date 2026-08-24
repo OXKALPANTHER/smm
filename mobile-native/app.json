@@ -1,0 +1,18 @@
+{
+  "expo": {
+    "name": "Royal SMM",
+    "slug": "royal-smm-native",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "scheme": "royalsmm",
+    "newArchEnabled": true,
+    "ios": { "supportsTablet": true },
+    "android": {
+      "package": "com.royalsmm.nativeapp",
+      "permissions": ["POST_NOTIFICATIONS"]
+    },
+    "plugins": ["expo-router"],
+    "experiments": { "typedRoutes": true }
+  }
+}

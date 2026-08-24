@@ -406,6 +406,12 @@ ui_head(APP_NAME . ' — Admin', 'admin', $extraHead);
             display: flex;
         }
     }
+
+    /* Operator’s Signal Room: notification scope, urgency, and delivery context are visible at a glance. */
+    .notification-command{position:relative;overflow:hidden;border:1px solid #e7e9fb;background:linear-gradient(135deg,#fff 0%,#fbfaff 62%,#f5f2ff 100%)}
+    .notification-command:after{content:'';position:absolute;right:-76px;top:-92px;width:225px;height:225px;border-radius:999px;background:radial-gradient(circle,rgba(108,92,231,.12),rgba(108,92,231,0) 68%);pointer-events:none}
+    .notification-eyebrow{color:#6c5ce7;font-size:.68rem;font-weight:800;letter-spacing:.11em;text-transform:uppercase}.notification-heading-icon{display:inline-flex;align-items:center;justify-content:center;width:42px;height:42px;margin-right:.7rem;border-radius:14px;background:#eeebff;color:#6c5ce7;font-size:1.15rem}.notification-scope-strip{position:relative;z-index:1;display:flex;align-items:center;gap:.8rem;margin-bottom:1rem;padding:.75rem .9rem;border:1px solid #ebe8ff;border-radius:14px;background:rgba(255,255,255,.8)}.notification-scope-orb{display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;width:32px;height:32px;border-radius:50%;background:#6c5ce7;color:#fff;font-size:.88rem;box-shadow:0 5px 12px rgba(108,92,231,.22)}.notification-scope-strip strong,.notification-scope-strip small{display:block;line-height:1.25}.notification-scope-strip small{margin-top:.14rem;color:var(--muted);font-size:.74rem}.notification-template-row{position:relative;z-index:1;display:flex;flex-wrap:wrap;gap:.45rem;margin-top:.8rem}.notification-template{border:1px solid #e6e8f7;border-radius:999px;padding:.38rem .7rem;background:#fff;color:#4c5275;font-size:.72rem;font-weight:700;transition:transform .18s ease,border-color .18s ease,color .18s ease}.notification-template:hover{transform:translateY(-1px);border-color:#bfb5ff;color:#5d4dd4}.notification-rail-panel{padding:0;overflow:hidden;border:1px solid #e8ebf6}.notification-rail-head{display:flex;align-items:center;justify-content:space-between;gap:.8rem;padding:1.25rem 1.25rem .85rem}.notification-filter-row{display:flex;gap:.35rem;overflow-x:auto;padding:0 1.25rem .9rem;border-bottom:1px solid #eef0f7;scrollbar-width:none}.notification-filter{flex:0 0 auto;border:0;border-radius:9px;padding:.36rem .62rem;background:#f3f5fb;color:#68708f;font-size:.7rem;font-weight:800}.notification-filter.active,.notification-filter:hover{background:#eae6ff;color:#5d4dd4}.notification-rail{position:relative;max-height:475px;overflow-y:auto;padding:.55rem .95rem 1rem 1.35rem}.notification-rail:before{content:'';position:absolute;left:1.85rem;top:1rem;bottom:1.15rem;width:1px;background:#e6e9f5}.notification-event{position:relative;display:grid;grid-template-columns:38px minmax(0,1fr);gap:.8rem;padding:.8rem .4rem .8rem 0}.notification-event-icon{position:relative;z-index:1;display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:12px;background:#eef1fc;color:#6170b0;font-size:.92rem;box-shadow:0 0 0 4px #fff}.notification-event[data-type=success] .notification-event-icon{background:#e4f8ee;color:#168957}.notification-event[data-type=warning] .notification-event-icon{background:#fff4da;color:#b77900}.notification-event[data-type=danger] .notification-event-icon{background:#ffebe8;color:#ce4b3e}.notification-event-title-row{display:flex;align-items:flex-start;justify-content:space-between;gap:.55rem}.notification-event-title{overflow:hidden;color:#252a4d;font-size:.82rem;font-weight:800;text-overflow:ellipsis;white-space:nowrap}.notification-event-time{flex:0 0 auto;color:#8a90aa;font-size:.67rem;font-weight:700;white-space:nowrap}.notification-event-message{display:-webkit-box;overflow:hidden;margin:.22rem 0 .45rem;color:#707693;font-size:.74rem;line-height:1.45;-webkit-box-orient:vertical;-webkit-line-clamp:2}.notification-meta-chip{border-radius:999px;padding:.2rem .42rem;background:#f1f3fa;color:#707896;font-size:.64rem;font-weight:700}.notification-meta-chip.scope-broadcast{background:#eeeaff;color:#6654d8}.notification-meta-chip.scope-admin{background:#e7f7fa;color:#167d88}@media(max-width:575px){.notification-command,.notification-rail-panel{border-radius:16px}.notification-scope-strip{align-items:flex-start}}
+
 </style>
 
 <div class="sidebar" id="sidebar">
@@ -520,83 +526,9 @@ ui_head(APP_NAME . ' — Admin', 'admin', $extraHead);
         </div>
     </div>
 
-    <div class="row g-3 mb-4">
-        <div class="col-lg-7">
-            <div class="panel">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h5 class="fw-bold mb-0"><i class="bi bi-send-fill text-primary"></i> Tuma Notisi kwa Wateja</h5>
-                    <span class="badge-soft badge-secondary">Admin Composer</span>
-                </div>
-                <div class="row g-3">
-                    <div class="col-md-3">
-                        <label class="form-label">Mpokeaji</label>
-                        <select class="form-select" id="notificationTarget">
-                            <option value="user">Mteja mmoja</option>
-                            <option value="broadcast">Wote</option>
-                            <option value="admin">Wafanyakazi/Admin</option>
-                        </select>
-                    </div>
-                    <div class="col-md-3" id="userSelectWrap">
-                        <label class="form-label">Chagua mtumiaji</label>
-                        <select class="form-select" id="notificationUserId">
-                            <option value="">-- Chagua --</option>
-                            <?php foreach ($users as $u): ?>
-                                <option value="<?= (int) $u['id'] ?>"><?= htmlspecialchars($u['username']) ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label">Aina</label>
-                        <select class="form-select" id="notificationType">
-                            <option value="info">Info</option>
-                            <option value="success">Success</option>
-                            <option value="warning">Warning</option>
-                            <option value="danger">Danger</option>
-                        </select>
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label">Kichwa</label>
-                        <input type="text" class="form-control" id="notificationTitle"
-                            placeholder="Mfano: Update ya mfumo">
-                    </div>
-                </div>
-                <div class="mt-3">
-                    <label class="form-label">Ujumbe</label>
-                    <textarea class="form-control" id="notificationMessage" rows="4"
-                        placeholder="Andika ujumbe wa notisi..."></textarea>
-                </div>
-                <div class="d-flex justify-content-between align-items-center mt-3 flex-wrap gap-2">
-                    <small class="text-muted">Notisi zitatumwa moja kwa moja kwenye mfumo wa ndani na zinaweza kuonekana
-                        kwenye ukurasa wa notisi.</small>
-                    <button class="btn-grad" style="width:auto;padding:.65rem 1.2rem;" onclick="sendNotification()"><i
-                            class="bi bi-send"></i> Tuma</button>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-5">
-            <div class="panel">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h5 class="fw-bold mb-0"><i class="bi bi-bell-fill text-warning"></i> Notisi za hivi karibuni</h5>
-                    <span class="badge-soft badge-warning"><?= number_format(count($notifications)) ?> total</span>
-                </div>
-                <div class="d-flex flex-column gap-2">
-                    <?php foreach (array_slice($notifications, 0, 8) as $n): ?>
-                        <div class="border rounded-4 p-2" style="background:#fbfcff;">
-                            <div class="d-flex justify-content-between align-items-start gap-2">
-                                <div>
-                                    <div class="fw-semibold small"><?= htmlspecialchars($n['title'] ?? 'Notification') ?>
-                                    </div>
-                                    <div class="text-muted small">
-                                        <?= htmlspecialchars(mb_substr($n['message'] ?? '', 0, 90)) ?></div>
-                                </div>
-                                <span
-                                    class="badge-soft badge-<?= htmlspecialchars($n['type'] ?? 'info') ?>"><?= htmlspecialchars($n['type'] ?? 'info') ?></span>
-                            </div>
-                        </div>
-                    <?php endforeach; ?>
-                </div>
-            </div>
-        </div>
+    <div class="row g-3 mb-4" id="notificationCenter">
+        <div class="col-lg-7"><div class="panel notification-command h-100"><div class="position-relative" style="z-index:1;"><div class="d-flex justify-content-between align-items-start gap-3 mb-3"><div class="d-flex align-items-center"><span class="notification-heading-icon"><i class="bi bi-send-fill"></i></span><div><div class="notification-eyebrow">Signal composer</div><h5 class="fw-bold mb-0">Tuma notisi yenye muktadha</h5></div></div><span class="badge-soft badge-secondary">Live delivery</span></div><div class="notification-scope-strip" aria-live="polite"><span class="notification-scope-orb"><i class="bi bi-person-fill"></i></span><div><strong id="notificationScopeLabel">Mteja mmoja</strong><small id="notificationScopeSummary">Notisi inatumwa kwa mtu uliyemchagua.</small></div></div></div><div class="row g-3 position-relative" style="z-index:1;"><div class="col-md-4"><label class="form-label">Mpokeaji</label><select class="form-select" id="notificationTarget"><option value="user">Mteja mmoja</option><option value="broadcast">Wateja wote</option><option value="admin">Wafanyakazi/Admin</option></select></div><div class="col-md-4" id="userSelectWrap"><label class="form-label">Chagua mtumiaji</label><select class="form-select" id="notificationUserId"><option value="">-- Chagua --</option><?php foreach ($users as $u): ?><option value="<?= (int) $u['id'] ?>"><?= htmlspecialchars($u['username']) ?></option><?php endforeach; ?></select></div><div class="col-md-4"><label class="form-label">Aina ya ishara</label><select class="form-select" id="notificationType"><option value="info">Info</option><option value="success">Success</option><option value="warning">Warning</option><option value="danger">Danger</option></select></div></div><div class="row g-3 mt-0 position-relative" style="z-index:1;"><div class="col-md-5"><label class="form-label">Kichwa</label><input type="text" class="form-control" id="notificationTitle" placeholder="Mfano: Update ya mfumo"></div><div class="col-md-7"><div class="d-flex justify-content-between align-items-center"><label class="form-label mb-1">Ujumbe</label><span class="text-muted" id="notificationMessageCount" style="font-size:.7rem;">0 herufi</span></div><textarea class="form-control" id="notificationMessage" rows="3" placeholder="Andika ujumbe wenye hatua inayofuata..."></textarea></div></div><div class="notification-template-row" aria-label="Quick notification templates"><button class="notification-template" type="button" data-template-title="Taarifa ya mfumo" data-template-message="Tafadhali angalia taarifa ya mfumo kwenye akaunti yako." data-template-type="info"><i class="bi bi-info-circle me-1"></i>Taarifa ya mfumo</button><button class="notification-template" type="button" data-template-title="Order imekamilika" data-template-message="Order yako imekamilika. Angalia maelezo kwenye ukurasa wa orders." data-template-type="success"><i class="bi bi-check2-circle me-1"></i>Order imekamilika</button><button class="notification-template" type="button" data-template-title="Hatua inahitajika" data-template-message="Kuna hatua inahitajika kwenye akaunti yako. Tafadhali fungua notisi kwa maelezo." data-template-type="warning"><i class="bi bi-exclamation-circle me-1"></i>Hatua inahitajika</button></div><div class="d-flex justify-content-between align-items-center mt-3 flex-wrap gap-2 position-relative" style="z-index:1;"><small class="text-muted">Ujumbe unatumwa kwenye notisi za ndani. Scope na aina huonekana kwenye signal rail.</small><button class="btn-grad" id="sendNotificationButton" style="width:auto;padding:.65rem 1.2rem;" onclick="sendNotification()"><i class="bi bi-send"></i> Tuma notisi</button></div></div></div>
+        <div class="col-lg-5"><div class="panel notification-rail-panel h-100"><div class="notification-rail-head"><div><div class="notification-eyebrow">Recent signal rail</div><h5 class="fw-bold mb-0"><i class="bi bi-bell-fill text-warning me-1"></i>Notisi za hivi karibuni</h5></div><a href="notifications.php" class="btn-ico" title="Fungua notisi zote" aria-label="Fungua notisi zote"><i class="bi bi-arrow-up-right"></i></a></div><div class="notification-filter-row" aria-label="Filter notifications"><button class="notification-filter active" type="button" data-notification-filter="all">Zote <span><?= number_format(count($notifications)) ?></span></button><button class="notification-filter" type="button" data-notification-filter="warning">Tahadhari</button><button class="notification-filter" type="button" data-notification-filter="danger">Hatari</button><button class="notification-filter" type="button" data-notification-filter="success">Imekamilika</button></div><div class="notification-rail" id="notificationRail"><?php if (empty($notifications)): ?><div class="text-center text-muted py-4"><i class="bi bi-bell-slash d-block mb-2" style="font-size:1.35rem;"></i>Hakuna notisi bado.</div><?php else: ?><?php foreach (array_slice($notifications,0,12) as $n): ?><?php $nType=in_array($n['type']??'', ['info','success','warning','danger'],true)?$n['type']:'info'; $nTarget=$n['target']??'user'; $nScope=$nTarget==='broadcast'?'Broadcast':($nTarget==='admin'?'Admin':($n['username']??'Mteja')); $nIcon=$nType==='success'?'check2':($nType==='warning'?'exclamation-triangle':($nType==='danger'?'shield-exclamation':'info-circle')); ?><article class="notification-event" data-type="<?= htmlspecialchars($nType) ?>"><span class="notification-event-icon"><i class="bi bi-<?= $nIcon ?>"></i></span><div><div class="notification-event-title-row"><strong class="notification-event-title"><?= htmlspecialchars($n['title']??'Notification') ?></strong><time class="notification-event-time"><?= !empty($n['created_at'])?date('M j · H:i',strtotime($n['created_at'])):'Sasa' ?></time></div><p class="notification-event-message"><?= htmlspecialchars($n['message']??'') ?></p><div class="d-flex flex-wrap gap-1"><span class="notification-meta-chip scope-<?= htmlspecialchars($nTarget) ?>"><?= htmlspecialchars($nScope) ?></span><span class="notification-meta-chip text-capitalize"><?= htmlspecialchars($nType) ?></span></div></div></article><?php endforeach; ?><?php endif; ?></div></div></div>
     </div>
 
     <!-- Refill requests -->
@@ -917,6 +849,9 @@ function toggleUserSelector(){
 }
 targetSelect.addEventListener('change', toggleUserSelector);
 toggleUserSelector();
+// Notification command-center interactions
+(function(){const target=document.getElementById('notificationTarget'),wrap=document.getElementById('userSelectWrap'),message=document.getElementById('notificationMessage'),count=document.getElementById('notificationMessageCount');if(!target||!message)return;const sync=()=>{const scopes={user:['Mteja mmoja','Notisi inatumwa kwa mtu uliyemchagua.','person-fill'],broadcast:['Wateja wote','Ujumbe huu utaonekana kwa kila mteja anayehusika.','broadcast-pin'],admin:['Wafanyakazi/Admin','Ujumbe huu unaelekezwa kwa timu ya usimamizi.','people-fill']},s=scopes[target.value]||scopes.user;wrap.style.display=target.value==='user'?'':'none';document.getElementById('notificationScopeLabel').textContent=s[0];document.getElementById('notificationScopeSummary').textContent=s[1];document.querySelector('.notification-scope-orb').innerHTML='<i class="bi bi-'+s[2]+'"></i>';count.textContent=message.value.length+' herufi'};target.addEventListener('change',sync);message.addEventListener('input',sync);document.querySelectorAll('[data-template-title]').forEach(b=>b.addEventListener('click',()=>{document.getElementById('notificationTitle').value=b.dataset.templateTitle;message.value=b.dataset.templateMessage;document.getElementById('notificationType').value=b.dataset.templateType;sync();message.focus()}));document.querySelectorAll('[data-notification-filter]').forEach(b=>b.addEventListener('click',()=>{const f=b.dataset.notificationFilter;document.querySelectorAll('[data-notification-filter]').forEach(x=>x.classList.toggle('active',x===b));document.querySelectorAll('.notification-event').forEach(e=>e.hidden=f!=='all'&&e.dataset.type!==f)}));sync()})();
+
 JS
     . '</script>';
 
