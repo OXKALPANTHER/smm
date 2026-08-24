@@ -1,5 +1,6 @@
 <?php
 /**
+ * Performance direction: shared chrome keeps visual parity while prioritizing fewer blocking connections and a smaller font payload.
  * Shared UI theme + layout helpers for the Royal SMM front-end.
  * Gives every page the same look (palette, cards, forms, nav, toasts).
  *
@@ -111,7 +112,10 @@ function ui_head($title, $bodyClass = 'app', $extraHead = '')
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>{$title}</title>
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
 <style>
