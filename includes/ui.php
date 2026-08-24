@@ -333,7 +333,7 @@ function ui_topup_modal()
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body p-0">
-        <iframe src="topup.php" class="w-100" style="height:600px;border:none;"></iframe>
+        <iframe src="about:blank" data-src="topup.php" loading="lazy" title="Ongeza salio" class="w-100" style="height:600px;border:none;"></iframe>
       </div>
     </div>
   </div>
@@ -345,6 +345,7 @@ function ui_foot($extraScript = '')
 {
   echo <<<HTML
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="assets/lazy-topup.js"></script>
 <script>
 function toast(msg,type='primary'){
   const ic=type==='success'?'check-circle-fill':type==='danger'?'x-circle-fill':type==='warning'?'exclamation-triangle-fill':'info-circle-fill';
