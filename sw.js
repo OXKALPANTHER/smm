@@ -1,15 +1,8 @@
 /* Royal SMM — service worker (offline support + installable PWA) */
-
 const VERSION   = 'royal-v4';
-
 const SHELL     = 'royal-shell-' + VERSION;
-
 const RUNTIME   = 'royal-runtime-' + VERSION;
-
-
-
 // Minimal app shell precached on install.
-
 const SHELL_ASSETS = [
   
   './offline.html',
@@ -27,15 +20,8 @@ const SHELL_ASSETS = [
   './assets/payment-icons.svg'
   
 ];
-
-
-
 // Never let the SW touch these (auth / live order / keep-alive / dynamic JSON).
-
 const BYPASS = ['ping.php', 'place-order.php', 'api-services.php', 'logout.php', 'login.php', 'register.php', 'webhooks/'];
-
-
-
 self.addEventListener('install', (event) => {
   
   event.waitUntil(
@@ -45,9 +31,6 @@ self.addEventListener('install', (event) => {
   );
   
 });
-
-
-
 self.addEventListener('activate', (event) => {
   
   event.waitUntil(
@@ -61,26 +44,20 @@ self.addEventListener('activate', (event) => {
   );
   
 });
-
-
-
 self.addEventListener('fetch', (event) => {
   
   const req = event.request;
   
-
   
   // Only handle GET; let everything else hit the network untouched.
   
   if (req.method !== 'GET') return;
   
-
   
   const url = new URL(req.url);
   
   if (BYPASS.some((p) => url.pathname.includes(p))) return;
   
-
   
   // Navigations (HTML pages): network-first, fall back to cache, then offline page.
   
@@ -108,7 +85,6 @@ self.addEventListener('fetch', (event) => {
     
   }
   
-
   
   // Static assets (css/js/fonts/images, incl. CDN): cache-first, then network.
   
@@ -137,58 +113,3 @@ self.addEventListener('fetch', (event) => {
   );
   
 });
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
