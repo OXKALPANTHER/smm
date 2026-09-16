@@ -21,6 +21,12 @@ if (OPENAI_API_KEY === '') {
     exit;
 }
 
+if (!filter_var(OPENAI_BASE_URL, FILTER_VALIDATE_URL)) {
+    http_response_code(503);
+    echo json_encode(['success' => false, 'message' => 'Live support has an invalid AI provider URL. Check OPENAI_BASE_URL in Render.']);
+    exit;
+}
+
 if (!function_exists('curl_init')) {
     http_response_code(503);
     echo json_encode(['success' => false, 'message' => 'Live support cannot start because the server is missing PHP cURL. Please redeploy the latest application image.']);
@@ -118,9 +124,9 @@ $statusCode = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
 curl_close($ch);
 
 if ($responseBody === false || $curlError !== '') {
-    error_log('Chatbot provider connection failed: ' . $curlError);
+    error_log('Chatbot provider connection failed: ' . $curlError . ' URL=' . OPENAI_BASE_URL);
     http_response_code(502);
-    echo json_encode(['success' => false, 'message' => 'The live support service is temporarily unavailable. Please try again or use WhatsApp support.']);
+    echo json_encode(['success' => false, 'message' => 'The AI provider could not be reached. Check outbound network access and OPENAI_BASE_URL in Render.']);
     exit;
 }
 
@@ -129,7 +135,21 @@ $answer = trim((string) ($response['choices'][0]['message']['content'] ?? ''));
 if ($statusCode < 200 || $statusCode >= 300 || $answer === '') {
     error_log('Chatbot provider returned HTTP ' . $statusCode . ': ' . mb_substr($responseBody, 0, 500));
     http_response_code(502);
-    echo json_encode(['success' => false, 'message' => 'I could not reach live support right now. Please try again or use WhatsApp support.']);
+    $providerMessage = (string) ($response['error']['message'] ?? '');
+    if ($statusCode === 401) {
+        $message = 'The AI provider rejected OPENAI_API_KEY. Check that the key is valid and saved in Render.';
+    } elseif ($statusCode === 403) {
+        $message = 'The AI provider denied this request. Check API key permissions and project access.';
+    } elseif ($statusCode === 404) {
+        $message = 'The configured AI model or provider URL was not found. Check OPENAI_MODEL and OPENAI_BASE_URL.';
+    } elseif ($statusCode === 429) {
+        $message = 'The AI provider rate limit or billing limit was reached. Check your provider usage and credits.';
+    } elseif ($providerMessage !== '') {
+        $message = 'The AI provider returned an error. Check the API key, model, and account billing settings.';
+    } else {
+        $message = 'The AI provider returned an unexpected response. Check the Render logs for the HTTP status.';
+    }
+    echo json_encode(['success' => false, 'message' => $message]);
     exit;
 }
 
