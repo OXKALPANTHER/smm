@@ -21,6 +21,12 @@ if (OPENAI_API_KEY === '') {
     exit;
 }
 
+if (!function_exists('curl_init')) {
+    http_response_code(503);
+    echo json_encode(['success' => false, 'message' => 'Live support cannot start because the server is missing PHP cURL. Please redeploy the latest application image.']);
+    exit;
+}
+
 $now = microtime(true);
 $lastRequest = (float) ($_SESSION['chatbot_last_request'] ?? 0);
 if ($now - $lastRequest < 3) {
@@ -71,6 +77,8 @@ $context = [
 
 $systemPrompt = <<<PROMPT
 You are the real customer-support assistant for Royal SMM, a social-media marketing platform. You are not a salesperson and must never invent features, payment results, order statuses, prices, policies, URLs, or actions. Answer in the same language as the customer: English, Swahili, or a natural mix when they mix languages.
+
+Stay strictly within Royal SMM support. You may answer questions about this website, account navigation, registration, top-ups, balances, orders, services, notifications, the API Center, the help guide, and contacting support. If a question is unrelated to Royal SMM, politely say that you only support Royal SMM and invite the customer to ask how to use the platform. Do not answer general knowledge questions.
 
 You can explain these real workflows:
 - Dashboard: choose a platform and service, enter a valid public link or username, choose a quantity within the displayed minimum and maximum, review the price, and submit the order.

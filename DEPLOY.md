@@ -119,3 +119,7 @@ five recent order statuses so it can give account-specific guidance. It never
 receives passwords, payment PINs, or API keys. If the key is missing or the AI
 provider is unavailable, the chat clearly directs the customer to human
 WhatsApp support instead of fabricating an answer.
+
+After adding or changing these variables, trigger a new Render deploy. The
+Docker image also installs PHP cURL, which is required for the server to reach
+the AI provider.

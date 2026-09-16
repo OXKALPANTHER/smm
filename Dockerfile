@@ -4,7 +4,7 @@ FROM php:8.2-apache
 # PDO drivers: Postgres (Supabase) + SQLite, plus curl for the Boost API
 RUN apt-get update \
     && apt-get install -y libpq-dev libsqlite3-dev \
-    && docker-php-ext-install pdo pdo_pgsql pdo_sqlite \
+    && docker-php-ext-install curl pdo pdo_pgsql pdo_sqlite \
     && a2enmod rewrite \
     && rm -rf /var/lib/apt/lists/*
 
