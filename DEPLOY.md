@@ -77,6 +77,26 @@ So they are **not recommended** for this app. Use a Docker host above instead.
 ## D. Quick checklist
 - [ ] `supabase_schema.sql` ran successfully (tables visible in Table Editor)
 - [ ] 6 `DB_*` env vars set on the host
+- [ ] SMTP variables set on the host (`SMTP_USER`, `SMTP_PASS`, and `SMTP_FROM_EMAIL` are required for top-up emails)
 - [ ] App opens, you can log in as `admin / Admin@123`
 - [ ] Placing/viewing a service loads live prices (proves outbound works)
 - [ ] Change the admin password
+
+### Top-up email configuration
+
+Successful top-ups send an email after the transaction is committed and the
+user balance has been confirmed to increase. For Gmail, create an App Password
+and set these Render environment variables:
+
+```
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=your-google-account@gmail.com
+SMTP_PASS=your-16-character-app-password
+SMTP_FROM_NAME=Royal
+SMTP_FROM_EMAIL=your-google-account@gmail.com
+SMTP_USE_TLS=true
+```
+
+Do not put the SMTP password in the repository. Email delivery failures are
+logged without undoing a successful balance credit.

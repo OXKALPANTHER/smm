@@ -481,13 +481,14 @@ define('PAYSTACK_CALLBACK_URL', 'https://yourdomain.com/webhooks/paystack.php');
 // ============================================
 
 // Email Configuration (SMTP)
-define('SMTP_HOST', 'smtp.gmail.com');
-define('SMTP_PORT', 587);
-define('SMTP_USER', 'your_email@gmail.com');
-define('SMTP_PASS', 'your_app_password');
-define('SMTP_FROM_NAME', APP_NAME);
-define('SMTP_FROM_EMAIL', 'noreply@boostpro.com');
-define('SMTP_USE_TLS', true);
+define('SMTP_HOST', getenv('SMTP_HOST') ?: 'smtp.gmail.com');
+define('SMTP_PORT', (int) (getenv('SMTP_PORT') ?: 587));
+define('SMTP_USER', getenv('SMTP_USER') ?: '');
+define('SMTP_PASS', getenv('SMTP_PASS') ?: '');
+define('SMTP_FROM_NAME', getenv('SMTP_FROM_NAME') ?: APP_NAME);
+define('SMTP_FROM_EMAIL', getenv('SMTP_FROM_EMAIL') ?: SMTP_USER);
+define('SMTP_USE_TLS', filter_var(getenv('SMTP_USE_TLS') ?: 'true', FILTER_VALIDATE_BOOLEAN));
+define('SMTP_TIMEOUT', (int) (getenv('SMTP_TIMEOUT') ?: 15));
 
 // SMS Gateway - Africa's Talking
 define('AFRICAS_TALKING_API_KEY', 'your_africas_talking_key');
@@ -572,6 +573,95 @@ function sanitize($data)
 function validateEmail($email)
 {
     return filter_var($email, FILTER_VALIDATE_EMAIL) !== false;
+}
+
+if (!function_exists('sendTopupSuccessEmail')) {
+    function sendTopupSuccessEmail($email, $username, $amount, $balance, $transactionId)
+    {
+        if (!validateEmail($email)) {
+            error_log('Top-up email skipped: invalid recipient address.');
+            return false;
+        }
+
+        $safeName = htmlspecialchars((string) $username, ENT_QUOTES, 'UTF-8');
+        $safeAmount = htmlspecialchars(number_format((float) $amount, 2), ENT_QUOTES, 'UTF-8');
+        $safeBalance = htmlspecialchars(number_format((float) $balance, 2), ENT_QUOTES, 'UTF-8');
+        $safeTransactionId = htmlspecialchars((string) $transactionId, ENT_QUOTES, 'UTF-8');
+        $subject = APP_NAME . ' top-up successful';
+        $body = '<!doctype html><html><body>'
+            . '<h2>Top-up successful</h2>'
+            . '<p>Hello ' . $safeName . ',</p>'
+            . '<p>Your account has been credited with <strong>' . $safeAmount . ' TZS</strong>.</p>'
+            . '<p>Your new balance is <strong>' . $safeBalance . ' TZS</strong>.</p>'
+            . '<p>Transaction: ' . $safeTransactionId . '</p>'
+            . '<p>Thank you for using ' . htmlspecialchars(APP_NAME, ENT_QUOTES, 'UTF-8') . '.</p>'
+            . '</body></html>';
+        $headers = [
+            'MIME-Version: 1.0',
+            'Content-type: text/html; charset=UTF-8',
+            'From: ' . SMTP_FROM_NAME . ' <' . SMTP_FROM_EMAIL . '>',
+        ];
+
+        $socket = @fsockopen(SMTP_HOST, SMTP_PORT, $errorCode, $errorMessage, SMTP_TIMEOUT);
+        if (!$socket) {
+            error_log('Top-up email SMTP connection failed: ' . $errorMessage . ' (' . $errorCode . ').');
+            return false;
+        }
+
+        stream_set_timeout($socket, SMTP_TIMEOUT);
+        $readResponse = static function ($socket) {
+            $response = '';
+            while (($line = fgets($socket, 515)) !== false) {
+                $response .= $line;
+                if (strlen($line) < 4 || $line[3] !== '-') {
+                    break;
+                }
+            }
+            return [substr($response, 0, 3), $response];
+        };
+        $sendCommand = static function ($socket, $command, $expectedCodes) use ($readResponse) {
+            fwrite($socket, $command . "\r\n");
+            [$code, $response] = $readResponse($socket);
+            if (!in_array($code, $expectedCodes, true)) {
+                throw new RuntimeException('SMTP error ' . $code . ': ' . trim($response));
+            }
+        };
+
+        try {
+            [$code, $response] = $readResponse($socket);
+            if ($code !== '220') {
+                throw new RuntimeException('SMTP greeting error: ' . trim($response));
+            }
+            $sendCommand($socket, 'EHLO ' . ($_SERVER['SERVER_NAME'] ?? 'localhost'), ['250']);
+            if (SMTP_USE_TLS) {
+                $sendCommand($socket, 'STARTTLS', ['220']);
+                if (!stream_socket_enable_crypto($socket, true, STREAM_CRYPTO_METHOD_TLS_CLIENT)) {
+                    throw new RuntimeException('SMTP TLS negotiation failed.');
+                }
+                $sendCommand($socket, 'EHLO ' . ($_SERVER['SERVER_NAME'] ?? 'localhost'), ['250']);
+            }
+            if (SMTP_USER !== '') {
+                $sendCommand($socket, 'AUTH LOGIN', ['334']);
+                $sendCommand($socket, base64_encode(SMTP_USER), ['334']);
+                $sendCommand($socket, base64_encode(SMTP_PASS), ['235']);
+            }
+            $sendCommand($socket, 'MAIL FROM:<' . SMTP_FROM_EMAIL . '>', ['250']);
+            $sendCommand($socket, 'RCPT TO:<' . $email . '>', ['250', '251']);
+            $sendCommand($socket, 'DATA', ['354']);
+            fwrite($socket, 'To: ' . $email . "\r\n" . implode("\r\n", $headers) . "\r\nSubject: " . $subject . "\r\n\r\n" . $body . "\r\n.\r\n");
+            [$code, $response] = $readResponse($socket);
+            if ($code !== '250') {
+                throw new RuntimeException('SMTP message error ' . $code . ': ' . trim($response));
+            }
+            $sendCommand($socket, 'QUIT', ['221']);
+            fclose($socket);
+            return true;
+        } catch (Throwable $exception) {
+            fclose($socket);
+            error_log('Top-up success email could not be sent: ' . $exception->getMessage());
+            return false;
+        }
+    }
 }
 
 /**
