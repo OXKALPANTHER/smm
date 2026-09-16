@@ -17,6 +17,7 @@ if (!defined('APP_NAME')) {
 }
 
 require_once __DIR__ . '/pwa.php';
+require_once __DIR__ . '/chatbot-widget.php';
 
 /**
  * Premium gold crown mark for the Royal brand. Returns a self-contained inline
@@ -380,6 +381,7 @@ function toast(msg,type='primary'){
 </script>
 {$extraScript}
 HTML;
+  renderChatbotWidget();
   pwa_foot();
   echo <<<HTML
 </body>

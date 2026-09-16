@@ -37,3 +37,11 @@ services:
         sync: false      # usually the same address as SMTP_USER
       - key: SMTP_USE_TLS
         value: "true"
+      - key: OPENAI_API_KEY
+        sync: false      # server-side API key for live support
+      - key: OPENAI_BASE_URL
+        value: https://api.openai.com/v1
+      - key: OPENAI_MODEL
+        value: gpt-4o-mini
+      - key: OPENAI_TIMEOUT
+        value: "30"

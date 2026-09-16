@@ -490,6 +490,12 @@ define('SMTP_FROM_EMAIL', getenv('SMTP_FROM_EMAIL') ?: SMTP_USER);
 define('SMTP_USE_TLS', filter_var(getenv('SMTP_USE_TLS') ?: 'true', FILTER_VALIDATE_BOOLEAN));
 define('SMTP_TIMEOUT', (int) (getenv('SMTP_TIMEOUT') ?: 15));
 
+// Live support assistant (OpenAI-compatible chat completions endpoint).
+define('OPENAI_API_KEY', getenv('OPENAI_API_KEY') ?: '');
+define('OPENAI_BASE_URL', rtrim(getenv('OPENAI_BASE_URL') ?: 'https://api.openai.com/v1', '/'));
+define('OPENAI_MODEL', getenv('OPENAI_MODEL') ?: 'gpt-4o-mini');
+define('OPENAI_TIMEOUT', (int) (getenv('OPENAI_TIMEOUT') ?: 30));
+
 // SMS Gateway - Africa's Talking
 define('AFRICAS_TALKING_API_KEY', 'your_africas_talking_key');
 define('AFRICAS_TALKING_USERNAME', 'your_username');

@@ -78,6 +78,7 @@ So they are **not recommended** for this app. Use a Docker host above instead.
 - [ ] `supabase_schema.sql` ran successfully (tables visible in Table Editor)
 - [ ] 6 `DB_*` env vars set on the host
 - [ ] SMTP variables set on the host (`SMTP_USER`, `SMTP_PASS`, and `SMTP_FROM_EMAIL` are required for top-up emails)
+- [ ] `OPENAI_API_KEY` set on the host for live bilingual customer support
 - [ ] App opens, you can log in as `admin / Admin@123`
 - [ ] Placing/viewing a service loads live prices (proves outbound works)
 - [ ] Change the admin password
@@ -100,3 +101,21 @@ SMTP_USE_TLS=true
 
 Do not put the SMTP password in the repository. Email delivery failures are
 logged without undoing a successful balance credit.
+
+### Live customer support chatbot
+
+The floating support chat uses a real OpenAI-compatible chat-completions API;
+it does not use scripted fake answers. Set these server environment variables:
+
+```
+OPENAI_API_KEY=your-server-side-api-key
+OPENAI_BASE_URL=https://api.openai.com/v1
+OPENAI_MODEL=gpt-4o-mini
+OPENAI_TIMEOUT=30
+```
+
+The assistant receives the logged-in customer's username, current balance, and
+five recent order statuses so it can give account-specific guidance. It never
+receives passwords, payment PINs, or API keys. If the key is missing or the AI
+provider is unavailable, the chat clearly directs the customer to human
+WhatsApp support instead of fabricating an answer.

@@ -811,6 +811,7 @@ document.getElementById('orderForm').addEventListener('submit', async function (
     }
 });
 </script>
+<?php renderChatbotWidget(); ?>
 <?php pwa_foot(); ?>
 </body>
 </html>
