@@ -582,6 +582,10 @@ if (!function_exists('sendHtmlEmail')) {
             error_log('Email skipped: invalid recipient address.');
             return false;
         }
+        if (SMTP_USER === '' || SMTP_PASS === '' || !validateEmail(SMTP_FROM_EMAIL)) {
+            error_log('Email skipped: SMTP_USER, SMTP_PASS, and a valid SMTP_FROM_EMAIL must be configured.');
+            return false;
+        }
 
         $headers = [
             'MIME-Version: 1.0',
@@ -591,7 +595,7 @@ if (!function_exists('sendHtmlEmail')) {
 
         $socket = @fsockopen(SMTP_HOST, SMTP_PORT, $errorCode, $errorMessage, SMTP_TIMEOUT);
         if (!$socket) {
-            error_log('Email SMTP connection failed: ' . $errorMessage . ' (' . $errorCode . ').');
+            error_log('Email SMTP connection failed for ' . SMTP_HOST . ':' . SMTP_PORT . ': ' . $errorMessage . ' (' . $errorCode . ').');
             return false;
         }
 
