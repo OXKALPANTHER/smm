@@ -64,6 +64,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'user',
                     ['source' => 'registration']
                 );
+                sendWelcomeEmail($email, $username);
                 header("Location: index.php");
                 exit;
             } else {

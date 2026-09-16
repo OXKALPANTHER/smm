@@ -575,27 +575,14 @@ function validateEmail($email)
     return filter_var($email, FILTER_VALIDATE_EMAIL) !== false;
 }
 
-if (!function_exists('sendTopupSuccessEmail')) {
-    function sendTopupSuccessEmail($email, $username, $amount, $balance, $transactionId)
+if (!function_exists('sendHtmlEmail')) {
+    function sendHtmlEmail($email, $subject, $body)
     {
         if (!validateEmail($email)) {
-            error_log('Top-up email skipped: invalid recipient address.');
+            error_log('Email skipped: invalid recipient address.');
             return false;
         }
 
-        $safeName = htmlspecialchars((string) $username, ENT_QUOTES, 'UTF-8');
-        $safeAmount = htmlspecialchars(number_format((float) $amount, 2), ENT_QUOTES, 'UTF-8');
-        $safeBalance = htmlspecialchars(number_format((float) $balance, 2), ENT_QUOTES, 'UTF-8');
-        $safeTransactionId = htmlspecialchars((string) $transactionId, ENT_QUOTES, 'UTF-8');
-        $subject = APP_NAME . ' top-up successful';
-        $body = '<!doctype html><html><body>'
-            . '<h2>Top-up successful</h2>'
-            . '<p>Hello ' . $safeName . ',</p>'
-            . '<p>Your account has been credited with <strong>' . $safeAmount . ' TZS</strong>.</p>'
-            . '<p>Your new balance is <strong>' . $safeBalance . ' TZS</strong>.</p>'
-            . '<p>Transaction: ' . $safeTransactionId . '</p>'
-            . '<p>Thank you for using ' . htmlspecialchars(APP_NAME, ENT_QUOTES, 'UTF-8') . '.</p>'
-            . '</body></html>';
         $headers = [
             'MIME-Version: 1.0',
             'Content-type: text/html; charset=UTF-8',
@@ -604,7 +591,7 @@ if (!function_exists('sendTopupSuccessEmail')) {
 
         $socket = @fsockopen(SMTP_HOST, SMTP_PORT, $errorCode, $errorMessage, SMTP_TIMEOUT);
         if (!$socket) {
-            error_log('Top-up email SMTP connection failed: ' . $errorMessage . ' (' . $errorCode . ').');
+            error_log('Email SMTP connection failed: ' . $errorMessage . ' (' . $errorCode . ').');
             return false;
         }
 
@@ -658,9 +645,53 @@ if (!function_exists('sendTopupSuccessEmail')) {
             return true;
         } catch (Throwable $exception) {
             fclose($socket);
-            error_log('Top-up success email could not be sent: ' . $exception->getMessage());
+            error_log('Email could not be sent: ' . $exception->getMessage());
             return false;
         }
+    }
+}
+
+if (!function_exists('sendTopupSuccessEmail')) {
+    function sendTopupSuccessEmail($email, $username, $amount, $balance, $transactionId)
+    {
+        $safeName = htmlspecialchars((string) $username, ENT_QUOTES, 'UTF-8');
+        $safeAmount = htmlspecialchars(number_format((float) $amount, 2), ENT_QUOTES, 'UTF-8');
+        $safeBalance = htmlspecialchars(number_format((float) $balance, 2), ENT_QUOTES, 'UTF-8');
+        $safeTransactionId = htmlspecialchars((string) $transactionId, ENT_QUOTES, 'UTF-8');
+        $body = '<!doctype html><html><body>'
+            . '<h2>Top-up successful</h2>'
+            . '<p>Hello ' . $safeName . ',</p>'
+            . '<p>Your account has been credited with <strong>' . $safeAmount . ' TZS</strong>.</p>'
+            . '<p>Your new balance is <strong>' . $safeBalance . ' TZS</strong>.</p>'
+            . '<p>Transaction: ' . $safeTransactionId . '</p>'
+            . '<p>Thank you for using ' . htmlspecialchars(APP_NAME, ENT_QUOTES, 'UTF-8') . '.</p>'
+            . '</body></html>';
+        return sendHtmlEmail($email, APP_NAME . ' top-up successful', $body);
+    }
+}
+
+if (!function_exists('sendWelcomeEmail')) {
+    function sendWelcomeEmail($email, $username)
+    {
+        $safeName = htmlspecialchars((string) $username, ENT_QUOTES, 'UTF-8');
+        $safeAppName = htmlspecialchars(APP_NAME, ENT_QUOTES, 'UTF-8');
+        $body = '<!doctype html><html><body style="margin:0;background:#f4f7fb;font-family:Arial,sans-serif;color:#172033;">'
+            . '<div style="max-width:620px;margin:32px auto;background:#ffffff;border-radius:18px;overflow:hidden;box-shadow:0 12px 35px rgba(23,32,51,.12);">'
+            . '<div style="padding:34px 38px;background:linear-gradient(135deg,#102a43,#1f7a8c);color:#ffffff;">'
+            . '<div style="font-size:13px;letter-spacing:2px;text-transform:uppercase;opacity:.8;">' . $safeAppName . '</div>'
+            . '<h1 style="margin:14px 0 6px;font-size:32px;line-height:1.15;">Welcome aboard, ' . $safeName . '!</h1>'
+            . '<p style="margin:0;font-size:16px;opacity:.9;">Your account is ready to use.</p>'
+            . '</div>'
+            . '<div style="padding:34px 38px;">'
+            . '<p style="font-size:17px;line-height:1.6;margin-top:0;">Thanks for joining ' . $safeAppName . '. You can now explore services, place orders, and manage your account from one simple dashboard.</p>'
+            . '<div style="margin:26px 0;padding:20px;background:#eef8f8;border-left:4px solid #1f7a8c;border-radius:8px;">'
+            . '<strong>Your next step</strong><br><span style="color:#526174;">Sign in and add balance whenever you are ready to place your first order.</span>'
+            . '</div>'
+            . '<p style="margin-bottom:0;color:#526174;line-height:1.6;">We are glad to have you with us. If you need help, contact our support team from the platform.</p>'
+            . '</div>'
+            . '<div style="padding:20px 38px;background:#f7f9fc;color:#7b8794;font-size:12px;">This email confirms that your ' . $safeAppName . ' account was created successfully.</div>'
+            . '</div></body></html>';
+        return sendHtmlEmail($email, 'Welcome to ' . APP_NAME, $body);
     }
 }
 
