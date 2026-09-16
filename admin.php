@@ -124,6 +124,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $reply(true, 'Notification imetumwa.');
                 break;
 
+            case 'delete_notification':
+                $notificationId = (int) ($in['notification_id'] ?? 0);
+                if ($notificationId <= 0 || !deleteNotification($notificationId)) {
+                    $reply(false, 'Notisi haikupatikana au haikufutika.');
+                }
+                logActivity($admin_id, 'admin_delete_notification', "Notification #{$notificationId}");
+                $reply(true, 'Notisi imefutwa kabisa.');
+                break;
+
             default:
                 $reply(false, 'Kitendo hakijulikani.');
         }
@@ -388,6 +397,73 @@ ui_head(APP_NAME . ' — Admin', 'admin', $extraHead);
         font-size: .9rem;
     }
 
+    .notification-feed {
+        display: grid;
+        gap: 10px;
+        max-height: 440px;
+        overflow-y: auto;
+        padding-right: 4px;
+    }
+
+    .notification-item {
+        position: relative;
+        border: 1px solid #edf0f8;
+        border-left: 4px solid var(--notification-color, #6c5ce7);
+        border-radius: 15px;
+        padding: 13px 42px 13px 14px;
+        background: linear-gradient(135deg, #fff, #fafbff);
+        transition: transform .2s, box-shadow .2s, opacity .2s;
+    }
+
+    .notification-item:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(43, 54, 116, .09);
+    }
+
+    .notification-item.unread {
+        background: linear-gradient(135deg, #f4f3ff, #fff);
+    }
+
+    .notification-item.is-deleting {
+        opacity: 0;
+        transform: translateX(18px);
+    }
+
+    .notification-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        display: inline-block;
+        background: var(--notification-color, #6c5ce7);
+        margin-right: 6px;
+    }
+
+    .notification-delete {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        width: 28px;
+        height: 28px;
+        border: 0;
+        border-radius: 9px;
+        color: #9aa4b5;
+        background: transparent;
+    }
+
+    .notification-delete:hover {
+        color: #c0392b;
+        background: #fff0ed;
+    }
+
+    .notification-empty {
+        text-align: center;
+        padding: 28px 12px;
+        color: #8b96a8;
+        background: #fafbff;
+        border: 1px dashed #dfe4f0;
+        border-radius: 15px;
+    }
+
     @media(max-width:991px) {
         .sidebar {
             transform: translateX(-100%);
@@ -575,26 +651,48 @@ ui_head(APP_NAME . ' — Admin', 'admin', $extraHead);
         </div>
         <div class="col-lg-5">
             <div class="panel">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h5 class="fw-bold mb-0"><i class="bi bi-bell-fill text-warning"></i> Notisi za hivi karibuni</h5>
-                    <span class="badge-soft badge-warning"><?= number_format(count($notifications)) ?> total</span>
+                <div class="d-flex justify-content-between align-items-start mb-3 gap-2">
+                    <div>
+                        <h5 class="fw-bold mb-1"><i class="bi bi-stars text-warning"></i> Notification centre</h5>
+                        <small class="text-muted">Review what is happening across the platform.</small>
+                    </div>
+                    <span class="badge-soft badge-warning" id="notificationCount"><?= number_format(count($notifications)) ?> total</span>
                 </div>
-                <div class="d-flex flex-column gap-2">
-                    <?php foreach (array_slice($notifications, 0, 8) as $n): ?>
-                        <div class="border rounded-4 p-2" style="background:#fbfcff;">
-                            <div class="d-flex justify-content-between align-items-start gap-2">
-                                <div>
-                                    <div class="fw-semibold small"><?= htmlspecialchars($n['title'] ?? 'Notification') ?>
-                                    </div>
-                                    <div class="text-muted small">
-                                        <?= htmlspecialchars(mb_substr($n['message'] ?? '', 0, 90)) ?></div>
-                                </div>
-                                <span
-                                    class="badge-soft badge-<?= htmlspecialchars($n['type'] ?? 'info') ?>"><?= htmlspecialchars($n['type'] ?? 'info') ?></span>
+                <div class="d-flex gap-2 mb-3" role="group" aria-label="Notification filters">
+                    <button class="btn btn-sm btn-light notification-filter active" data-filter="all">All</button>
+                    <button class="btn btn-sm btn-light notification-filter" data-filter="unread">Unread</button>
+                    <button class="btn btn-sm btn-light notification-filter" data-filter="success">Success</button>
+                    <button class="btn btn-sm btn-light notification-filter" data-filter="danger">Alerts</button>
+                </div>
+                <div class="notification-feed" id="notificationFeed">
+                    <?php foreach (array_slice($notifications, 0, 8) as $n):
+                        $notificationType = $n['type'] ?? 'info';
+                        $notificationColors = ['success' => '#00a878', 'warning' => '#e09f3e', 'danger' => '#d95d39', 'info' => '#6c5ce7'];
+                        $notificationColor = $notificationColors[$notificationType] ?? $notificationColors['info'];
+                        $notificationUnread = ($n['status'] ?? '') === 'unread';
+                    ?>
+                        <article class="notification-item<?= $notificationUnread ? ' unread' : '' ?>"
+                            data-notification-id="<?= (int) $n['id'] ?>"
+                            data-notification-type="<?= htmlspecialchars($notificationType) ?>"
+                            data-notification-status="<?= $notificationUnread ? 'unread' : 'read' ?>"
+                            style="--notification-color:<?= $notificationColor ?>;">
+                            <button class="notification-delete" title="Delete notification" aria-label="Delete notification"
+                                onclick="deleteNotification(<?= (int) $n['id'] ?>, this)"><i class="bi bi-trash3"></i></button>
+                            <div class="d-flex align-items-center gap-2 mb-1">
+                                <span class="notification-dot"></span>
+                                <span class="badge-soft badge-<?= htmlspecialchars($notificationType) ?> text-uppercase"><?= htmlspecialchars($notificationType) ?></span>
+                                <?php if ($notificationUnread): ?><span class="small fw-semibold text-primary">New</span><?php endif; ?>
                             </div>
-                        </div>
+                            <div class="fw-semibold small mb-1"><?= htmlspecialchars($n['title'] ?? 'Notification') ?></div>
+                            <div class="text-muted small"><?= htmlspecialchars(mb_substr($n['message'] ?? '', 0, 110)) ?></div>
+                            <div class="text-muted" style="font-size:.68rem;margin-top:8px;"><i class="bi bi-clock me-1"></i><?= htmlspecialchars($n['created_at'] ?? '') ?></div>
+                        </article>
                     <?php endforeach; ?>
+                    <?php if (empty($notifications)): ?>
+                        <div class="notification-empty"><i class="bi bi-bell-slash fs-3 d-block mb-2"></i>No notifications yet.</div>
+                    <?php endif; ?>
                 </div>
+                <div class="small text-muted mt-3"><i class="bi bi-shield-check me-1"></i>Deleted notifications are removed from the database.</div>
             </div>
         </div>
     </div>
@@ -908,6 +1006,32 @@ async function sendNotification(){
   toast(j.message, j.success?'success':'danger');
   if(j.success){ document.getElementById('notificationTitle').value=''; document.getElementById('notificationMessage').value=''; }
 }
+
+async function deleteNotification(id, button){
+    if(!confirm('Delete this notification permanently?')) return;
+    const card=button.closest('.notification-item');
+    button.disabled=true;
+    const j=await postAction({action:'delete_notification',notification_id:id});
+    if(!j.success){ button.disabled=false; return toast(j.message,'danger'); }
+    card.classList.add('is-deleting');
+    setTimeout(()=>{
+        card.remove();
+        const remaining=document.querySelectorAll('.notification-item').length;
+        document.getElementById('notificationCount').textContent=remaining+' total';
+        if(!remaining){ document.getElementById('notificationFeed').innerHTML='<div class="notification-empty"><i class="bi bi-bell-slash fs-3 d-block mb-2"></i>No notifications yet.</div>'; }
+    },220);
+    toast(j.message,'success');
+}
+
+document.querySelectorAll('.notification-filter').forEach(filter=>filter.addEventListener('click',()=>{
+    document.querySelectorAll('.notification-filter').forEach(item=>item.classList.remove('active'));
+    filter.classList.add('active');
+    const selected=filter.dataset.filter;
+    document.querySelectorAll('.notification-item').forEach(item=>{
+        const matches=selected==='all' || item.dataset.notificationType===selected || (selected==='unread' && item.dataset.notificationStatus==='unread');
+        item.style.display=matches?'':'none';
+    });
+}));
 
 const targetSelect=document.getElementById('notificationTarget');
 const userSelectWrap=document.getElementById('userSelectWrap');
