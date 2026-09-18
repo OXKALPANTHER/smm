@@ -145,7 +145,7 @@ if ($statusCode < 200 || $statusCode >= 300 || $answer === '') {
     } elseif ($statusCode === 404) {
         $message = 'The configured AI model or provider URL was not found. Check OPENAI_MODEL and OPENAI_BASE_URL.';
     } elseif ($statusCode === 429) {
-        $message = 'The AI provider rate limit or billing limit was reached. Check your provider usage and credits.';
+        $message = 'Support chat is temporarily busy. Please try again shortly or contact human support on WhatsApp.';
     } elseif ($providerMessage !== '') {
         $message = 'The AI provider returned an error. Check the API key, model, and account billing settings.';
     } else {
