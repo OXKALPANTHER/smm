@@ -35,12 +35,13 @@ if (!function_exists('curl_init')) {
 
 $now = microtime(true);
 $lastRequest = (float) ($_SESSION['chatbot_last_request'] ?? 0);
-if ($now - $lastRequest < 8) {
+if ($now - $lastRequest < 1) {
     http_response_code(429);
     echo json_encode(['success' => false, 'message' => 'Please wait a moment before sending another message.']);
     exit;
 }
 $_SESSION['chatbot_last_request'] = $now;
+session_write_close();
 
 $input = json_decode(file_get_contents('php://input'), true) ?: [];
 $messages = $input['messages'] ?? [];
@@ -107,30 +108,22 @@ $payload = json_encode([
     'max_tokens' => 350,
 ]);
 
-$responseBody = false;
-$curlError = '';
-$statusCode = 0;
-for ($attempt = 0; $attempt < 2; $attempt++) {
-    $ch = curl_init(OPENAI_BASE_URL . '/chat/completions');
-    curl_setopt_array($ch, [
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_POST => true,
-        CURLOPT_POSTFIELDS => $payload,
-        CURLOPT_HTTPHEADER => [
-            'Authorization: Bearer ' . OPENAI_API_KEY,
-            'Content-Type: application/json',
-        ],
-        CURLOPT_TIMEOUT => OPENAI_TIMEOUT,
-    ]);
-    $responseBody = curl_exec($ch);
-    $curlError = curl_error($ch);
-    $statusCode = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    curl_close($ch);
-    if ($statusCode !== 429 || $attempt === 1) {
-        break;
-    }
-    sleep(2);
-}
+$ch = curl_init(OPENAI_BASE_URL . '/chat/completions');
+curl_setopt_array($ch, [
+    CURLOPT_RETURNTRANSFER => true,
+    CURLOPT_POST => true,
+    CURLOPT_POSTFIELDS => $payload,
+    CURLOPT_HTTPHEADER => [
+        'Authorization: Bearer ' . OPENAI_API_KEY,
+        'Content-Type: application/json',
+    ],
+    CURLOPT_CONNECTTIMEOUT => 8,
+    CURLOPT_TIMEOUT => OPENAI_TIMEOUT,
+]);
+$responseBody = curl_exec($ch);
+$curlError = curl_error($ch);
+$statusCode = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+curl_close($ch);
 
 if ($responseBody === false || $curlError !== '') {
     error_log('Chatbot provider connection failed: ' . $curlError . ' URL=' . OPENAI_BASE_URL);
