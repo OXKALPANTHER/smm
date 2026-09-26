@@ -23,6 +23,8 @@ services:
         sync: false      # e.g. postgres.xxxxxxxxxxxx
       - key: DB_PASS
         sync: false      # your Supabase database password
+      - key: FASTWAY_API_KEY
+        sync: false      # primary FastWay SMM supplier credential
       - key: SMTP_HOST
         value: smtp.gmail.com
       - key: SMTP_PORT

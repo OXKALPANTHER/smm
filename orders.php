@@ -26,7 +26,7 @@ $user = $stmt->get_result()->fetch_assoc();
 // All orders, newest first.
 $stmt = $conn->prepare(
     "SELECT id, service_id, service_name, platform, quantity, price, status, progress, external_order_id,
-            link, created_at, refill_available, refill_requested, refill_status, gateway,
+            link, created_at, refill_available, refill_requested, refill_status, provider, gateway,
             delivered_quantity, remaining_quantity
        FROM orders WHERE user_id = ? ORDER BY id DESC"
 );
@@ -84,7 +84,10 @@ function serviceSupportsCancellation($order)
     }
 
     $gateway = strtolower((string) ($order['gateway'] ?? 'primary'));
-    $provider = ($gateway === 'partner' || $gateway === 'pro' || $gateway === 'premium' || $gateway === 'fastway') ? 'fastway' : 'boost';
+    $provider = strtolower((string) ($order['provider'] ?? ''));
+    if (!in_array($provider, ['fastway', 'boost'], true)) {
+        $provider = ($gateway === 'partner' || $gateway === 'pro' || $gateway === 'premium' || $gateway === 'fastway') ? 'fastway' : 'boost';
+    }
 
     if (!isset($serviceCache[$provider])) {
         try {

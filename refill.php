@@ -2,12 +2,13 @@
 /**
  * Refill request endpoint.
  *
- * The Boost provider has no refill API, so a refill is handled as a request:
- * the eligible order is flagged and a support ticket is opened for the admin
- * to process. Accepts JSON/form POST: order_id. Returns JSON.
+ * FastWay refills are submitted directly using the documented `refill` action.
+ * Legacy orders remain an administrator-supported request. Accepts JSON/form
+ * POST: order_id. Returns JSON.
  */
 
 require_once 'config.php';
+require_once 'includes/APIHandler.php';
 
 header('Content-Type: application/json');
 
@@ -31,7 +32,7 @@ $order_id = (int)($input['order_id'] ?? 0);
 if ($order_id <= 0) rOut(false, 'Order haijatambulika.', [], 422);
 
 // Load the order (must belong to this user)
-$stmt = $conn->prepare("SELECT id, service_name, status, refill_available, refill_requested FROM orders WHERE id = ? AND user_id = ?");
+$stmt = $conn->prepare("SELECT id, service_name, status, external_order_id, provider, gateway, refill_available, refill_requested FROM orders WHERE id = ? AND user_id = ?");
 $stmt->bind_param("ii", $order_id, $user_id);
 $stmt->execute();
 $order = $stmt->get_result()->fetch_assoc();
@@ -46,15 +47,35 @@ if (strpos($status, 'complet') === false && strpos($status, 'partial') === false
 }
 
 try {
+    $provider = strtolower((string)($order['provider'] ?? ''));
+    if (!in_array($provider, ['fastway', 'boost'], true)) {
+        $provider = strtolower((string)($order['gateway'] ?? '')) === 'partner' ? 'fastway' : 'boost';
+    }
+
+    $refillId = null;
+    if ($provider === 'fastway') {
+        $externalId = trim((string)($order['external_order_id'] ?? ''));
+        if ($externalId === '') {
+            rOut(false, 'Order hii haina kumbukumbu ya FastWay ya refill.', [], 422);
+        }
+        $refill = (new APIHandler('fastway'))->createRefill($externalId);
+        if (empty($refill['success'])) {
+            rOut(false, $refill['error'] ?? 'FastWay haikupokea refill kwa sasa.', [], 502);
+        }
+        $refillId = (string)($refill['refill_id'] ?? '');
+    }
+
     $conn->begin_transaction();
 
-    $stmt = $conn->prepare("UPDATE orders SET refill_requested = 1, refill_status = 'requested', refill_requested_at = CURRENT_TIMESTAMP WHERE id = ?");
-    $stmt->bind_param("i", $order_id);
+    $refillStatus = $refillId !== '' ? 'requested:' . $refillId : 'requested';
+    $stmt = $conn->prepare("UPDATE orders SET refill_requested = 1, refill_status = ?, refill_requested_at = CURRENT_TIMESTAMP WHERE id = ?");
+    $stmt->bind_param("si", $refillStatus, $order_id);
     $stmt->execute();
 
-    // Open a support ticket so the admin sees the request
+    // Preserve the existing operator trail without changing the user-facing UI.
     $subject = "Refill request - Order #{$order_id}";
-    $message = "Mteja ameomba refill kwa order #{$order_id} ({$order['service_name']}).";
+    $message = "Mteja ameomba refill kwa order #{$order_id} ({$order['service_name']}). Provider: {$provider}."
+        . ($refillId !== '' ? " FastWay refill ID: {$refillId}." : ' Inahitaji ufuatiliaji wa support.');
     $stmt = $conn->prepare("INSERT INTO support_tickets (user_id, subject, message, status, priority) VALUES (?, ?, ?, 'open', 'high')");
     $stmt->bind_param("iss", $user_id, $subject, $message);
     $stmt->execute();

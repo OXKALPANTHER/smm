@@ -15,6 +15,36 @@ if (!headers_sent()) {
 }
 error_reporting(E_ALL & ~E_WARNING & ~E_NOTICE & ~E_DEPRECATED);
 
+// Load ignored local environment values for development without replacing
+// variables injected by the production host (for example, Render). Keeping
+// credentials in .env avoids committing supplier API keys to the repository.
+if (!function_exists('loadLocalEnvironment')) {
+    function loadLocalEnvironment($path)
+    {
+        if (!is_readable($path)) {
+            return;
+        }
+        foreach (file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) ?: [] as $line) {
+            $line = trim($line);
+            if ($line === '' || str_starts_with($line, '#') || !str_contains($line, '=')) {
+                continue;
+            }
+            [$name, $value] = explode('=', $line, 2);
+            $name = trim($name);
+            $value = trim($value);
+            if (!preg_match('/^[A-Z_][A-Z0-9_]*$/', $name) || getenv($name) !== false) {
+                continue;
+            }
+            if (strlen($value) >= 2 && (($value[0] === '"' && substr($value, -1) === '"') || ($value[0] === "'" && substr($value, -1) === "'"))) {
+                $value = substr($value, 1, -1);
+            }
+            putenv($name . '=' . $value);
+            $_ENV[$name] = $value;
+        }
+    }
+}
+loadLocalEnvironment(__DIR__ . '/.env');
+
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
@@ -423,15 +453,17 @@ define('PLATFORMS', json_encode([
 // EXTERNAL APIs - SOCIAL MEDIA SERVICES
 // ============================================
 
-// Primary SMM Service - Boost API (Lazack Organization).
+// Legacy SMM service retained only to sync/cancel orders that were created
+// before FastWay became the primary provider.
 define('BOOST_API_KEY', '5673ca1f6e026c293a54efb2c2cc228e8b08c48488e3df12e0f1136b87f3770b');
 define('BOOST_API_BASE_URL', 'https://boostapi.lazackorganisation.my.id/api/v1');
 define('BOOST_API_TIMEOUT', 30);
 define('BOOST_API_VERIFY_SSL', true);
 
-// Fallback SMM Service - FastWay (Perfect Panel API: POST /api/v2 with key+action).
+// Primary SMM service - FastWay (Perfect Panel API: POST /api/v2 with key+action).
 // FastWay quotes rates in USD/1000, so prices are converted to TZS via USD_TO_TZS_RATE.
-define('FASTWAY_API_KEY', getenv('FASTWAY_API_KEY') ?: '1b4f31a4b94de5c1fd6f3314e7a42294');
+// Set FASTWAY_API_KEY in the deployment environment; never commit it here.
+define('FASTWAY_API_KEY', getenv('FASTWAY_API_KEY') ?: '');
 define('FASTWAY_API_BASE_URL', 'https://fastwaysmm.com/api/v2');
 define('FASTWAY_API_TIMEOUT', 30);
 define('FASTWAY_API_VERIFY_SSL', true);
@@ -440,8 +472,9 @@ define('FASTWAY_API_VERIFY_SSL', true);
 // the provider's raw rate BEFORE PRICE_MARKUP_PERCENT is added.
 define('USD_TO_TZS_RATE', (float) (getenv('USD_TO_TZS_RATE') ?: 3500));
 
-// SMM providers in priority order: primary first, fallback after.
-define('SMM_PROVIDERS', json_encode(['boost', 'fastway']));
+// FastWay is the sole provider for all new catalogue requests and orders.
+// Boost remains available only for legacy order-status and cancel operations.
+define('SMM_PROVIDERS', json_encode(['fastway']));
 
 // Backup SMM Service - Alternative Provider
 define('SMMDADDY_API_KEY', 'your_smmdaddy_api_key');
@@ -544,9 +577,9 @@ define('CURRENCY_SYMBOL', 'TSh');
 define('MINIMUM_TOPUP', 1000);
 define('MAXIMUM_TOPUP', 10000000);
 
-// Profit margin added on top of the provider's real price (percent).
-// e.g. 60 => the user sees & pays 60% more than the API price.
-define('PRICE_MARKUP_PERCENT', 60);
+// Customer pricing markup added on top of the provider's real price (percent).
+// e.g. 78 => the user sees and pays 78% more than the FastWay API price.
+define('PRICE_MARKUP_PERCENT', 78);
 
 // Referral reward: the inviter earns this % of a friend's FIRST top-up.
 define('REFERRAL_BONUS_PERCENT', 20);

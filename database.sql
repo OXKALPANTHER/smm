@@ -54,7 +54,7 @@ CREATE TABLE orders (
     status VARCHAR(50) DEFAULT 'Pending',
     progress INT DEFAULT 0,
     external_order_id VARCHAR(100),
-    provider VARCHAR(30) DEFAULT 'boost',
+    provider VARCHAR(30) DEFAULT 'fastway',
     link TEXT NOT NULL,
     notes TEXT,
     delivered_quantity INT DEFAULT 0,
@@ -318,4 +318,3 @@ INSERT INTO users (username, email, phone, password, role, status) VALUES
 CREATE INDEX idx_orders_user_date ON orders(user_id, created_at);
 CREATE INDEX idx_transactions_user_date ON transactions(user_id, created_at);
 CREATE INDEX idx_analytics_date ON analytics(date);
-

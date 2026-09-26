@@ -42,7 +42,7 @@ function syncUserOrders($conn, $user_id, $force = false, array &$notifications =
     // Pull orders that can still change. Anything already in a final state is
     // skipped (and never re-refunded).
     $stmt = $conn->prepare(
-        "SELECT id, external_order_id, status, price, refund_amount, gateway,
+        "SELECT id, external_order_id, status, price, refund_amount, provider, gateway,
                 quantity, delivered_quantity, remaining_quantity
            FROM orders
           WHERE user_id = ?
@@ -61,12 +61,16 @@ function syncUserOrders($conn, $user_id, $force = false, array &$notifications =
         return 0;
     }
 
-    // Route each order to the provider it was placed with so the status query
-    // speaks the right protocol (partner = FastWay/Perfect Panel, else Boost).
+    // Route each order to the provider saved at creation time so the status
+    // query speaks the right protocol. The gateway is only a UI lane; older
+    // rows without a provider still retain the historic Boost fallback.
     // Handlers are cached so we build at most one per provider.
     $handlers = [];
-    $handlerFor = function ($gateway) use (&$handlers) {
-        $provider = ($gateway === 'partner') ? 'fastway' : 'boost';
+    $handlerFor = function ($provider, $gateway) use (&$handlers) {
+        $provider = strtolower((string) $provider);
+        if (!in_array($provider, ['fastway', 'boost'], true)) {
+            $provider = ($gateway === 'partner') ? 'fastway' : 'boost';
+        }
         if (!isset($handlers[$provider])) {
             try {
                 $handlers[$provider] = new APIHandler($provider);
@@ -81,7 +85,7 @@ function syncUserOrders($conn, $user_id, $force = false, array &$notifications =
     $changed = 0;
 
     foreach ($rows as $o) {
-        $api = $handlerFor($o['gateway'] ?? 'primary');
+        $api = $handlerFor($o['provider'] ?? '', $o['gateway'] ?? 'primary');
         if (!$api) {
             continue;
         }

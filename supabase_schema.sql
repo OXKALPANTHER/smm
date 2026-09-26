@@ -74,8 +74,8 @@ CREATE TABLE orders (
     status            TEXT DEFAULT 'Pending',
     progress          INTEGER DEFAULT 0,
     external_order_id TEXT,
-    provider          TEXT DEFAULT 'boost',
-    -- Provider lane shown on the orders page (primary = Kawaida, partner = Pro).
+    provider          TEXT DEFAULT 'fastway',
+    -- Provider lane shown on the orders page (primary = FastWay).
     -- place-order.php and orders.php both write/read this; without it every
     -- order INSERT aborts its transaction on Postgres and rolls back silently.
     gateway           TEXT DEFAULT 'primary',

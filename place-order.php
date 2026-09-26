@@ -2,7 +2,7 @@
 /**
  * Live order endpoint.
  *
- * Submits the order to the live Boost provider FIRST, and only on success
+ * Submits the order to the live FastWay provider FIRST, and only on success
  * deducts the user's balance and records the order locally (atomic). This
  * guarantees a user is never charged for an order the provider rejected.
  *
@@ -51,25 +51,12 @@ if ($service_id <= 0 || $quantity <= 0 || $link === '') {
     jsonOut(false, 'Tafadhali jaza huduma, idadi na link.', [], 422);
 }
 
-// Does the user want the premium (hidden) service pool?
-// This must be known up front so we resolve the service and its price from
-// the SAME catalogue we will order against — Boost and the premium pool have
-// separate service_id spaces and prices, so resolving from the wrong one mischarges.
-$use_fallback = filter_var($input['use_fallback'] ?? false, FILTER_VALIDATE_BOOLEAN);
-$provider_input = strtolower(trim((string) ($input['provider'] ?? '')));
-if (in_array($provider_input, ['premium', 'pro', 'pro-service', 'partner'], true)) {
-    $use_fallback = true;
-} elseif ($provider_input === 'boost') {
-    $use_fallback = false;
-}
-
 try {
-    // Resolve from the catalogue of the provider we'll actually order against.
-    if ($use_fallback) {
-        $services = (new APIHandler('fastway'))->getAllServices();
-    } else {
-        $services = (new APIHandler('boost'))->getAllServices();
-    }
+    // FastWay is the authoritative catalogue and order provider for all new
+    // orders. Ignoring stale client-side provider flags prevents a FastWay ID
+    // from being resolved against an old Boost catalogue.
+    $provider = 'fastway';
+    $services = (new APIHandler($provider))->getAllServices();
 
     // Resolve the service from the live catalogue (authoritative price/limits).
     $service = null;
@@ -126,41 +113,16 @@ try {
         }
     }
 
-    // 1) Try primary provider (Lazack Boost) first
-    if (!$use_fallback) {
-        $api_primary = new APIHandler('boost');
-        $result = $api_primary->placeOrder($service_id, $link, $quantity, $email);
-
-        if (!$result['success']) {
-            // Primary failed - ask user if they want to try alternative provider
-            logActivity($user_id, 'order_attempt_primary_failed', $service['name'] . ' - ' . ($result['error'] ?? ''), 'failed');
-
-            jsonOut(false, 'Huduma yetu ya kawaida haipatikani kwa sasa. Ingekuwa na njia nyingine ya kukamilisha order hii?', [
-                'provider_unavailable' => true,
-                'can_retry_alt' => true,
-                'service_id' => $service_id,
-                'quantity' => $quantity,
-                'link' => $link,
-            ], 503);
-        }
-    } else {
-        // User approved the alternative provider. The service_id and $cost were
-        // already resolved from FastWay's own catalogue above (with its USD->TZS
-        // converted price), so we just submit and charge in TZS.
-        $api_fallback = new APIHandler('fastway');
-        $result = $api_fallback->placeOrder($service_id, $link, $quantity, $email);
-
-        if (!$result['success']) {
-            logActivity($user_id, 'order_attempt_fallback_failed', $service['name'] . ' - ' . ($result['error'] ?? ''), 'failed');
-
-            // Both providers failed - suggest similar orders
-            jsonOut(false, 'Huduma hii haiwezi kutengenezwa kwa sasa. Tafadhali jaribu huduma nyingine.', [
-                'both_failed' => true,
-                'suggest_alternatives' => true,
-                'service_id' => $service_id,
-                'platform' => $platform,
-            ], 503);
-        }
+    // 1) FastWay accepts the order before the local balance is charged.
+    $api = new APIHandler($provider);
+    $result = $api->placeOrder($service_id, $link, $quantity, $email);
+    if (!$result['success']) {
+        logActivity($user_id, 'order_attempt_fastway_failed', $service['name'] . ' - ' . ($result['error'] ?? ''), 'failed');
+        jsonOut(false, 'Huduma haikuweza kupokelewa kwa sasa. Tafadhali jaribu tena au chagua huduma nyingine.', [
+            'suggest_alternatives' => true,
+            'service_id' => $service_id,
+            'platform' => $platform,
+        ], 503);
     }
 
     $external_id = $result['order_id'] ?? null;
@@ -184,19 +146,19 @@ try {
             "INSERT INTO orders
                 (user_id, service_id, service_name, service_category, platform,
                  quantity, price, status, progress, external_order_id,
-                 link, gateway, refill_available, delivered_quantity, remaining_quantity)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+                 link, provider, gateway, refill_available, delivered_quantity, remaining_quantity)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
         );
         if (!$stmt)
             throw new Exception('prepare failed (orders): ' . ($conn->error ?? ''));
         $ext = $external_id !== null ? (string) $external_id : null;
         $refillAvail = !empty($service['refill']) ? 1 : 0;
-        $gateway = $use_fallback ? 'partner' : 'primary';
+        $gateway = 'primary';
         $initialProgress = 10; // Start at 10% for newly placed orders
         $deliveredQty = 0;
         $remainingQty = $quantity;
         $stmt->bind_param(
-            "iisssidisssiii",
+            "iisssidsissssiii",
             $user_id,
             $service_id,
             $service['name'],
@@ -208,6 +170,7 @@ try {
             $initialProgress,
             $ext,
             $link,
+            $provider,
             $gateway,
             $refillAvail,
             $deliveredQty,
@@ -218,7 +181,7 @@ try {
         $order_id = $conn->insert_id();
 
         $desc = "Order #{$order_id} - {$service['name']}";
-        $gateway_dup = $use_fallback ? 'partner' : 'primary';
+        $gateway_dup = 'primary';
         $stmt = $conn->prepare(
             "INSERT INTO transactions
                 (user_id, order_id, amount, type, payment_method, gateway, description, external_ref, status, completed_at)
@@ -245,7 +208,7 @@ try {
         ], 500);
     }
 
-    $provider_used = $use_fallback ? 'partner_service' : 'primary_service';
+    $provider_used = 'fastway';
     logActivity($user_id, 'order_placed', "Order #{$order_id} ({$service['name']}) x{$quantity} = {$cost} TZS via {$provider_used}");
     createNotification(
         $user_id,

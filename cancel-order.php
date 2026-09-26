@@ -29,7 +29,7 @@ if ($orderId <= 0) {
     jsonOut(false, 'Order id is required.', [], 422);
 }
 
-$stmt = $conn->prepare("SELECT id, service_id, external_order_id, gateway, status FROM orders WHERE id = ? AND user_id = ?");
+$stmt = $conn->prepare("SELECT id, service_id, external_order_id, provider, gateway, status FROM orders WHERE id = ? AND user_id = ?");
 $stmt->bind_param("ii", $orderId, $_SESSION['user_id']);
 $stmt->execute();
 $order = $stmt->get_result()->fetch_assoc();
@@ -39,7 +39,10 @@ if (!$order) {
 }
 
 $gateway = strtolower((string)($order['gateway'] ?? 'primary'));
-$provider = ($gateway === 'partner' || $gateway === 'pro' || $gateway === 'premium' || $gateway === 'fastway') ? 'fastway' : 'boost';
+$provider = strtolower((string)($order['provider'] ?? ''));
+if (!in_array($provider, ['fastway', 'boost'], true)) {
+    $provider = ($gateway === 'partner' || $gateway === 'pro' || $gateway === 'premium' || $gateway === 'fastway') ? 'fastway' : 'boost';
+}
 $serviceId = (int)($order['service_id'] ?? 0);
 
 try {
@@ -62,7 +65,9 @@ try {
         jsonOut(false, 'This order has no external reference to cancel.', [], 400);
     }
 
-    $result = $api->request('/order/cancel', 'POST', ['order_id' => $externalId]);
+    $result = $provider === 'fastway'
+        ? $api->cancelOrders($externalId)
+        : ['success' => false, 'error' => 'Legacy provider cancellation is not available.'];
     if (!($result['success'] ?? false)) {
         jsonOut(false, $result['error'] ?? 'Cancellation failed.', [], 502);
     }

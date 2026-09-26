@@ -3,8 +3,8 @@
  * Advanced API Handler for Royal Platform.
  *
  * Speaks two SMM provider protocols behind one interface:
- *   - 'boost'        Lazack Boost REST API (JSON, prices already in TZS).
- *   - 'perfectpanel' FastWay (POST /api/v2, form-encoded key+action, USD rates).
+ *   - 'fastway'      FastWay SMM Perfect Panel API (POST /api/v2, form-encoded key+action, USD rates).
+ *   - 'boost'        Legacy Lazack Boost REST API (JSON, prices already in TZS).
  *
  * Provider selection / failover lives in includes/provider.php; this class just
  * talks to whichever single provider it was constructed with.
@@ -17,13 +17,13 @@ class APIHandler
     private $base_url;
     private $timeout;
     private $verify_ssl;
-    private $protocol;        // 'boost' | 'perfectpanel'
+    private $protocol;        // 'perfectpanel' | 'boost'
     private $cache_dir;
     private $cache_duration = 3600; // 1 hour
     private $last_error = '';
     private $last_response_code = 0;
 
-    public function __construct($service = 'boost')
+    public function __construct($service = 'fastway')
     {
         $this->service = strtolower($service);
         $this->cache_dir = __DIR__ . '/../data/cache';
@@ -49,6 +49,9 @@ class APIHandler
         switch ($service) {
             case 'fastway':
                 $this->api_key = FASTWAY_API_KEY;
+                if (trim((string) $this->api_key) === '') {
+                    throw new RuntimeException('FastWay API key is not configured. Set FASTWAY_API_KEY in the host environment.');
+                }
                 $this->base_url = FASTWAY_API_BASE_URL;
                 $this->timeout = FASTWAY_API_TIMEOUT;
                 $this->verify_ssl = FASTWAY_API_VERIFY_SSL;
@@ -100,7 +103,7 @@ class APIHandler
      */
     public static function withFallback($method, ...$args)
     {
-        $providers = json_decode(SMM_PROVIDERS, true) ?: ['boost', 'fastway'];
+        $providers = json_decode(SMM_PROVIDERS, true) ?: ['fastway'];
         $lastError = null;
 
         foreach ($providers as $provider) {
@@ -167,10 +170,9 @@ class APIHandler
      */
     public function getAllServices($use_cache = true)
     {
-        // Cache key is per-provider so Boost and FastWay catalogues never
-        // overwrite each other's cache file. Bumped to v6 so the current 60%
-        // markup is applied immediately to newly fetched services.
-        $cache_key = "services_all_v6_" . $this->service;
+        // Cache key is per-provider so legacy Boost and FastWay catalogues never
+        // overwrite each other's cache file. Bump whenever pricing rules change.
+        $cache_key = "services_all_v7_" . $this->service;
 
         if ($use_cache) {
             $cached = $this->getCache($cache_key);
@@ -265,12 +267,12 @@ class APIHandler
                 $provider_price_per_k = $price_per_k;
             }
 
-            // Apply our profit margin on top of the provider's real price.
-            // Default to 60% when the constant is missing or unset so the UI
-            // always shows the intended customer-facing price.
+            // Apply the configured customer pricing markup on top of the
+            // provider's real price. The FastWay primary catalogue is kept at
+            // the configured 78% markup.
             $markup = defined('PRICE_MARKUP_PERCENT') && (float) PRICE_MARKUP_PERCENT > 0
                 ? (float) PRICE_MARKUP_PERCENT
-                : 60;
+                : 78;
             $customer_price_per_k = $price_per_k > 0 ? $price_per_k * (1 + $markup / 100) : 0;
             $customer_rate = $customer_price_per_k > 0 ? $customer_price_per_k / 1000 : 0;
 
@@ -352,6 +354,60 @@ class APIHandler
         ];
     }
 
+    /** Request a FastWay refill for a completed eligible order. */
+    public function createRefill($order_id)
+    {
+        if ($this->protocol !== 'perfectpanel') {
+            return ['success' => false, 'error' => 'This provider does not support the FastWay refill workflow.'];
+        }
+
+        $response = $this->requestFormEncoded('', 'POST', [
+            'key' => $this->api_key,
+            'action' => 'refill',
+            'order' => (int) $order_id,
+        ]);
+        $body = $response['data'] ?? [];
+
+        if (!empty($response['success']) && empty($body['error']) && isset($body['refill'])) {
+            return ['success' => true, 'refill_id' => (string) $body['refill'], 'data' => $body];
+        }
+
+        return ['success' => false, 'error' => $body['error'] ?? $response['error'] ?? 'Refill request failed.', 'data' => $body];
+    }
+
+    /** Cancel one or more FastWay orders as documented by the provider. */
+    public function cancelOrders($order_ids)
+    {
+        if ($this->protocol !== 'perfectpanel') {
+            return ['success' => false, 'error' => 'This provider does not support the FastWay cancellation workflow.'];
+        }
+
+        $ids = is_array($order_ids) ? $order_ids : [$order_ids];
+        $ids = array_values(array_filter(array_map('intval', $ids), static function ($id) {
+            return $id > 0;
+        }));
+        if (empty($ids)) {
+            return ['success' => false, 'error' => 'A valid external order ID is required.'];
+        }
+
+        $response = $this->requestFormEncoded('', 'POST', [
+            'key' => $this->api_key,
+            'action' => 'cancel',
+            'orders' => implode(',', $ids),
+        ]);
+        $body = $response['data'] ?? [];
+        if (empty($response['success']) || !is_array($body)) {
+            return ['success' => false, 'error' => $response['error'] ?? 'Cancellation request failed.', 'data' => $body];
+        }
+
+        foreach ($body as $result) {
+            if (is_array($result) && isset($result['cancel']) && !is_array($result['cancel']) && (string) $result['cancel'] !== '0') {
+                return ['success' => true, 'data' => $body];
+            }
+        }
+        return ['success' => false, 'error' => $body[0]['cancel']['error'] ?? 'Cancellation was not accepted.', 'data' => $body];
+    }
+
     /**
      * Make form-encoded API request (for Perfect Panel / FastWay)
      */
@@ -407,7 +463,11 @@ class APIHandler
         }
 
         $decoded = json_decode($response, true);
-        $success = $this->last_response_code >= 200 && $this->last_response_code < 300;
+        $httpSuccess = $this->last_response_code >= 200 && $this->last_response_code < 300;
+        // FastWay can return an API error in a successful HTTP response. Never
+        // charge or save an order when the upstream provider has rejected it.
+        $apiError = is_array($decoded) && isset($decoded['error']) && trim((string) $decoded['error']) !== '';
+        $success = $httpSuccess && !$apiError;
 
         if (!$success) {
             $this->last_error = $decoded['error'] ?? $decoded['message'] ?? 'API Error';
@@ -497,14 +557,27 @@ class APIHandler
      */
     public function getBalance($currency = 'TZS')
     {
-        $response = $this->request('/balance');
+        if ($this->protocol === 'perfectpanel') {
+            // FastWay documents balance as POST key + action=balance.
+            $response = $this->requestFormEncoded('', 'POST', [
+                'key' => $this->api_key,
+                'action' => 'balance',
+            ]);
+        } else {
+            $response = $this->request('/balance');
+        }
 
         if ($response['success']) {
             $data = $response['data'] ?? [];
             if (isset($data['balances'][$currency])) {
                 return (float) $data['balances'][$currency];
             }
-            return (float) ($data['balance'] ?? 0);
+            $balance = (float) ($data['balance'] ?? 0);
+            $providerCurrency = strtoupper((string) ($data['currency'] ?? ''));
+            if ($this->protocol === 'perfectpanel' && strtoupper($currency) === 'TZS' && $providerCurrency === 'USD') {
+                return $balance * USD_TO_TZS_RATE;
+            }
+            return $balance;
         }
 
         return 0;
@@ -655,7 +728,14 @@ class APIHandler
      */
     public function testConnection()
     {
-        $response = $this->request('/services');
+        if ($this->protocol === 'perfectpanel') {
+            $response = $this->requestFormEncoded('', 'POST', [
+                'key' => $this->api_key,
+                'action' => 'services',
+            ]);
+        } else {
+            $response = $this->request('/services');
+        }
         return $response['success'];
     }
 }

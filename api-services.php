@@ -1,6 +1,6 @@
 <?php
 /**
- * API Endpoint to fetch services from Boost API
+ * API Endpoint to fetch services from the FastWay API
  * Used by JavaScript to populate dropdowns
  */
 
@@ -14,14 +14,10 @@ try {
     $query    = trim($_GET['q'] ?? '');
     $refresh  = isset($_GET['refresh']) && $_GET['refresh'] === 'true';
 
-    // Provider selection: 'boost' (Huduma Kawaida) is the default; 'premium'
-    // uses the hidden Pro service pool in the background.
-    $provider = strtolower(trim($_GET['provider'] ?? 'boost'));
-    if (in_array($provider, ['premium', 'pro', 'pro-service', 'partner'], true)) {
-        $provider = 'fastway';
-    } elseif (!in_array($provider, ['boost', 'fastway'], true)) {
-        $provider = 'boost';
-    }
+    // FastWay is the authoritative catalogue for every new order. Accept old
+    // client aliases so cached clients keep working, but never fetch a legacy
+    // Boost catalogue for a new purchase.
+    $provider = 'fastway';
 
     // "all"/empty platform means: do not filter by platform.
     if ($platform === '__all__' || $platform === 'all' || $platform === '') {
