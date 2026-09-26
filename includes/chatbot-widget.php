@@ -27,8 +27,8 @@ if (!function_exists('renderChatbotWidget')) {
 </style>
 <button id="royalChatToggle" type="button" aria-label="Open live support chat" title="Live support"><i class="bi bi-chat-heart-fill"></i></button>
 <section id="royalChatPanel" aria-label="Royal live support chat">
-  <header class="royal-chat-head"><div class="royal-chat-avatar"><i class="bi bi-stars"></i></div><div><h6>Royal live support</h6><small>English + Kiswahili · account-aware help</small></div><button class="royal-chat-close" type="button" aria-label="Close chat"><i class="bi bi-x-lg"></i></button></header>
-  <div class="royal-chat-messages" id="royalChatMessages"><div class="royal-chat-msg bot">Habari! I can help you use Royal, place orders, top up, check order guidance, and use the API. Ask in English or Kiswahili.</div></div>
+  <header class="royal-chat-head"><div class="royal-chat-avatar"><i class="bi bi-stars"></i></div><div><h6>Royal live support</h6><small>English or Kiswahili · automatic replies</small></div><button class="royal-chat-close" type="button" aria-label="Close chat"><i class="bi bi-x-lg"></i></button></header>
+  <div class="royal-chat-messages" id="royalChatMessages"><div class="royal-chat-msg bot">Hello! Ask your question in English or Kiswahili, and I will reply in the same language.</div></div>
   <div class="royal-chat-quick"><button type="button" data-chat-prompt="How do I place an order?">Place an order</button><button type="button" data-chat-prompt="Ninawezaje kuongeza salio?">Ongeza salio</button><button type="button" data-chat-prompt="How can I check my order status?">Order status</button></div>
   <form class="royal-chat-form" id="royalChatForm"><textarea id="royalChatInput" maxlength="1500" placeholder="Ask in English or Kiswahili..." aria-label="Chat message"></textarea><button class="royal-chat-send" type="submit" aria-label="Send message"><i class="bi bi-send-fill"></i></button></form>
   <div class="royal-chat-foot">Support can explain and guide using your account context. For payment disputes or account actions, <a href="{$whatsappUrl}" target="_blank" rel="noopener">contact a human on WhatsApp</a>.</div>
