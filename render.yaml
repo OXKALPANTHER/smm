@@ -42,4 +42,4 @@ services:
       - key: SMTP_USE_TLS
         value: "true"
       - key: SMTP_TIMEOUT
-        value: "15"
+        value: "8"

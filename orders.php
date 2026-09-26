@@ -13,9 +13,10 @@ requireLogin();
 
 $user_id = $_SESSION['user_id'];
 
-// Pull the latest status from the provider before rendering.
+// Pull latest status only when the user explicitly requests a refresh; normal
+// order-page navigation should not wait for multiple provider API calls.
 $orderNotifications = [];
-syncUserOrders($conn, $user_id, isset($_GET['sync']), $orderNotifications);
+syncUserOrders($conn, $user_id, isset($_GET['sync']) && $_GET['sync'] === '1', $orderNotifications);
 
 // User (for the nav balance pill).
 $stmt = $conn->prepare("SELECT username, balance FROM users WHERE id = ?");

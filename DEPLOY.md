@@ -83,6 +83,11 @@ So they are **not recommended** for this app. Use a Docker host above instead.
 - [ ] Placing/viewing a service loads live prices (proves outbound works)
 - [ ] Change the admin password
 
+Provider order-status synchronization is intentionally manual on the Dashboard,
+Profile, and Orders pages. Use the visible Refresh control when the newest
+provider status is needed; ordinary page navigation reads the local database and
+does not wait for multiple external API requests.
+
 ### Free real-email configuration
 
 The app sends real SMTP email for welcome messages, confirmed top-ups, accepted

@@ -100,7 +100,7 @@ function ui_logo($wordmark = true, $size = 46)
     . "<span style=\"font-family:'Poppins',sans-serif;font-weight:700;font-size:{$tsize}px;letter-spacing:3px;"
     . "text-transform:uppercase;color:#b8860b;margin-top:2px;\">SMM Panel</span>"
     . "</span>";
-  return "<span style=\"display:inline-flex;align-items:center;gap:.6rem;\">{$badge}{$word}</span>";
+  return "<span class=\"royal-brand-lockup\" aria-label=\"" . htmlspecialchars(APP_NAME . ' SMM') . "\" style=\"display:inline-flex;align-items:center;gap:.6rem;position:static;\">{$badge}{$word}</span>";
 }
 
 function ui_head($title, $bodyClass = 'app', $extraHead = '')
@@ -172,7 +172,8 @@ body.auth{
 .badge-secondary{background:#eef1f8;color:#5a6a85;}
 
 /* top-right action buttons */
-.top-actions{position:fixed;top:14px;right:14px;z-index:1600;display:flex;align-items:center;gap:8px;}
+  .top-actions{position:fixed;top:14px;right:14px;z-index:1600;display:flex;align-items:center;gap:8px;}
+  .royal-brand-lockup{position:static!important;}
 .nav-bell{width:46px;height:46px;border-radius:14px;border:1px solid rgba(108,92,231,.12);background:rgba(255,255,255,.95);backdrop-filter:blur(10px);box-shadow:0 10px 26px rgba(43,54,116,.18);display:flex;align-items:center;justify-content:center;color:var(--primary);font-size:1.05rem;transition:transform .2s,box-shadow .2s;text-decoration:none;position:relative;}
 .nav-bell:hover{transform:translateY(-1px);box-shadow:0 14px 30px rgba(43,54,116,.22);color:var(--primary-2);}
 .nav-bell:active{transform:scale(.95);} 

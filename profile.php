@@ -59,10 +59,10 @@ $refLink = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' ? 'https' : 
 $refLink = preg_replace('#(?<!:)//+#', '/', $refLink);
 $refLink = preg_replace('#^(https?):/#', '$1://', $refLink);
 
-// Refresh order statuses from the live provider before displaying them.
+// Provider status refresh is explicit (`?sync=1`) so profile loads stay fast.
 require_once 'includes/order-sync.php';
 $orderNotifications = [];
-syncUserOrders($conn, $user_id, isset($_GET['sync']), $orderNotifications);
+syncUserOrders($conn, $user_id, isset($_GET['sync']) && $_GET['sync'] === '1', $orderNotifications);
 
 // Orders
 $stmt = $conn->prepare("SELECT id, service_name, platform, quantity, price, status, external_order_id, created_at, refill_available, refill_requested, refill_status, delivered_quantity, remaining_quantity FROM orders WHERE user_id = ? ORDER BY id DESC");

@@ -450,6 +450,7 @@ class APIHandler
             CURLOPT_URL => $url,
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_TIMEOUT => $this->timeout,
+            CURLOPT_CONNECTTIMEOUT => min(8, max(3, (int) $this->timeout)),
             CURLOPT_HTTPHEADER => $headers,
             CURLOPT_SSL_VERIFYPEER => $this->verify_ssl,
             CURLOPT_SSL_VERIFYHOST => $this->verify_ssl ? 2 : 0,
@@ -633,6 +634,7 @@ class APIHandler
             CURLOPT_URL => $url,
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_TIMEOUT => $this->timeout,
+            CURLOPT_CONNECTTIMEOUT => min(8, max(3, (int) $this->timeout)),
             CURLOPT_HTTPHEADER => $headers,
             CURLOPT_SSL_VERIFYPEER => $this->verify_ssl,
             CURLOPT_SSL_VERIFYHOST => $this->verify_ssl ? 2 : 0,
@@ -712,7 +714,10 @@ class APIHandler
             'created' => time()
         ];
 
-        @file_put_contents($file, json_encode($data));
+        $tmp = $file . '.' . getmypid() . '.tmp';
+        if (@file_put_contents($tmp, json_encode($data), LOCK_EX) !== false) {
+            @rename($tmp, $file);
+        }
     }
 
     /**

@@ -15,7 +15,7 @@ SMTP_FROM_NAME=Royal
 SMTP_FROM_EMAIL=your-panel-mail@gmail.com
 SMTP_REPLY_TO=your-panel-mail@gmail.com
 SMTP_USE_TLS=true
-SMTP_TIMEOUT=15
+SMTP_TIMEOUT=8
 ```
 
 Gmail documents `smtp.gmail.com` with port `587` for TLS or `465` for SSL. This implementation uses STARTTLS on port 587.
@@ -33,7 +33,7 @@ SMTP_FROM_NAME=Royal
 SMTP_FROM_EMAIL=verified-sender@example.com
 SMTP_REPLY_TO=support@example.com
 SMTP_USE_TLS=true
-SMTP_TIMEOUT=15
+SMTP_TIMEOUT=8
 ```
 
 `SMTP_FROM_EMAIL` must be a sender verified with the selected provider. Never commit `SMTP_PASS` to the repository.

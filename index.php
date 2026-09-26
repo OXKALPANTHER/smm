@@ -39,9 +39,11 @@ $platformIcons = [
     'shazam'     => 'bi-music-note',
 ];
 
-// Refresh order statuses from the live provider before reading them.
+// Provider status refresh is explicit (`?sync=1`) so the dashboard never
+// blocks on multiple live API calls during ordinary navigation.
 require_once 'includes/order-sync.php';
-syncUserOrders($conn, $user_id, isset($_GET['sync']));
+$orderNotifications = [];
+syncUserOrders($conn, $user_id, isset($_GET['sync']) && $_GET['sync'] === '1', $orderNotifications);
 
 // Recent orders
 $recentOrders = [];
@@ -114,8 +116,8 @@ function statusBadge($status) {
         .container { max-width: 540px; }
 
         /* Top bar */
-        .topbar { padding: 1.1rem 0 0.5rem; }
-        .brand { font-weight: 800; letter-spacing: -0.5px; font-size: 1.35rem; }
+        .topbar { padding: 1.1rem 0 0.5rem; display:flex; align-items:center; justify-content:space-between; gap:1rem; position:static; }
+        .brand { display:inline-flex; align-items:center; min-height:46px; font-weight:800; letter-spacing: -0.5px; font-size: 1.35rem; position:static; }
         .brand span { color: var(--primary); }
         .icon-btn {
             width: 42px; height: 42px; border-radius: 14px;
@@ -456,7 +458,7 @@ function statusBadge($status) {
     <div class="card-soft mt-3">
         <div class="d-flex justify-content-between align-items-center mb-2">
             <div class="section-title" style="font-size:.98rem;"><div class="section-ico" style="width:34px;height:34px;font-size:1rem;"><i class="bi bi-clock-history"></i></div> Orders za Karibuni</div>
-            <a href="orders.php" class="text-decoration-none small fw-semibold" style="color:var(--primary)">Zote</a>
+            <div class="d-flex align-items-center gap-2"><a href="index.php?sync=1" class="text-decoration-none small fw-semibold" style="color:var(--primary)">Refresh</a><a href="orders.php" class="text-decoration-none small fw-semibold" style="color:var(--primary)">Zote</a></div>
         </div>
         <?php if (empty($recentOrders)): ?>
             <div class="text-center text-muted py-4" style="font-size:.85rem;">

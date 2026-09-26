@@ -523,7 +523,7 @@ define('SMTP_FROM_NAME', getenv('SMTP_FROM_NAME') ?: APP_NAME);
 define('SMTP_FROM_EMAIL', getenv('SMTP_FROM_EMAIL') ?: SMTP_USER);
 define('SMTP_REPLY_TO', getenv('SMTP_REPLY_TO') ?: SMTP_FROM_EMAIL);
 define('SMTP_USE_TLS', filter_var(getenv('SMTP_USE_TLS') ?: 'true', FILTER_VALIDATE_BOOLEAN));
-define('SMTP_TIMEOUT', (int) (getenv('SMTP_TIMEOUT') ?: 15));
+define('SMTP_TIMEOUT', max(3, min(10, (int) (getenv('SMTP_TIMEOUT') ?: 8))));
 
 // SMS Gateway - Africa's Talking
 define('AFRICAS_TALKING_API_KEY', 'your_africas_talking_key');
@@ -629,12 +629,16 @@ if (!function_exists('sendHtmlEmail')) {
         $headers = [
             'MIME-Version: 1.0',
             'Content-type: text/html; charset=UTF-8',
+            'Content-Transfer-Encoding: 8bit',
             'From: ' . SMTP_FROM_NAME . ' <' . SMTP_FROM_EMAIL . '>',
             'Reply-To: ' . (validateEmail(SMTP_REPLY_TO) ? SMTP_REPLY_TO : SMTP_FROM_EMAIL),
             'Date: ' . date(DATE_RFC2822),
+            'Message-ID: <' . bin2hex(random_bytes(12)) . '@' . (parse_url('https://' . SMTP_HOST, PHP_URL_HOST) ?: 'localhost') . '>',
         ];
 
-        $socket = @fsockopen(SMTP_HOST, SMTP_PORT, $errorCode, $errorMessage, SMTP_TIMEOUT);
+        // Port 465 uses implicit TLS; port 587 uses STARTTLS below.
+        $socketHost = SMTP_PORT === 465 ? 'ssl://' . SMTP_HOST : SMTP_HOST;
+        $socket = @fsockopen($socketHost, SMTP_PORT, $errorCode, $errorMessage, SMTP_TIMEOUT);
         if (!$socket) {
             error_log('Email SMTP connection failed for ' . SMTP_HOST . ':' . SMTP_PORT . ': ' . $errorMessage . ' (' . $errorCode . ').');
             return false;
@@ -665,7 +669,7 @@ if (!function_exists('sendHtmlEmail')) {
                 throw new RuntimeException('SMTP greeting error: ' . trim($response));
             }
             $sendCommand($socket, 'EHLO ' . ($_SERVER['SERVER_NAME'] ?? 'localhost'), ['250']);
-            if (SMTP_USE_TLS) {
+            if (SMTP_USE_TLS && SMTP_PORT !== 465) {
                 $sendCommand($socket, 'STARTTLS', ['220']);
                 if (!stream_socket_enable_crypto($socket, true, STREAM_CRYPTO_METHOD_TLS_CLIENT)) {
                     throw new RuntimeException('SMTP TLS negotiation failed.');
