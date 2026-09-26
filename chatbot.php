@@ -1,68 +1,49 @@
 <?php
+/**
+ * Free Royal support assistant.
+ *
+ * This endpoint intentionally uses no paid AI provider. It produces deterministic,
+ * account-aware answers from the real user's balance, recent orders, and the
+ * documented Royal workflows. It never claims to perform protected actions.
+ */
 require_once 'config.php';
 
 header('Content-Type: application/json; charset=UTF-8');
 
+function chatReply($success, $message, $code = 200)
+{
+    http_response_code($code);
+    echo json_encode(['success' => $success, 'message' => $message], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
 if (!isset($_SESSION['user_id'])) {
-    http_response_code(401);
-    echo json_encode(['success' => false, 'message' => 'Please log in to use support chat.']);
-    exit;
+    chatReply(false, 'Please log in to use Royal support chat.', 401);
 }
-
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    http_response_code(405);
-    echo json_encode(['success' => false, 'message' => 'Method not allowed.']);
-    exit;
+    chatReply(false, 'Method not allowed.', 405);
 }
-
-if (OPENAI_API_KEY === '') {
-    http_response_code(503);
-    echo json_encode(['success' => false, 'message' => 'Live support is not configured yet. Please contact support directly.']);
-    exit;
-}
-
-if (!filter_var(OPENAI_BASE_URL, FILTER_VALIDATE_URL)) {
-    http_response_code(503);
-    echo json_encode(['success' => false, 'message' => 'Live support has an invalid AI provider URL. Check OPENAI_BASE_URL in Render.']);
-    exit;
-}
-
-if (!function_exists('curl_init')) {
-    http_response_code(503);
-    echo json_encode(['success' => false, 'message' => 'Live support cannot start because the server is missing PHP cURL. Please redeploy the latest application image.']);
-    exit;
-}
+requireSameOriginRequest();
 
 $now = microtime(true);
 $lastRequest = (float) ($_SESSION['chatbot_last_request'] ?? 0);
 if ($now - $lastRequest < 1) {
-    http_response_code(429);
-    echo json_encode(['success' => false, 'message' => 'Please wait a moment before sending another message.']);
-    exit;
+    chatReply(false, 'Please wait a moment before sending another message.', 429);
 }
 $_SESSION['chatbot_last_request'] = $now;
-session_write_close();
 
 $input = json_decode(file_get_contents('php://input'), true) ?: [];
-$messages = $input['messages'] ?? [];
-if (!is_array($messages)) {
-    $messages = [];
-}
-
-$cleanMessages = [];
-foreach (array_slice($messages, -8) as $message) {
-    if (!is_array($message) || !in_array($message['role'] ?? '', ['user', 'assistant'], true)) {
-        continue;
-    }
-    $content = trim((string) ($message['content'] ?? ''));
-    if ($content !== '') {
-        $cleanMessages[] = ['role' => $message['role'], 'content' => mb_substr($content, 0, 1500)];
+$messages = is_array($input['messages'] ?? null) ? $input['messages'] : [];
+$question = '';
+for ($i = count($messages) - 1; $i >= 0; $i--) {
+    if (($messages[$i]['role'] ?? '') === 'user') {
+        $question = trim((string) ($messages[$i]['content'] ?? ''));
+        break;
     }
 }
-if (!$cleanMessages || end($cleanMessages)['role'] !== 'user') {
-    http_response_code(400);
-    echo json_encode(['success' => false, 'message' => 'Send a question to start the conversation.']);
-    exit;
+$question = mb_substr($question, 0, 1500);
+if ($question === '') {
+    chatReply(false, 'Send a question to start the conversation.', 400);
 }
 
 $userId = (int) $_SESSION['user_id'];
@@ -71,88 +52,90 @@ $stmt->bind_param('i', $userId);
 $stmt->execute();
 $user = $stmt->get_result()->fetch_assoc() ?: [];
 
-$orderStmt = $conn->prepare("SELECT service_name, quantity, price, status, created_at FROM orders WHERE user_id = ? ORDER BY id DESC LIMIT 5");
+$orderStmt = $conn->prepare("SELECT id, service_name, quantity, price, status, created_at FROM orders WHERE user_id = ? ORDER BY id DESC LIMIT 8");
 $orderStmt->bind_param('i', $userId);
 $orderStmt->execute();
 $orders = $orderStmt->get_result()->fetch_all(MYSQLI_ASSOC);
 
-$context = [
-    'username' => $user['username'] ?? 'customer',
-    'balance_tzs' => (float) ($user['balance'] ?? 0),
-    'recent_orders' => $orders,
-];
+$text = function_exists('mb_strtolower') ? mb_strtolower($question, 'UTF-8') : strtolower($question);
+$hasSwahili = preg_match('/\b(nawezaje|ninawezaje|salio|ongeza|order|huduma|bei|kiasi|hii|hii|yangu|imefika|imekamilika|wapi|tafadhali|asante|msaada|namba|kiwango)\b/u', $text) === 1;
+$hello = preg_match('/\b(hello|hi|hey|habari|mambo|hujambo|salama)\b/u', $text) === 1;
+$balance = preg_match('/\b(balance|salio|money|pesa|credit|credits)\b/u', $text) === 1;
+$topup = preg_match('/\b(top.?up|deposit|ongeza|kuweka|เติม|payment|malipo)\b/u', $text) === 1;
+$orderHelp = preg_match('/\b(order|agizo|maagizo|purchase|nunua|buy|weka)\b/u', $text) === 1;
+$statusHelp = preg_match('/\b(status|progress|endelea|imefika|imekamilika|pending|processing|complete|completed|cancel|refund)\b/u', $text) === 1;
+$serviceHelp = preg_match('/\b(service|huduma|bei|price|platform|followers|likes|views|comments|id)\b/u', $text) === 1;
+$apiHelp = preg_match('/\b(api|key|developer|integration)\b/u', $text) === 1;
+$securityHelp = preg_match('/\b(password|siri|security|hack|stolen|usalama|whatsapp)\b/u', $text) === 1;
 
-$systemPrompt = <<<PROMPT
-You are the real customer-support assistant for Royal SMM, a social-media marketing platform. You are not a salesperson and must never invent features, payment results, order statuses, prices, policies, URLs, or actions. Answer in the same language as the customer: English, Swahili, or a natural mix when they mix languages.
+$money = number_format((float) ($user['balance'] ?? 0), 0) . ' TZS';
+$latest = $orders[0] ?? null;
+$latestLine = $latest
+    ? 'Your latest order is #' . (int) $latest['id'] . ' (' . $latest['status'] . ') for ' . (string) $latest['service_name'] . '.'
+    : 'You do not have any orders yet.';
 
-Stay strictly within Royal SMM support. You may answer questions about this website, account navigation, registration, top-ups, balances, orders, services, notifications, the API Center, the help guide, and contacting support. If a question is unrelated to Royal SMM, politely say that you only support Royal SMM and invite the customer to ask how to use the platform. Do not answer general knowledge questions.
-
-You can explain these real workflows:
-- Dashboard: choose a platform and service, enter a valid public link or username, choose a quantity within the displayed minimum and maximum, review the price, and submit the order.
-- Top-up: open Ongeza Salio, enter the amount, name, email, and mobile-money phone number, approve the payment on the phone, and wait for the balance confirmation. A successful top-up increases the account balance.
-- Orders: customers can review order status and progress on Orders Zangu or the dashboard. Pending or processing orders may take time.
-- Notifications: account and payment updates appear in Notisi.
-- API Center: logged-in users can generate and use their API key; they should keep it private.
-- Help: the app has a Mwongozo page and WhatsApp support/community links. For a payment dispute, account security issue, refund, or anything requiring staff action, clearly say that a human support agent must handle it and direct the customer to WhatsApp support rather than pretending to perform the action.
-
-Be concise but helpful. Give numbered steps for procedures. Ask one focused follow-up question when the request lacks necessary detail. Never request or reveal passwords, API keys, SMTP credentials, payment PINs, or other secrets. Do not claim you changed an order, credited an account, sent an email, or contacted staff. You may use the private customer context below only to explain what is visible in their account; do not expose their email.
-
-PRIVATE CUSTOMER CONTEXT:
-PROMPT;
-$systemPrompt .= "\n" . json_encode($context, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-
-$payload = json_encode([
-    'model' => OPENAI_MODEL,
-    'messages' => array_merge([['role' => 'system', 'content' => $systemPrompt]], $cleanMessages),
-    'temperature' => 0.2,
-    'max_tokens' => 350,
-]);
-
-$ch = curl_init(OPENAI_BASE_URL . '/chat/completions');
-curl_setopt_array($ch, [
-    CURLOPT_RETURNTRANSFER => true,
-    CURLOPT_POST => true,
-    CURLOPT_POSTFIELDS => $payload,
-    CURLOPT_HTTPHEADER => [
-        'Authorization: Bearer ' . OPENAI_API_KEY,
-        'Content-Type: application/json',
-    ],
-    CURLOPT_CONNECTTIMEOUT => 8,
-    CURLOPT_TIMEOUT => OPENAI_TIMEOUT,
-]);
-$responseBody = curl_exec($ch);
-$curlError = curl_error($ch);
-$statusCode = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
-curl_close($ch);
-
-if ($responseBody === false || $curlError !== '') {
-    error_log('Chatbot provider connection failed: ' . $curlError . ' URL=' . OPENAI_BASE_URL);
-    http_response_code(502);
-    echo json_encode(['success' => false, 'message' => 'The AI provider could not be reached. Check outbound network access and OPENAI_BASE_URL in Render.']);
-    exit;
+// Answer a specific order number from the user's own records only.
+$orderId = 0;
+if (preg_match('/(?:#|order\s*)(\d{1,12})/i', $question, $match)) {
+    $orderId = (int) $match[1];
 }
-
-$response = json_decode($responseBody, true);
-$answer = trim((string) ($response['choices'][0]['message']['content'] ?? ''));
-if ($statusCode < 200 || $statusCode >= 300 || $answer === '') {
-    error_log('Chatbot provider returned HTTP ' . $statusCode . ': ' . mb_substr($responseBody, 0, 500));
-    http_response_code(502);
-    $providerMessage = (string) ($response['error']['message'] ?? '');
-    if ($statusCode === 401) {
-        $message = 'The AI provider rejected OPENAI_API_KEY. Check that the key is valid and saved in Render.';
-    } elseif ($statusCode === 403) {
-        $message = 'The AI provider denied this request. Check API key permissions and project access.';
-    } elseif ($statusCode === 404) {
-        $message = 'The configured AI model or provider URL was not found. Check OPENAI_MODEL and OPENAI_BASE_URL.';
-    } elseif ($statusCode === 429) {
-        $message = 'Support chat is temporarily busy. Please try again shortly or contact human support on WhatsApp.';
-    } elseif ($providerMessage !== '') {
-        $message = 'The AI provider returned an error. Check the API key, model, and account billing settings.';
-    } else {
-        $message = 'The AI provider returned an unexpected response. Check the Render logs for the HTTP status.';
+if ($orderId > 0) {
+    foreach ($orders as $order) {
+        if ((int) $order['id'] === $orderId) {
+            $message = $hasSwahili
+                ? 'Order #' . $orderId . ' iko kwenye hali ya ' . $order['status'] . '. Huduma: ' . $order['service_name'] . ', kiasi: ' . number_format((int) $order['quantity']) . '. Fungua Orders Zangu kwa progress ya sasa.'
+                : 'Order #' . $orderId . ' is currently ' . $order['status'] . '. Service: ' . $order['service_name'] . ', quantity: ' . number_format((int) $order['quantity']) . '. Open Orders Zangu for the latest progress.';
+            chatReply(true, $message);
+        }
     }
-    echo json_encode(['success' => false, 'message' => $message]);
-    exit;
+    chatReply(true, $hasSwahili ? 'Sioni order #' . $orderId . ' kwenye akaunti yako. Tafadhali hakikisha namba ni sahihi.' : 'I cannot find order #' . $orderId . ' in your account. Please check the number and try again.');
 }
 
-echo json_encode(['success' => true, 'message' => $answer], JSON_UNESCAPED_UNICODE);
+if ($hello && !$balance && !$topup && !$orderHelp && !$statusHelp && !$serviceHelp && !$apiHelp && !$securityHelp) {
+    chatReply(true, $hasSwahili
+        ? 'Habari ' . ($user['username'] ?? 'Mteja') . '! Niko tayari kusaidia kuhusu salio, huduma, order, top-up, au API. Unahitaji msaada gani?'
+        : 'Hello ' . ($user['username'] ?? 'customer') . '! I can help with your balance, services, orders, top-ups, or API access. What do you need?');
+}
+
+if ($balance && !$topup) {
+    chatReply(true, $hasSwahili
+        ? 'Salio lako la sasa ni ' . $money . '. Unaweza kuongeza salio kupitia kitufe cha Ongeza Salio.'
+        : 'Your current balance is ' . $money . '. You can add balance through the Ongeza Salio button.');
+}
+if ($topup) {
+    chatReply(true, $hasSwahili
+        ? 'Ili kuongeza salio: fungua Ongeza Salio, weka kiasi, jina, email na namba ya simu, kisha thibitisha malipo kwenye simu. Salio litaongezwa baada ya malipo kuthibitishwa.'
+        : 'To top up: open Ongeza Salio, enter the amount, name, email, and mobile number, then approve the payment on your phone. Your balance is updated after the payment is confirmed.');
+}
+if ($statusHelp || ($orderHelp && $latest)) {
+    if ($latest) {
+        chatReply(true, $hasSwahili
+            ? $latestLine . ' Fungua Orders Zangu au bonyeza refresh ili kuona hali mpya kutoka kwa provider.'
+            : $latestLine . ' Open Orders Zangu or refresh the page to see the latest provider status.');
+    }
+    chatReply(true, $hasSwahili ? 'Bado huna order. Chagua huduma kwenye Dashboard kuanza.' : 'You do not have an order yet. Choose a service on the Dashboard to get started.');
+}
+if ($orderHelp) {
+    chatReply(true, $hasSwahili
+        ? 'Kuweka order: chagua platform na huduma, unaweza kutafuta kwa jina au Service ID, weka link/username halali, chagua quantity ndani ya min/max, kagua gharama ya TSh, kisha thibitisha.'
+        : 'To place an order: choose a platform and service, search by name or Service ID, enter a valid link/username, choose a quantity within the displayed min/max, review the TSh cost, and confirm.');
+}
+if ($serviceHelp) {
+    chatReply(true, $hasSwahili
+        ? 'Huduma zinaonekana kwa bei ya mteja kwa TSh. Tumia search kwenye Dashboard au fungua Huduma kutafuta kwa jina, platform, au Service ID kama 5557.'
+        : 'Services are shown at the customer price in TSh. Use the Dashboard search or open Huduma to search by name, platform, or a Service ID such as 5557.');
+}
+if ($apiHelp) {
+    chatReply(true, $hasSwahili
+        ? 'API Center inaruhusu user aliyeingia kutengeneza API key na kuona documentation. Usishiriki API key yako na mtu mwingine.'
+        : 'API Center lets a logged-in user create an API key and read the documentation. Keep your API key private.');
+}
+if ($securityHelp) {
+    chatReply(true, $hasSwahili
+        ? 'Kwa password, account security, dispute ya malipo, refund, au jambo linalohitaji hatua ya staff, usishiriki siri zako kwenye chat. Wasiliana na human support kupitia WhatsApp link kwenye menu.'
+        : 'For passwords, account security, payment disputes, refunds, or anything requiring staff action, do not share secrets in chat. Contact human support through the WhatsApp link in the menu.');
+}
+
+chatReply(true, $hasSwahili
+    ? 'Naweza kusaidia kuhusu salio, top-up, huduma, Service ID, order status, API Center na navigation ya Royal. Eleza swali lako kwa ufupi, kwa mfano: "salio langu ni kiasi gani?"'
+    : 'I can help with your balance, top-ups, services, Service IDs, order status, API Center, and Royal navigation. Ask briefly, for example: "What is my balance?"');

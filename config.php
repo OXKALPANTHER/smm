@@ -468,9 +468,10 @@ define('FASTWAY_API_BASE_URL', 'https://fastwaysmm.com/api/v2');
 define('FASTWAY_API_TIMEOUT', 30);
 define('FASTWAY_API_VERIFY_SSL', true);
 
-// USD -> TZS conversion for providers that quote in USD (FastWay). Applied to
-// the provider's raw rate BEFORE PRICE_MARKUP_PERCENT is added.
-define('USD_TO_TZS_RATE', (float) (getenv('USD_TO_TZS_RATE') ?: 3500));
+// Fixed conversion direction: 1 USD = 3,500 TSh. Applied to the provider's
+// raw USD rate BEFORE PRICE_MARKUP_PERCENT is added. Never divide TSh by this
+// value and never expose this internal supplier conversion to customers.
+define('USD_TO_TZS_RATE', 3500.0);
 
 // FastWay is the sole provider for all new catalogue requests and orders.
 // Boost remains available only for legacy order-status and cancel operations.
@@ -523,12 +524,6 @@ define('SMTP_FROM_EMAIL', getenv('SMTP_FROM_EMAIL') ?: SMTP_USER);
 define('SMTP_REPLY_TO', getenv('SMTP_REPLY_TO') ?: SMTP_FROM_EMAIL);
 define('SMTP_USE_TLS', filter_var(getenv('SMTP_USE_TLS') ?: 'true', FILTER_VALIDATE_BOOLEAN));
 define('SMTP_TIMEOUT', (int) (getenv('SMTP_TIMEOUT') ?: 15));
-
-// Live support assistant (OpenAI-compatible chat completions endpoint).
-define('OPENAI_API_KEY', getenv('OPENAI_API_KEY') ?: '');
-define('OPENAI_BASE_URL', rtrim(getenv('OPENAI_BASE_URL') ?: 'https://api.openai.com/v1', '/'));
-define('OPENAI_MODEL', getenv('OPENAI_MODEL') ?: 'gpt-4o-mini');
-define('OPENAI_TIMEOUT', (int) (getenv('OPENAI_TIMEOUT') ?: 30));
 
 // SMS Gateway - Africa's Talking
 define('AFRICAS_TALKING_API_KEY', 'your_africas_talking_key');

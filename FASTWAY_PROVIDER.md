@@ -29,8 +29,12 @@
 
 ## Pricing formula
 
+The internal fixed conversion is **1 USD = 3,500 TSh**. The application
+multiplies USD supplier rates by 3,500; it never divides TSh by this rate and
+does not expose the supplier conversion or markup to customers.
+
 ```text
-supplier_tzs_per_1000 = fastway_usd_rate_per_1000 × USD_TO_TZS_RATE
+supplier_tzs_per_1000 = fastway_usd_rate_per_1000 × 3500
 customer_tzs_per_1000 = supplier_tzs_per_1000 × 1.78
 ```
 

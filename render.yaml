@@ -43,11 +43,3 @@ services:
         value: "true"
       - key: SMTP_TIMEOUT
         value: "15"
-      - key: OPENAI_API_KEY
-        sync: false      # server-side API key for live support
-      - key: OPENAI_BASE_URL
-        value: https://api.openai.com/v1
-      - key: OPENAI_MODEL
-        value: gpt-4o-mini
-      - key: OPENAI_TIMEOUT
-        value: "30"

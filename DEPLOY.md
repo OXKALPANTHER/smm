@@ -78,7 +78,7 @@ So they are **not recommended** for this app. Use a Docker host above instead.
 - [ ] `supabase_schema.sql` ran successfully (tables visible in Table Editor)
 - [ ] 6 `DB_*` env vars set on the host
 - [ ] SMTP variables set on the host (`SMTP_USER`, `SMTP_PASS`, and `SMTP_FROM_EMAIL` are required for top-up emails)
-- [ ] `OPENAI_API_KEY` set on the host for live bilingual customer support
+- [ ] Free account-aware support chat responds without a paid AI key
 - [ ] App opens, you can log in as `admin / Admin@123`
 - [ ] Placing/viewing a service loads live prices (proves outbound works)
 - [ ] Change the admin password
@@ -110,24 +110,14 @@ undoing a successful balance credit or order.
 
 See [FREE_EMAIL_SETUP.md](FREE_EMAIL_SETUP.md) for provider-specific steps.
 
-### Live customer support chatbot
+### Free customer support chatbot
 
-The floating support chat uses a real OpenAI-compatible chat-completions API;
-it does not use scripted fake answers. Set these server environment variables:
+The floating support chat uses the local `chatbot.php` support engine and does
+not call any paid AI service. It gives real account-aware responses
+using the logged-in customer's current balance and recent order records, and
+answers documented Royal workflows in English and Kiswahili. It never receives
+passwords, payment PINs, or API keys, and it directs payment disputes and
+protected account actions to human WhatsApp support.
 
-```
-OPENAI_API_KEY=your-server-side-api-key
-OPENAI_BASE_URL=https://api.openai.com/v1
-OPENAI_MODEL=gpt-4o-mini
-OPENAI_TIMEOUT=30
-```
-
-The assistant receives the logged-in customer's username, current balance, and
-five recent order statuses so it can give account-specific guidance. It never
-receives passwords, payment PINs, or API keys. If the key is missing or the AI
-provider is unavailable, the chat clearly directs the customer to human
-WhatsApp support instead of fabricating an answer.
-
-After adding or changing these variables, trigger a new Render deploy. The
-Docker image also installs PHP cURL, which is required for the server to reach
-the AI provider.
+No chatbot API key or paid service is required. Deploy the application normally;
+the support endpoint reads the logged-in user's account context locally.
