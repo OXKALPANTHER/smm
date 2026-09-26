@@ -77,7 +77,7 @@ So they are **not recommended** for this app. Use a Docker host above instead.
 ## D. Quick checklist
 - [ ] `supabase_schema.sql` ran successfully (tables visible in Table Editor)
 - [ ] 6 `DB_*` env vars set on the host
-- [ ] SMTP variables set on the host (`SMTP_USER`, `SMTP_PASS`, and `SMTP_FROM_EMAIL` are required for top-up emails)
+- [ ] Brevo API variables set on the host (`BREVO_API_KEY` and `BREVO_FROM_EMAIL` are required for email)
 - [ ] Free account-aware support chat responds without a paid AI key
 - [ ] App opens, you can log in as `admin / Admin@123`
 - [ ] Placing/viewing a service loads live prices (proves outbound works)
@@ -90,27 +90,23 @@ does not wait for multiple external API requests.
 
 ### Free real-email configuration
 
-The app sends real SMTP email for welcome messages, confirmed top-ups, accepted
-orders, and provider status changes. The production setup uses Brevo SMTP. Set
-the Render environment variables below; use an SMTP key, never an API key or
-normal mailbox password:
+The app sends real transactional email through Brevo's HTTPS API on port 443
+for welcome messages, confirmed top-ups, accepted orders, and provider status
+changes. Set the Render environment variables below:
 
 ```
-SMTP_HOST=smtp-relay.brevo.com
-SMTP_PORT=587
-SMTP_USER=b9ff5f001@smtp-brevo.com
-SMTP_PASS=your-brevo-smtp-key
-SMTP_FROM_NAME=Royal
-SMTP_FROM_EMAIL=your-verified-brevo-sender@example.com
-SMTP_REPLY_TO=your-verified-brevo-sender@example.com
-SMTP_USE_TLS=true
-SMTP_TIMEOUT=8
+BREVO_API_KEY=your-brevo-api-key
+BREVO_API_URL=https://api.brevo.com/v3/smtp/email
+BREVO_FROM_NAME=Royal
+BREVO_FROM_EMAIL=your-verified-brevo-sender@example.com
+BREVO_REPLY_TO=your-verified-brevo-sender@example.com
+BREVO_API_TIMEOUT=8
 ```
 
-Use the Brevo login shown in the SMTP settings as `SMTP_USER` and the generated
-SMTP key as `SMTP_PASS`. Verify the sender used in `SMTP_FROM_EMAIL` with Brevo
-first. Do not put the SMTP key in the repository. Email delivery failures are
-logged without undoing a successful balance credit or order.
+Use a Brevo API key as `BREVO_API_KEY`, not the SMTP key. Verify the sender used
+in `BREVO_FROM_EMAIL` with Brevo first. Do not put the API key in the repository.
+Email delivery failures are logged without undoing a successful balance credit
+or order.
 
 See [FREE_EMAIL_SETUP.md](FREE_EMAIL_SETUP.md) for provider-specific steps.
 

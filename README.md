@@ -82,7 +82,7 @@ FLUTTERWAVE_PUBLIC_KEY / FLUTTERWAVE_SECRET_KEY
 PAYSTACK_PUBLIC_KEY / PAYSTACK_SECRET_KEY
 
 // Notifications
-SMTP_HOST, SMTP_PORT, SMTP_USER
+BREVO_API_KEY, BREVO_FROM_EMAIL
 AFRICAS_TALKING_API_KEY
 TWILIO_ACCOUNT_SID
 ```
@@ -229,7 +229,7 @@ HTTP Status Codes:
 1. Import `database.sql` to MySQL
 2. Update credentials in `config.php`
 3. Set up payment gateway API keys
-4. Configure SMTP for emails
+4. Configure Brevo HTTPS API variables for emails
 5. Install dependencies: `composer install`
 
 ## Files Structure

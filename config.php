@@ -514,16 +514,15 @@ define('PAYSTACK_CALLBACK_URL', 'https://yourdomain.com/webhooks/paystack.php');
 // NOTIFICATION SERVICES
 // ============================================
 
-// Email Configuration (SMTP)
-define('SMTP_HOST', getenv('SMTP_HOST') ?: 'smtp.gmail.com');
-define('SMTP_PORT', (int) (getenv('SMTP_PORT') ?: 587));
-define('SMTP_USER', getenv('SMTP_USER') ?: '');
-define('SMTP_PASS', getenv('SMTP_PASS') ?: '');
-define('SMTP_FROM_NAME', getenv('SMTP_FROM_NAME') ?: APP_NAME);
-define('SMTP_FROM_EMAIL', getenv('SMTP_FROM_EMAIL') ?: SMTP_USER);
-define('SMTP_REPLY_TO', getenv('SMTP_REPLY_TO') ?: SMTP_FROM_EMAIL);
-define('SMTP_USE_TLS', filter_var(getenv('SMTP_USE_TLS') ?: 'true', FILTER_VALIDATE_BOOLEAN));
-define('SMTP_TIMEOUT', max(3, min(10, (int) (getenv('SMTP_TIMEOUT') ?: 8))));
+// Email Configuration (Brevo Transactional Email API over HTTPS/443).
+// The API avoids Render SMTP egress/IP restrictions. Keep the API key in the
+// deployment secret manager; never commit it to the repository.
+define('BREVO_API_KEY', getenv('BREVO_API_KEY') ?: '');
+define('BREVO_API_URL', rtrim(getenv('BREVO_API_URL') ?: 'https://api.brevo.com/v3/smtp/email', '/'));
+define('BREVO_FROM_NAME', getenv('BREVO_FROM_NAME') ?: APP_NAME);
+define('BREVO_FROM_EMAIL', getenv('BREVO_FROM_EMAIL') ?: '');
+define('BREVO_REPLY_TO', getenv('BREVO_REPLY_TO') ?: BREVO_FROM_EMAIL);
+define('BREVO_API_TIMEOUT', max(3, min(15, (int) (getenv('BREVO_API_TIMEOUT') ?: 8))));
 
 // SMS Gateway - Africa's Talking
 define('AFRICAS_TALKING_API_KEY', 'your_africas_talking_key');
@@ -611,95 +610,66 @@ function validateEmail($email)
 }
 
 if (!function_exists('sendHtmlEmail')) {
+    /** Send one transactional email through Brevo's HTTPS API (port 443). */
     function sendHtmlEmail($email, $subject, $body)
     {
         if (!validateEmail($email)) {
             error_log('Email skipped: invalid recipient address.');
             return false;
         }
-        if (preg_match('/[\r\n]/', (string) $subject) || preg_match('/[\r\n]/', (string) SMTP_FROM_NAME)) {
+        if (preg_match('/[\r\n]/', (string) $subject) || preg_match('/[\r\n]/', (string) BREVO_FROM_NAME)) {
             error_log('Email skipped: unsafe header value.');
             return false;
         }
-        if (SMTP_USER === '' || SMTP_PASS === '' || !validateEmail(SMTP_FROM_EMAIL)) {
-            error_log('Email skipped: SMTP_USER, SMTP_PASS, and a valid SMTP_FROM_EMAIL must be configured.');
+        if (BREVO_API_KEY === '' || !validateEmail(BREVO_FROM_EMAIL)) {
+            error_log('Email skipped: BREVO_API_KEY and a verified BREVO_FROM_EMAIL must be configured.');
+            return false;
+        }
+        if (!function_exists('curl_init')) {
+            error_log('Email skipped: PHP cURL extension is unavailable.');
             return false;
         }
 
-        $headers = [
-            'MIME-Version: 1.0',
-            'Content-type: text/html; charset=UTF-8',
-            'Content-Transfer-Encoding: 8bit',
-            'From: ' . SMTP_FROM_NAME . ' <' . SMTP_FROM_EMAIL . '>',
-            'Reply-To: ' . (validateEmail(SMTP_REPLY_TO) ? SMTP_REPLY_TO : SMTP_FROM_EMAIL),
-            'Date: ' . date(DATE_RFC2822),
-            'Message-ID: <' . bin2hex(random_bytes(12)) . '@' . (parse_url('https://' . SMTP_HOST, PHP_URL_HOST) ?: 'localhost') . '>',
-        ];
-
-        // Port 465 uses implicit TLS; port 587 uses STARTTLS below.
-        $socketHost = SMTP_PORT === 465 ? 'ssl://' . SMTP_HOST : SMTP_HOST;
-        $socket = @fsockopen($socketHost, SMTP_PORT, $errorCode, $errorMessage, SMTP_TIMEOUT);
-        if (!$socket) {
-            error_log('Email SMTP connection failed for ' . SMTP_HOST . ':' . SMTP_PORT . ': ' . $errorMessage . ' (' . $errorCode . ').');
+        $payload = json_encode([
+            'sender' => ['name' => (string) BREVO_FROM_NAME, 'email' => (string) BREVO_FROM_EMAIL],
+            'to' => [['email' => (string) $email]],
+            'replyTo' => ['email' => validateEmail(BREVO_REPLY_TO) ? (string) BREVO_REPLY_TO : (string) BREVO_FROM_EMAIL],
+            'subject' => (string) $subject,
+            'htmlContent' => (string) $body,
+        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        if ($payload === false) {
+            error_log('Email skipped: could not encode Brevo request.');
             return false;
         }
 
-        stream_set_timeout($socket, SMTP_TIMEOUT);
-        $readResponse = static function ($socket) {
-            $response = '';
-            while (($line = fgets($socket, 515)) !== false) {
-                $response .= $line;
-                if (strlen($line) < 4 || $line[3] !== '-') {
-                    break;
-                }
-            }
-            return [substr($response, 0, 3), $response];
-        };
-        $sendCommand = static function ($socket, $command, $expectedCodes) use ($readResponse) {
-            fwrite($socket, $command . "\r\n");
-            [$code, $response] = $readResponse($socket);
-            if (!in_array($code, $expectedCodes, true)) {
-                throw new RuntimeException('SMTP error ' . $code . ': ' . trim($response));
-            }
-        };
+        $ch = curl_init(BREVO_API_URL);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => $payload,
+            CURLOPT_CONNECTTIMEOUT => 5,
+            CURLOPT_TIMEOUT => BREVO_API_TIMEOUT,
+            CURLOPT_HTTPHEADER => ['accept: application/json', 'api-key: ' . BREVO_API_KEY, 'content-type: application/json'],
+            CURLOPT_SSL_VERIFYPEER => true,
+            CURLOPT_SSL_VERIFYHOST => 2,
+        ]);
+        $responseBody = curl_exec($ch);
+        $curlError = curl_error($ch);
+        $statusCode = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
 
-        try {
-            [$code, $response] = $readResponse($socket);
-            if ($code !== '220') {
-                throw new RuntimeException('SMTP greeting error: ' . trim($response));
-            }
-            $sendCommand($socket, 'EHLO ' . ($_SERVER['SERVER_NAME'] ?? 'localhost'), ['250']);
-            if (SMTP_USE_TLS && SMTP_PORT !== 465) {
-                $sendCommand($socket, 'STARTTLS', ['220']);
-                if (!stream_socket_enable_crypto($socket, true, STREAM_CRYPTO_METHOD_TLS_CLIENT)) {
-                    throw new RuntimeException('SMTP TLS negotiation failed.');
-                }
-                $sendCommand($socket, 'EHLO ' . ($_SERVER['SERVER_NAME'] ?? 'localhost'), ['250']);
-            }
-            if (SMTP_USER !== '') {
-                $sendCommand($socket, 'AUTH LOGIN', ['334']);
-                $sendCommand($socket, base64_encode(SMTP_USER), ['334']);
-                $sendCommand($socket, base64_encode(SMTP_PASS), ['235']);
-            }
-            $sendCommand($socket, 'MAIL FROM:<' . SMTP_FROM_EMAIL . '>', ['250']);
-            $sendCommand($socket, 'RCPT TO:<' . $email . '>', ['250', '251']);
-            $sendCommand($socket, 'DATA', ['354']);
-            // Dot-stuff lines per RFC 5321 so an HTML body cannot terminate DATA early.
-            $wireBody = preg_replace('/(?m)^\./', '..', str_replace(["\r\n", "\r"], "\n", (string) $body));
-            $wireBody = str_replace("\n", "\r\n", $wireBody);
-            fwrite($socket, 'To: ' . $email . "\r\n" . implode("\r\n", $headers) . "\r\nSubject: " . $subject . "\r\n\r\n" . $wireBody . "\r\n.\r\n");
-            [$code, $response] = $readResponse($socket);
-            if ($code !== '250') {
-                throw new RuntimeException('SMTP message error ' . $code . ': ' . trim($response));
-            }
-            $sendCommand($socket, 'QUIT', ['221']);
-            fclose($socket);
-            return true;
-        } catch (Throwable $exception) {
-            fclose($socket);
-            error_log('Email could not be sent: ' . $exception->getMessage());
+        if ($responseBody === false || $curlError !== '') {
+            error_log('Brevo HTTPS email request failed: ' . ($curlError ?: 'unknown cURL error'));
             return false;
         }
+        $response = json_decode($responseBody, true);
+        if ($statusCode < 200 || $statusCode >= 300 || empty($response['messageId'])) {
+            $providerMessage = is_array($response) ? (string) ($response['message'] ?? $response['code'] ?? '') : '';
+            error_log('Brevo email rejected HTTP ' . $statusCode . ($providerMessage !== '' ? ': ' . $providerMessage : '.'));
+            return false;
+        }
+        error_log('Brevo accepted transactional email: ' . (string) $response['messageId']);
+        return true;
     }
 }
 

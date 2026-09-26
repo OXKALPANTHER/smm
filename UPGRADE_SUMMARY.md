@@ -153,7 +153,7 @@ MPESA_API_TOKEN        // From M-Pesa provider
 STRIPE_SECRET_KEY      // From Stripe dashboard
 FLUTTERWAVE_SECRET_KEY // From Flutterwave
 PAYSTACK_SECRET_KEY    // From Paystack
-SMTP_USER / SMTP_PASS  // Your email credentials
+BREVO_API_KEY / BREVO_FROM_EMAIL  // Brevo transactional email credentials
 ```
 
 ### 2. **Import Database**

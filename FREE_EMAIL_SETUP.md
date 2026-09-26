@@ -1,58 +1,52 @@
-# Free real-email delivery
+# Free real-email delivery through Brevo API
 
-The application now sends real transactional email through authenticated SMTP. It does not depend on PHP `mail()` or a local mail daemon.
+The application sends transactional email through Brevo's HTTPS API on port
+443. It no longer opens an SMTP socket, so Render SMTP egress and authorized
+SMTP-IP restrictions do not affect delivery.
 
-## Free option A: Gmail SMTP
+## Brevo configuration
 
-Use a dedicated Gmail account for the panel. Enable 2-Step Verification, create a Google App Password, and use the 16-character app password—not the normal account password.
-
-```text
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-SMTP_USER=your-panel-mail@gmail.com
-SMTP_PASS=your-16-character-app-password
-SMTP_FROM_NAME=Royal
-SMTP_FROM_EMAIL=your-panel-mail@gmail.com
-SMTP_REPLY_TO=your-panel-mail@gmail.com
-SMTP_USE_TLS=true
-SMTP_TIMEOUT=8
-```
-
-Gmail documents `smtp.gmail.com` with port `587` for TLS or `465` for SSL. This implementation uses STARTTLS on port 587.
-
-## Free option B: Brevo SMTP
-
-Brevo provides a free SMTP relay allowance. Create and verify a sender, then create an SMTP key from the Brevo SMTP/API settings.
+1. In Brevo, create or copy an **API key** from **SMTP & API → API keys**.
+2. Do not use the SMTP key for this integration.
+3. Verify the sender address in Brevo under **Transactional → Senders**.
+4. Set these Render environment variables:
 
 ```text
-SMTP_HOST=smtp-relay.brevo.com
-SMTP_PORT=587
-SMTP_USER=your-brevo-login-email
-SMTP_PASS=your-brevo-smtp-key
-SMTP_FROM_NAME=Royal
-SMTP_FROM_EMAIL=verified-sender@example.com
-SMTP_REPLY_TO=support@example.com
-SMTP_USE_TLS=true
-SMTP_TIMEOUT=8
+BREVO_API_KEY=your-brevo-api-key
+BREVO_API_URL=https://api.brevo.com/v3/smtp/email
+BREVO_FROM_NAME=Royal
+BREVO_FROM_EMAIL=your-verified-brevo-sender@example.com
+BREVO_REPLY_TO=your-verified-brevo-sender@example.com
+BREVO_API_TIMEOUT=8
 ```
 
-`SMTP_FROM_EMAIL` must be a sender verified with the selected provider. Never commit `SMTP_PASS` to the repository.
+`BREVO_FROM_EMAIL` must exactly match a verified Brevo sender. Keep
+`BREVO_API_KEY` in Render's secret environment settings and never commit it.
 
 ## Messages sent
 
 - Welcome email after registration
 - Top-up success email after a confirmed balance credit
 - Order accepted email after FastWay accepts an order
-- Order status email when a synced order changes status, including provider cancellation/refund notices
+- Order status email when a synced order changes status, including provider
+  cancellation/refund notices
 
-Email failure is logged server-side and does not roll back a successful registration, payment, or order. This prevents mail-provider downtime from corrupting financial or provider state.
+The application logs the Brevo HTTP status and returned message ID without
+logging the API key. A Brevo message ID means Brevo accepted the request; final
+Inbox/Spam delivery status is available in **Brevo → Transactional → Logs**.
+Email failure does not roll back a successful registration, payment, or order.
 
-## Render setup
+## Testing
 
-In the Render service environment, set the SMTP variables marked `sync: false` in `render.yaml`. Redeploy after saving them. The repository contains safe defaults and no credentials.
+1. Save the Render variables.
+2. Trigger a new registration using an accessible email address.
+3. Open **Brevo → Transactional → Logs** immediately.
+4. Check Render logs for either:
+   - `Brevo accepted transactional email: ...`
+   - `Brevo email rejected HTTP ...`
+   - `Brevo HTTPS email request failed: ...`
+5. Check the recipient Inbox and Spam folders.
 
-## Sources
+## Official reference
 
-- [Gmail: send email from an app](https://knowledge.workspace.google.com/admin/gmail/send-email-from-app)
-- [Brevo: free SMTP server](https://www.brevo.com/free-smtp-server/)
-- [Brevo: SMTP transactional email setup](https://help.brevo.com/hc/en-us/articles/7924908994450-Send-transactional-emails-using-Brevo-SMTP)
+- [Brevo: Send a transactional email](https://developers.brevo.com/docs/send-a-transactional-email)
