@@ -1012,6 +1012,25 @@ function requireLogin()
     }
 }
 
+/** Reject browser state-changing requests originating from another site. */
+function requireSameOriginRequest()
+{
+    $origin = trim((string) ($_SERVER['HTTP_ORIGIN'] ?? ''));
+    $referer = trim((string) ($_SERVER['HTTP_REFERER'] ?? ''));
+    $source = $origin !== '' ? $origin : $referer;
+    if ($source === '') {
+        return;
+    }
+    $sourceHost = parse_url($source, PHP_URL_HOST);
+    $requestHost = $_SERVER['HTTP_HOST'] ?? '';
+    if (!$sourceHost || !hash_equals(strtolower((string) $requestHost), strtolower((string) $sourceHost))) {
+        http_response_code(403);
+        header('Content-Type: application/json');
+        echo json_encode(['success' => false, 'message' => 'Request origin is not allowed.']);
+        exit;
+    }
+}
+
 /**
  * Redirect if not admin
  */

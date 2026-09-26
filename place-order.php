@@ -31,6 +31,7 @@ if (!isLoggedIn()) {
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     jsonOut(false, 'Method not allowed.', [], 405);
 }
+requireSameOriginRequest();
 
 // Accept JSON body or form-encoded.
 $input = $_POST;

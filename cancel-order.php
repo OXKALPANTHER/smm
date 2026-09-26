@@ -14,6 +14,7 @@ function jsonOut($success, $message, $extra = [], $code = 200) {
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     jsonOut(false, 'Method not allowed.', [], 405);
 }
+requireSameOriginRequest();
 
 $input = $_POST;
 if (empty($input)) {

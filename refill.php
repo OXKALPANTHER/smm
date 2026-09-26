@@ -20,6 +20,7 @@ function rOut($ok, $msg, $extra = [], $code = 200) {
 
 if (!isLoggedIn())                      rOut(false, 'Tafadhali ingia kwanza.', [], 401);
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') rOut(false, 'Method not allowed.', [], 405);
+requireSameOriginRequest();
 
 $input = $_POST;
 if (empty($input)) {

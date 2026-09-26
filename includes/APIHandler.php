@@ -172,7 +172,8 @@ class APIHandler
     {
         // Cache key is per-provider so legacy Boost and FastWay catalogues never
         // overwrite each other's cache file. Bump whenever pricing rules change.
-        $cache_key = "services_all_v7_" . $this->service;
+        // v8 removes supplier USD/markup metadata from browser-facing service payloads.
+        $cache_key = "services_all_v8_" . $this->service;
 
         if ($use_cache) {
             $cached = $this->getCache($cache_key);
@@ -285,9 +286,9 @@ class APIHandler
                 'max' => (int) ($service['max'] ?? $service['max_quantity'] ?? $service['maximum'] ?? 10000),
                 'rate' => round($customer_rate, 5),               // per-unit customer price in TZS
                 'price_per_1000' => round($customer_price_per_k), // TZS per 1000 units after markup
-                'provider_price_per_1000' => round($provider_price_per_k),
-                'rate_usd' => $rate_usd,                         // provider per-1000 USD rate
-                'markup_percent' => $markup,
+                // Supplier price, USD rate, and markup are intentionally not
+                // returned to browser consumers. Only the customer TZS price
+                // is public; raw values remain internal to this adapter.
                 'currency' => CURRENCY_CODE,
                 'api_id' => $id !== null ? (int) $id : null,
                 'status' => $service['status'] ?? 'active',
@@ -406,6 +407,24 @@ class APIHandler
             }
         }
         return ['success' => false, 'error' => $body[0]['cancel']['error'] ?? 'Cancellation was not accepted.', 'data' => $body];
+    }
+
+    /** Fetch the current status of a FastWay refill request. */
+    public function getRefillStatus($refill_id)
+    {
+        if ($this->protocol !== 'perfectpanel' || (int) $refill_id <= 0) {
+            return ['success' => false, 'error' => 'Invalid FastWay refill reference.'];
+        }
+        $response = $this->requestFormEncoded('', 'POST', [
+            'key' => $this->api_key,
+            'action' => 'refill_status',
+            'refill' => (int) $refill_id,
+        ]);
+        $body = $response['data'] ?? [];
+        if (!empty($response['success']) && isset($body['status']) && empty($body['error'])) {
+            return ['success' => true, 'status' => (string) $body['status'], 'data' => $body];
+        }
+        return ['success' => false, 'error' => $body['error'] ?? $response['error'] ?? 'Refill status unavailable.', 'data' => $body];
     }
 
     /**

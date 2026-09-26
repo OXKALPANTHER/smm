@@ -9,6 +9,7 @@ $admin_id = $_SESSION['user_id'];
  * AJAX ACTION HANDLERS (return JSON, exit before HTML)
  * ============================================================ */
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    requireSameOriginRequest();
     header('Content-Type: application/json');
     $in = json_decode(file_get_contents('php://input'), true) ?: $_POST;
     $action = $in['action'] ?? '';
@@ -196,7 +197,8 @@ $providerBalances = [];
 $providerList = json_decode(defined('SMM_PROVIDERS') ? SMM_PROVIDERS : '[]', true) ?: ['boost', 'fastway'];
 $pbCache = __DIR__ . '/data/cache/provider_balance.json';
 $pbCacheData = null;
-if (is_file($pbCache) && (time() - filemtime($pbCache) < 120)) {
+$forceProviderRefresh = isset($_GET['refresh_provider']) && $_GET['refresh_provider'] === '1';
+if (!$forceProviderRefresh && is_file($pbCache) && (time() - filemtime($pbCache) < 120)) {
     $pbCacheData = json_decode(file_get_contents($pbCache), true);
 }
 
@@ -220,7 +222,8 @@ try {
         $providerBalances[$providerName] = (float) (new APIHandler($providerName))->getBalance('TZS');
     }
 
-    @file_put_contents($pbCache, json_encode($providerBalances));
+    @file_put_contents($pbCache, json_encode($providerBalances), LOCK_EX);
+    @chmod($pbCache, 0600);
 } catch (Exception $e) {
     if (is_array($pbCacheData)) {
         foreach ($pbCacheData as $providerName => $balance) {
@@ -541,7 +544,7 @@ ui_head(APP_NAME . ' — Admin', 'admin', $extraHead);
         <div class="col-xl-3 col-md-6">
             <div class="stat-card d-flex justify-content-between align-items-center">
                 <div>
-                    <div class="lbl">Provider Balances</div>
+                    <div class="lbl">Provider Balances <a href="admin.php?refresh_provider=1" class="text-decoration-none" title="Fetch live provider balance"><i class="bi bi-arrow-clockwise"></i></a></div>
                     <div class="val" style="font-size:1rem;line-height:1.4;">
                         <?php if (!empty($providerBalances)): ?>
                             <?php foreach ($providerBalances as $providerName => $balance): ?>
