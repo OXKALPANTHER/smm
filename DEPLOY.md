@@ -95,6 +95,7 @@ for welcome messages, confirmed top-ups, accepted orders, and provider status
 changes. Set the Render environment variables below:
 
 ```
+APP_URL=https://royal.t20tech.site
 BREVO_API_KEY=your-brevo-api-key
 BREVO_API_URL=https://api.brevo.com/v3/smtp/email
 BREVO_FROM_NAME=Royal

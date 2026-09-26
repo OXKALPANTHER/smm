@@ -517,6 +517,7 @@ define('PAYSTACK_CALLBACK_URL', 'https://yourdomain.com/webhooks/paystack.php');
 // Email Configuration (Brevo Transactional Email API over HTTPS/443).
 // The API avoids Render SMTP egress/IP restrictions. Keep the API key in the
 // deployment secret manager; never commit it to the repository.
+define('APP_URL', rtrim(getenv('APP_URL') ?: 'https://royal.t20tech.site', '/'));
 define('BREVO_API_KEY', getenv('BREVO_API_KEY') ?: '');
 define('BREVO_API_URL', rtrim(getenv('BREVO_API_URL') ?: 'https://api.brevo.com/v3/smtp/email', '/'));
 define('BREVO_FROM_NAME', getenv('BREVO_FROM_NAME') ?: APP_NAME);
@@ -673,46 +674,72 @@ if (!function_exists('sendHtmlEmail')) {
     }
 }
 
+if (!function_exists('emailSafe')) {
+    function emailSafe($value)
+    {
+        return htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
+    }
+}
+
+if (!function_exists('emailUrl')) {
+    function emailUrl($path = '')
+    {
+        return APP_URL . '/' . ltrim((string) $path, '/');
+    }
+}
+
+if (!function_exists('renderRoyalEmail')) {
+    /** Build the shared Royal SMM transactional email layout. */
+    function renderRoyalEmail($eyebrow, $title, $intro, $content, $buttonLabel = '', $buttonUrl = '')
+    {
+        $safeEyebrow = emailSafe($eyebrow);
+        $safeTitle = emailSafe($title);
+        $safeIntro = emailSafe($intro);
+        $button = '';
+        if ($buttonLabel !== '' && $buttonUrl !== '') {
+            $button = '<tr><td style="padding:4px 36px 30px;">'
+                . '<a href="' . emailSafe($buttonUrl) . '" style="display:inline-block;background:#6c5ce7;color:#ffffff;text-decoration:none;padding:14px 24px;border-radius:10px;font-weight:700;font-size:14px;">'
+                . emailSafe($buttonLabel) . ' &nbsp;→</a></td></tr>';
+        }
+        return '<!doctype html><html><body style="margin:0;background:#f2f4fb;font-family:Arial,Helvetica,sans-serif;color:#263052;">'
+            . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f2f4fb;padding:28px 12px;"><tr><td align="center">'
+            . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:620px;background:#ffffff;border-radius:18px;overflow:hidden;box-shadow:0 12px 35px rgba(43,54,116,.12);">'
+            . '<tr><td style="padding:28px 36px;background:linear-gradient(135deg,#6c5ce7,#4834d4);color:#ffffff;">'
+            . '<div style="font-size:12px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:#ffe08a;">ROYAL SMM</div>'
+            . '<div style="font-size:12px;margin-top:14px;opacity:.85;">' . $safeEyebrow . '</div>'
+            . '<h1 style="margin:8px 0 0;font-size:28px;line-height:1.2;color:#ffffff;">' . $safeTitle . '</h1>'
+            . '</td></tr>'
+            . '<tr><td style="padding:30px 36px 12px;"><p style="margin:0;color:#263052;font-size:16px;line-height:1.65;">' . $safeIntro . '</p></td></tr>'
+            . '<tr><td style="padding:0 36px 22px;color:#526174;font-size:14px;line-height:1.7;">' . $content . '</td></tr>'
+            . $button
+            . '<tr><td style="padding:20px 36px;background:#f8f9fd;color:#8a93b2;font-size:12px;line-height:1.6;">'
+            . '<strong style="color:#526174;">Royal SMM</strong><br>Fast. Simple. Reliable.<br>'
+            . 'You received this email because you have an account with Royal SMM. For support, contact us through the website or WhatsApp.'
+            . '<br><span style="color:#b0b7ca;">© ' . date('Y') . ' Royal SMM. All rights reserved.</span>'
+            . '</td></tr></table></td></tr></table></body></html>';
+    }
+}
+
 if (!function_exists('sendTopupSuccessEmail')) {
     function sendTopupSuccessEmail($email, $username, $amount, $balance, $transactionId)
     {
-        $safeName = htmlspecialchars((string) $username, ENT_QUOTES, 'UTF-8');
-        $safeAmount = htmlspecialchars(number_format((float) $amount, 2), ENT_QUOTES, 'UTF-8');
-        $safeBalance = htmlspecialchars(number_format((float) $balance, 2), ENT_QUOTES, 'UTF-8');
-        $safeTransactionId = htmlspecialchars((string) $transactionId, ENT_QUOTES, 'UTF-8');
-        $body = '<!doctype html><html><body>'
-            . '<h2>Top-up successful</h2>'
-            . '<p>Hello ' . $safeName . ',</p>'
-            . '<p>Your account has been credited with <strong>' . $safeAmount . ' TZS</strong>.</p>'
-            . '<p>Your new balance is <strong>' . $safeBalance . ' TZS</strong>.</p>'
-            . '<p>Transaction: ' . $safeTransactionId . '</p>'
-            . '<p>Thank you for using ' . htmlspecialchars(APP_NAME, ENT_QUOTES, 'UTF-8') . '.</p>'
-            . '</body></html>';
-        return sendHtmlEmail($email, APP_NAME . ' top-up successful', $body);
+        $content = '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:22px;border:1px solid #e9edf7;border-radius:12px;overflow:hidden;">'
+            . '<tr><td style="padding:13px 16px;color:#8a93b2;">Top-up amount</td><td align="right" style="padding:13px 16px;font-weight:700;color:#00a67d;">' . emailSafe(number_format((float) $amount, 0)) . ' TSh</td></tr>'
+            . '<tr style="background:#fafbff;"><td style="padding:13px 16px;color:#8a93b2;">New balance</td><td align="right" style="padding:13px 16px;font-weight:700;color:#263052;">' . emailSafe(number_format((float) $balance, 0)) . ' TSh</td></tr>'
+            . '<tr><td style="padding:13px 16px;color:#8a93b2;">Transaction ID</td><td align="right" style="padding:13px 16px;font-weight:600;color:#526174;word-break:break-all;">' . emailSafe($transactionId) . '</td></tr></table>'
+            . '<p style="margin:22px 0 0;">Your balance is ready to use for placing orders. If you do not recognize this transaction, contact support immediately.</p>';
+        $body = renderRoyalEmail('Payment confirmed', 'Your balance is updated', 'Hello ' . (string) $username . ', your top-up was completed successfully.', $content, 'Place an order', emailUrl('index.php'));
+        return sendHtmlEmail($email, APP_NAME . ' balance updated', $body);
     }
 }
 
 if (!function_exists('sendWelcomeEmail')) {
     function sendWelcomeEmail($email, $username)
     {
-        $safeName = htmlspecialchars((string) $username, ENT_QUOTES, 'UTF-8');
-        $safeAppName = htmlspecialchars(APP_NAME, ENT_QUOTES, 'UTF-8');
-        $body = '<!doctype html><html><body style="margin:0;background:#f4f7fb;font-family:Arial,sans-serif;color:#172033;">'
-            . '<div style="max-width:620px;margin:32px auto;background:#ffffff;border-radius:18px;overflow:hidden;box-shadow:0 12px 35px rgba(23,32,51,.12);">'
-            . '<div style="padding:34px 38px;background:linear-gradient(135deg,#102a43,#1f7a8c);color:#ffffff;">'
-            . '<div style="font-size:13px;letter-spacing:2px;text-transform:uppercase;opacity:.8;">' . $safeAppName . '</div>'
-            . '<h1 style="margin:14px 0 6px;font-size:32px;line-height:1.15;">Welcome aboard, ' . $safeName . '!</h1>'
-            . '<p style="margin:0;font-size:16px;opacity:.9;">Your account is ready to use.</p>'
-            . '</div>'
-            . '<div style="padding:34px 38px;">'
-            . '<p style="font-size:17px;line-height:1.6;margin-top:0;">Thanks for joining ' . $safeAppName . '. You can now explore services, place orders, and manage your account from one simple dashboard.</p>'
-            . '<div style="margin:26px 0;padding:20px;background:#eef8f8;border-left:4px solid #1f7a8c;border-radius:8px;">'
-            . '<strong>Your next step</strong><br><span style="color:#526174;">Sign in and add balance whenever you are ready to place your first order.</span>'
-            . '</div>'
-            . '<p style="margin-bottom:0;color:#526174;line-height:1.6;">We are glad to have you with us. If you need help, contact our support team from the platform.</p>'
-            . '</div>'
-            . '<div style="padding:20px 38px;background:#f7f9fc;color:#7b8794;font-size:12px;">This email confirms that your ' . $safeAppName . ' account was created successfully.</div>'
-            . '</div></body></html>';
+        $content = '<p style="margin:22px 0 0;">You can now explore services, search by Service ID, add balance in TSh, place orders, and track progress from your dashboard.</p>'
+            . '<div style="margin-top:22px;padding:16px 18px;background:#f3f1ff;border-left:4px solid #6c5ce7;border-radius:8px;color:#526174;">'
+            . '<strong style="color:#4834d4;">Your next step</strong><br>Sign in and choose a service whenever you are ready to place your first order.</div>';
+        $body = renderRoyalEmail('Welcome to Royal SMM', 'Your account is ready', 'Hello ' . (string) $username . ', welcome to Royal SMM.', $content, 'Open Royal SMM', emailUrl('index.php'));
         return sendHtmlEmail($email, 'Welcome to ' . APP_NAME, $body);
     }
 }
@@ -720,34 +747,29 @@ if (!function_exists('sendWelcomeEmail')) {
 if (!function_exists('sendOrderPlacedEmail')) {
     function sendOrderPlacedEmail($email, $username, $orderId, $serviceName, $quantity, $amount, $externalId = null)
     {
-        $name = htmlspecialchars((string) $username, ENT_QUOTES, 'UTF-8');
-        $service = htmlspecialchars((string) $serviceName, ENT_QUOTES, 'UTF-8');
-        $order = htmlspecialchars((string) $orderId, ENT_QUOTES, 'UTF-8');
-        $qty = htmlspecialchars(number_format((int) $quantity), ENT_QUOTES, 'UTF-8');
-        $cost = htmlspecialchars(number_format((float) $amount, 0), ENT_QUOTES, 'UTF-8');
-        $external = $externalId !== null ? '<p>Provider reference: <strong>' . htmlspecialchars((string) $externalId, ENT_QUOTES, 'UTF-8') . '</strong></p>' : '';
-        $body = '<!doctype html><html><body style="font-family:Arial,sans-serif;color:#172033;line-height:1.6">'
-            . '<h2>Order received</h2><p>Hello ' . $name . ',</p>'
-            . '<p>Your order <strong>#' . $order . '</strong> has been accepted by ' . htmlspecialchars(APP_NAME, ENT_QUOTES, 'UTF-8') . '.</p>'
-            . '<p>Service: <strong>' . $service . '</strong><br>Quantity: <strong>' . $qty . '</strong><br>Amount: <strong>' . $cost . ' TZS</strong></p>'
-            . $external . '<p>You can track progress from your Orders page.</p></body></html>';
-        return sendHtmlEmail($email, APP_NAME . ' order #' . $order . ' received', $body);
+        $reference = $externalId !== null ? '<tr><td style="padding:13px 16px;color:#8a93b2;">Provider reference</td><td align="right" style="padding:13px 16px;font-weight:600;color:#526174;word-break:break-all;">' . emailSafe($externalId) . '</td></tr>' : '';
+        $content = '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:22px;border:1px solid #e9edf7;border-radius:12px;overflow:hidden;">'
+            . '<tr><td style="padding:13px 16px;color:#8a93b2;">Order ID</td><td align="right" style="padding:13px 16px;font-weight:700;color:#4834d4;">#' . emailSafe($orderId) . '</td></tr>'
+            . '<tr style="background:#fafbff;"><td style="padding:13px 16px;color:#8a93b2;">Service</td><td align="right" style="padding:13px 16px;font-weight:600;color:#263052;">' . emailSafe($serviceName) . '</td></tr>'
+            . '<tr><td style="padding:13px 16px;color:#8a93b2;">Quantity</td><td align="right" style="padding:13px 16px;font-weight:700;color:#263052;">' . emailSafe(number_format((int) $quantity)) . '</td></tr>'
+            . '<tr style="background:#fafbff;"><td style="padding:13px 16px;color:#8a93b2;">Amount</td><td align="right" style="padding:13px 16px;font-weight:700;color:#263052;">' . emailSafe(number_format((float) $amount, 0)) . ' TSh</td></tr>'
+            . $reference . '</table><p style="margin:22px 0 0;">Please keep the submitted link or username public while the order is processing.</p>';
+        $body = renderRoyalEmail('Order received', 'Your order is on its way', 'Hello ' . (string) $username . ', your order has been accepted successfully.', $content, 'View my orders', emailUrl('orders.php'));
+        return sendHtmlEmail($email, APP_NAME . ' order #' . (int) $orderId . ' received', $body);
     }
 }
 
 if (!function_exists('sendOrderStatusEmail')) {
     function sendOrderStatusEmail($email, $username, $orderId, $serviceName, $status, $refundedAmount = 0)
     {
-        $name = htmlspecialchars((string) $username, ENT_QUOTES, 'UTF-8');
-        $order = htmlspecialchars((string) $orderId, ENT_QUOTES, 'UTF-8');
-        $service = htmlspecialchars((string) $serviceName, ENT_QUOTES, 'UTF-8');
-        $safeStatus = htmlspecialchars((string) $status, ENT_QUOTES, 'UTF-8');
-        $refund = (float) $refundedAmount > 0 ? '<p>Refund credited: <strong>' . number_format((float) $refundedAmount, 0) . ' TZS</strong>.</p>' : '';
-        $body = '<!doctype html><html><body style="font-family:Arial,sans-serif;color:#172033;line-height:1.6">'
-            . '<h2>Order status update</h2><p>Hello ' . $name . ',</p>'
-            . '<p>Order <strong>#' . $order . '</strong> for <strong>' . $service . '</strong> is now <strong>' . $safeStatus . '</strong>.</p>'
-            . $refund . '<p>Open your Orders page for the latest details.</p></body></html>';
-        return sendHtmlEmail($email, APP_NAME . ' order #' . $order . ' update', $body);
+        $refund = (float) $refundedAmount > 0 ? '<p style="margin:22px 0 0;padding:14px 16px;background:#e9faf4;border-radius:9px;color:#00876a;"><strong>Refund credited:</strong> ' . emailSafe(number_format((float) $refundedAmount, 0)) . ' TSh</p>' : '';
+        $content = '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:22px;border:1px solid #e9edf7;border-radius:12px;overflow:hidden;">'
+            . '<tr><td style="padding:13px 16px;color:#8a93b2;">Order ID</td><td align="right" style="padding:13px 16px;font-weight:700;color:#4834d4;">#' . emailSafe($orderId) . '</td></tr>'
+            . '<tr style="background:#fafbff;"><td style="padding:13px 16px;color:#8a93b2;">Service</td><td align="right" style="padding:13px 16px;font-weight:600;color:#263052;">' . emailSafe($serviceName) . '</td></tr>'
+            . '<tr><td style="padding:13px 16px;color:#8a93b2;">Current status</td><td align="right" style="padding:13px 16px;font-weight:700;color:#6c5ce7;">' . emailSafe($status) . '</td></tr></table>'
+            . $refund . '<p style="margin:22px 0 0;">Open your Orders page for the latest details and progress.</p>';
+        $body = renderRoyalEmail('Order update', 'Your order status changed', 'Hello ' . (string) $username . ', here is the latest update for your order.', $content, 'View order status', emailUrl('orders.php'));
+        return sendHtmlEmail($email, APP_NAME . ' order #' . (int) $orderId . ' update', $body);
     }
 }
 
