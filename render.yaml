@@ -26,17 +26,17 @@ services:
       - key: FASTWAY_API_KEY
         sync: false      # primary FastWay SMM supplier credential
       - key: SMTP_HOST
-        value: smtp.gmail.com
+        value: smtp-relay.brevo.com
       - key: SMTP_PORT
         value: "587"
       - key: SMTP_USER
-        sync: false      # SMTP account email
+        value: b9ff5f001@smtp-brevo.com
       - key: SMTP_PASS
-        sync: false      # SMTP app password, not the account password
+        sync: false      # Brevo SMTP key; never commit the value
       - key: SMTP_FROM_NAME
         value: Royal
       - key: SMTP_FROM_EMAIL
-        sync: false      # usually the same address as SMTP_USER
+        sync: false      # verified Brevo sender address
       - key: SMTP_REPLY_TO
         sync: false      # optional support/reply address
       - key: SMTP_USE_TLS

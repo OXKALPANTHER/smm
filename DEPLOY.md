@@ -91,27 +91,26 @@ does not wait for multiple external API requests.
 ### Free real-email configuration
 
 The app sends real SMTP email for welcome messages, confirmed top-ups, accepted
-orders, and provider status changes. For a free setup, use either a Gmail App
-Password or Brevo SMTP. Set the Render environment variables below; use an
-SMTP key/App Password, never your normal mailbox password:
+orders, and provider status changes. The production setup uses Brevo SMTP. Set
+the Render environment variables below; use an SMTP key, never an API key or
+normal mailbox password:
 
 ```
-SMTP_HOST=smtp.gmail.com
+SMTP_HOST=smtp-relay.brevo.com
 SMTP_PORT=587
-SMTP_USER=your-google-account@gmail.com
-SMTP_PASS=your-16-character-app-password
+SMTP_USER=b9ff5f001@smtp-brevo.com
+SMTP_PASS=your-brevo-smtp-key
 SMTP_FROM_NAME=Royal
-SMTP_FROM_EMAIL=your-google-account@gmail.com
-SMTP_REPLY_TO=your-google-account@gmail.com
+SMTP_FROM_EMAIL=your-verified-brevo-sender@example.com
+SMTP_REPLY_TO=your-verified-brevo-sender@example.com
 SMTP_USE_TLS=true
-SMTP_TIMEOUT=15
+SMTP_TIMEOUT=8
 ```
 
-For Brevo, use `SMTP_HOST=smtp-relay.brevo.com`, keep port `587`, use your
-Brevo login as `SMTP_USER`, and use a Brevo SMTP key as `SMTP_PASS`. Verify the
-sender used in `SMTP_FROM_EMAIL` with the provider first. Do not put SMTP
-credentials in the repository. Email delivery failures are logged without
-undoing a successful balance credit or order.
+Use the Brevo login shown in the SMTP settings as `SMTP_USER` and the generated
+SMTP key as `SMTP_PASS`. Verify the sender used in `SMTP_FROM_EMAIL` with Brevo
+first. Do not put the SMTP key in the repository. Email delivery failures are
+logged without undoing a successful balance credit or order.
 
 See [FREE_EMAIL_SETUP.md](FREE_EMAIL_SETUP.md) for provider-specific steps.
 
