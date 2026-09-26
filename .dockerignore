@@ -9,3 +9,5 @@
 .idea
 .env
 .env.*
+node_modules/
+mobile-app/node_modules/
