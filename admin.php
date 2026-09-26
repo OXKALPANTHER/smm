@@ -148,11 +148,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 /* ============================================================
  * DATA
  * ============================================================ */
-$users = $conn->query("SELECT id, username, email, phone, balance, role, status, created_at FROM users ORDER BY id DESC")->fetch_all(MYSQLI_ASSOC);
+$adminPageLimit = 250;
+$users = $conn->query("SELECT id, username, email, phone, balance, role, status, created_at FROM users ORDER BY id DESC LIMIT {$adminPageLimit}")->fetch_all(MYSQLI_ASSOC);
 $orders = $conn->query("SELECT o.id, o.service_name, o.platform, o.quantity, o.price, o.status, o.external_order_id, o.link, o.created_at, u.username
                         FROM orders o LEFT JOIN users u ON o.user_id = u.id ORDER BY o.id DESC LIMIT 200")->fetch_all(MYSQLI_ASSOC);
 
-$totalUsers = count($users);
+$totalUsers = (int) ($conn->query("SELECT COUNT(*) c FROM users")->fetch_assoc()['c'] ?? 0);
+$usersTruncated = count($users) < $totalUsers;
 $sumBalance = (float) ($conn->query("SELECT COALESCE(SUM(balance),0) t FROM users")->fetch_assoc()['t'] ?? 0);
 
 $totalOrders = (int) ($conn->query("SELECT COUNT(*) c FROM orders")->fetch_assoc()['c'] ?? 0);
@@ -175,9 +177,9 @@ $platRows = $conn->query("SELECT platform, COUNT(*) c FROM orders GROUP BY platf
 // Pending refill requests
 $refills = $conn->query("SELECT o.id, o.service_name, o.quantity, o.link, o.refill_status, o.refill_requested_at, u.username
                          FROM orders o LEFT JOIN users u ON o.user_id = u.id
-                         WHERE o.refill_requested = 1 ORDER BY o.refill_requested_at DESC")->fetch_all(MYSQLI_ASSOC);
+                         WHERE o.refill_requested = 1 ORDER BY o.refill_requested_at DESC LIMIT 100")->fetch_all(MYSQLI_ASSOC);
 
-$notifications = getNotifications(60);
+$notifications = getNotifications(20);
 $unreadNotifications = getUnreadNotificationCount($admin_id);
 
 // 7-day order trend
@@ -192,7 +194,8 @@ foreach ($conn->query("SELECT {$dexpr} d, COUNT(*) c FROM orders GROUP BY {$dexp
         $trend[$r['d']] = (int) $r['c'];
 }
 
-// Live provider balances (cached ~2 min so the dashboard stays snappy / resilient)
+// Provider balances are opt-in: ordinary dashboard navigation never waits on
+// an external provider API. The refresh icon performs a live fetch.
 $providerBalances = [];
 $providerList = json_decode(defined('SMM_PROVIDERS') ? SMM_PROVIDERS : '[]', true) ?: ['boost', 'fastway'];
 $pbCache = __DIR__ . '/data/cache/provider_balance.json';
@@ -214,7 +217,10 @@ try {
             $cachedBalance = $pbCacheData[$providerName];
         }
 
-        if ($cachedBalance !== null) {
+        if (!$forceProviderRefresh && $cachedBalance === null) {
+            continue;
+        }
+        if (!$forceProviderRefresh && $cachedBalance !== null) {
             $providerBalances[$providerName] = (float) $cachedBalance;
             continue;
         }
@@ -467,6 +473,17 @@ ui_head(APP_NAME . ' — Admin', 'admin', $extraHead);
         border-radius: 15px;
     }
 
+    .admin-callout {
+        border: 1px solid #dfe5ff;
+        border-left: 4px solid var(--primary);
+        background: linear-gradient(135deg, #f8f9ff, #ffffff);
+        border-radius: 16px;
+        padding: .85rem 1rem;
+        color: #526174;
+        font-size: .82rem;
+        box-shadow: 0 6px 20px rgba(43, 54, 116, .04);
+    }
+
     @media(max-width:991px) {
         .sidebar {
             transform: translateX(-100%);
@@ -510,6 +527,10 @@ ui_head(APP_NAME . ' — Admin', 'admin', $extraHead);
 
     <h4 class="fw-bold mb-1" id="overview">Dashboard</h4>
     <p class="text-muted mb-4">Karibu, <?= htmlspecialchars($_SESSION['username']) ?> 👋</p>
+    <div class="admin-callout mb-4"><i class="bi bi-shield-check text-primary me-1"></i>
+        Dashboard iko salama na nyepesi: provider balance inafetchiwa ukibonyeza refresh tu,
+        na tables zinaonyesha records za karibuni ili kuepuka load nzito.
+    </div>
 
     <!-- Stat cards -->
     <div class="row g-3 mb-4">
@@ -552,7 +573,7 @@ ui_head(APP_NAME . ' — Admin', 'admin', $extraHead);
                                         class="text-muted">TZS</small></div>
                             <?php endforeach; ?>
                         <?php else: ?>
-                            <span class="text-danger" style="font-size:1rem;">offline</span>
+                            <span class="text-muted" style="font-size:.9rem;">refresh to fetch</span>
                         <?php endif; ?>
                     </div>
                 </div>
@@ -756,6 +777,7 @@ ui_head(APP_NAME . ' — Admin', 'admin', $extraHead);
             <h5 class="fw-bold mb-0">Users (<?= $totalUsers ?>)</h5>
             <input type="text" class="search-box" id="userSearch" placeholder="🔍 Tafuta user...">
         </div>
+        <?php if ($usersTruncated): ?><div class="small text-muted mb-2"><i class="bi bi-info-circle me-1"></i>Showing latest <?= $adminPageLimit ?> users for dashboard performance.</div><?php endif; ?>
         <div class="table-responsive">
             <table class="table align-middle" id="userTable">
                 <thead>

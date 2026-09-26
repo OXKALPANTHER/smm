@@ -383,7 +383,7 @@ function statusBadge($status) {
             <div class="svc-search">
                 <i class="bi bi-search"></i>
                 <input type="text" id="svcSearch" autocomplete="off"
-                       placeholder="Tafuta huduma yoyote (mf: WhatsApp, Google, Spotify)...">
+                       placeholder="Tafuta jina, platform au Service ID (mf: 5557)...">
                 <button type="button" class="clr" id="svcSearchClr" aria-label="Futa"><i class="bi bi-x-lg"></i></button>
             </div>
 
@@ -586,10 +586,15 @@ if (svcSearchEl) {
         const q = svcSearchEl.value.trim();
         svcSearchClr.style.display = q ? 'flex' : 'none';
         clearTimeout(searchTimer);
-        if (q.length < 2) return;
+        // A numeric value is an exact Service ID lookup and should work even
+        // when it is only one character; text searches still wait for 2 chars.
+        if (q.length < 1 || (!/^\d+$/.test(q) && q.length < 2)) return;
         document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
         searchTimer = setTimeout(() => {
-            loadServices(withProvider(`api-services.php?q=${encodeURIComponent(q)}`),
+            const param = /^\d+$/.test(q)
+                ? `service_id=${encodeURIComponent(q)}`
+                : `q=${encodeURIComponent(q)}`;
+            loadServices(withProvider(`api-services.php?${param}`),
                          { openDropdown: true, emptyMsg: `Hakuna huduma kwa "${q}"` });
         }, 450);
     });
