@@ -29,6 +29,11 @@ function syncUserOrders($conn, $user_id, $force = false, array &$notifications =
         return 0;
     }
 
+    $userStmt = $conn->prepare("SELECT username, email FROM users WHERE id = ?");
+    $userStmt->bind_param("i", $user_id);
+    $userStmt->execute();
+    $syncUser = $userStmt->get_result()->fetch_assoc() ?: [];
+
     // Throttle automatic syncs so navigating around doesn't hammer the provider.
     $throttleSeconds = 45;
     $sessionKey = 'orders_synced_at';
@@ -42,7 +47,7 @@ function syncUserOrders($conn, $user_id, $force = false, array &$notifications =
     // Pull orders that can still change. Anything already in a final state is
     // skipped (and never re-refunded).
     $stmt = $conn->prepare(
-        "SELECT id, external_order_id, status, price, refund_amount, provider, gateway,
+            "SELECT id, service_name, external_order_id, status, price, refund_amount, provider, gateway,
                 quantity, delivered_quantity, remaining_quantity
            FROM orders
           WHERE user_id = ?
@@ -241,6 +246,17 @@ function syncUserOrders($conn, $user_id, $force = false, array &$notifications =
 
             $conn->commit();
             $changed++;
+            if (!empty($syncUser['email']) && !$unchanged) {
+                $refundForEmail = $isCanceled && $o['refund_amount'] === null ? (float) $o['price'] : 0;
+                sendOrderStatusEmail(
+                    $syncUser['email'],
+                    $syncUser['username'] ?? 'Mteja',
+                    $o['id'],
+                    $o['service_name'] ?? 'order',
+                    $newStatus,
+                    $refundForEmail
+                );
+            }
         } catch (Exception $e) {
             $conn->rollback();
             error_log("syncUserOrders order #{$o['id']}: " . $e->getMessage());

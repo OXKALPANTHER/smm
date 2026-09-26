@@ -89,12 +89,13 @@ try {
     }
 
     // Check the user's balance.
-    $stmt = $conn->prepare("SELECT balance, email FROM users WHERE id = ?");
+    $stmt = $conn->prepare("SELECT balance, email, username FROM users WHERE id = ?");
     $stmt->bind_param("i", $user_id);
     $stmt->execute();
     $u = $stmt->get_result()->fetch_assoc();
     $balance = (float) ($u['balance'] ?? 0);
     $email = $u['email'] ?? null;
+    $username = $u['username'] ?? 'Mteja';
 
     if ($cost > $balance) {
         jsonOut(false, 'Salio lako halitoshi kukamilisha order hii.', [
@@ -219,6 +220,9 @@ try {
         'user',
         ['order_id' => $order_id, 'source' => 'order_placed']
     );
+    if ($email) {
+        sendOrderPlacedEmail($email, $username, $order_id, $service['name'], $quantity, $cost, $external_id);
+    }
 
     jsonOut(true, 'Order imefanikiwa!', [
         'order_id' => $order_id,

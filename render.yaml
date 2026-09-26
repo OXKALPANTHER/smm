@@ -37,8 +37,12 @@ services:
         value: Royal
       - key: SMTP_FROM_EMAIL
         sync: false      # usually the same address as SMTP_USER
+      - key: SMTP_REPLY_TO
+        sync: false      # optional support/reply address
       - key: SMTP_USE_TLS
         value: "true"
+      - key: SMTP_TIMEOUT
+        value: "15"
       - key: OPENAI_API_KEY
         sync: false      # server-side API key for live support
       - key: OPENAI_BASE_URL

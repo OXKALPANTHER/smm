@@ -83,11 +83,12 @@ So they are **not recommended** for this app. Use a Docker host above instead.
 - [ ] Placing/viewing a service loads live prices (proves outbound works)
 - [ ] Change the admin password
 
-### Top-up email configuration
+### Free real-email configuration
 
-Successful top-ups send an email after the transaction is committed and the
-user balance has been confirmed to increase. For Gmail, create an App Password
-and set these Render environment variables:
+The app sends real SMTP email for welcome messages, confirmed top-ups, accepted
+orders, and provider status changes. For a free setup, use either a Gmail App
+Password or Brevo SMTP. Set the Render environment variables below; use an
+SMTP key/App Password, never your normal mailbox password:
 
 ```
 SMTP_HOST=smtp.gmail.com
@@ -96,11 +97,18 @@ SMTP_USER=your-google-account@gmail.com
 SMTP_PASS=your-16-character-app-password
 SMTP_FROM_NAME=Royal
 SMTP_FROM_EMAIL=your-google-account@gmail.com
+SMTP_REPLY_TO=your-google-account@gmail.com
 SMTP_USE_TLS=true
+SMTP_TIMEOUT=15
 ```
 
-Do not put the SMTP password in the repository. Email delivery failures are
-logged without undoing a successful balance credit.
+For Brevo, use `SMTP_HOST=smtp-relay.brevo.com`, keep port `587`, use your
+Brevo login as `SMTP_USER`, and use a Brevo SMTP key as `SMTP_PASS`. Verify the
+sender used in `SMTP_FROM_EMAIL` with the provider first. Do not put SMTP
+credentials in the repository. Email delivery failures are logged without
+undoing a successful balance credit or order.
+
+See [FREE_EMAIL_SETUP.md](FREE_EMAIL_SETUP.md) for provider-specific steps.
 
 ### Live customer support chatbot
 

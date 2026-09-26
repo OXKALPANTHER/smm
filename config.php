@@ -520,6 +520,7 @@ define('SMTP_USER', getenv('SMTP_USER') ?: '');
 define('SMTP_PASS', getenv('SMTP_PASS') ?: '');
 define('SMTP_FROM_NAME', getenv('SMTP_FROM_NAME') ?: APP_NAME);
 define('SMTP_FROM_EMAIL', getenv('SMTP_FROM_EMAIL') ?: SMTP_USER);
+define('SMTP_REPLY_TO', getenv('SMTP_REPLY_TO') ?: SMTP_FROM_EMAIL);
 define('SMTP_USE_TLS', filter_var(getenv('SMTP_USE_TLS') ?: 'true', FILTER_VALIDATE_BOOLEAN));
 define('SMTP_TIMEOUT', (int) (getenv('SMTP_TIMEOUT') ?: 15));
 
@@ -621,6 +622,10 @@ if (!function_exists('sendHtmlEmail')) {
             error_log('Email skipped: invalid recipient address.');
             return false;
         }
+        if (preg_match('/[\r\n]/', (string) $subject) || preg_match('/[\r\n]/', (string) SMTP_FROM_NAME)) {
+            error_log('Email skipped: unsafe header value.');
+            return false;
+        }
         if (SMTP_USER === '' || SMTP_PASS === '' || !validateEmail(SMTP_FROM_EMAIL)) {
             error_log('Email skipped: SMTP_USER, SMTP_PASS, and a valid SMTP_FROM_EMAIL must be configured.');
             return false;
@@ -630,6 +635,8 @@ if (!function_exists('sendHtmlEmail')) {
             'MIME-Version: 1.0',
             'Content-type: text/html; charset=UTF-8',
             'From: ' . SMTP_FROM_NAME . ' <' . SMTP_FROM_EMAIL . '>',
+            'Reply-To: ' . (validateEmail(SMTP_REPLY_TO) ? SMTP_REPLY_TO : SMTP_FROM_EMAIL),
+            'Date: ' . date(DATE_RFC2822),
         ];
 
         $socket = @fsockopen(SMTP_HOST, SMTP_PORT, $errorCode, $errorMessage, SMTP_TIMEOUT);
@@ -678,7 +685,10 @@ if (!function_exists('sendHtmlEmail')) {
             $sendCommand($socket, 'MAIL FROM:<' . SMTP_FROM_EMAIL . '>', ['250']);
             $sendCommand($socket, 'RCPT TO:<' . $email . '>', ['250', '251']);
             $sendCommand($socket, 'DATA', ['354']);
-            fwrite($socket, 'To: ' . $email . "\r\n" . implode("\r\n", $headers) . "\r\nSubject: " . $subject . "\r\n\r\n" . $body . "\r\n.\r\n");
+            // Dot-stuff lines per RFC 5321 so an HTML body cannot terminate DATA early.
+            $wireBody = preg_replace('/(?m)^\./', '..', str_replace(["\r\n", "\r"], "\n", (string) $body));
+            $wireBody = str_replace("\n", "\r\n", $wireBody);
+            fwrite($socket, 'To: ' . $email . "\r\n" . implode("\r\n", $headers) . "\r\nSubject: " . $subject . "\r\n\r\n" . $wireBody . "\r\n.\r\n");
             [$code, $response] = $readResponse($socket);
             if ($code !== '250') {
                 throw new RuntimeException('SMTP message error ' . $code . ': ' . trim($response));
@@ -735,6 +745,40 @@ if (!function_exists('sendWelcomeEmail')) {
             . '<div style="padding:20px 38px;background:#f7f9fc;color:#7b8794;font-size:12px;">This email confirms that your ' . $safeAppName . ' account was created successfully.</div>'
             . '</div></body></html>';
         return sendHtmlEmail($email, 'Welcome to ' . APP_NAME, $body);
+    }
+}
+
+if (!function_exists('sendOrderPlacedEmail')) {
+    function sendOrderPlacedEmail($email, $username, $orderId, $serviceName, $quantity, $amount, $externalId = null)
+    {
+        $name = htmlspecialchars((string) $username, ENT_QUOTES, 'UTF-8');
+        $service = htmlspecialchars((string) $serviceName, ENT_QUOTES, 'UTF-8');
+        $order = htmlspecialchars((string) $orderId, ENT_QUOTES, 'UTF-8');
+        $qty = htmlspecialchars(number_format((int) $quantity), ENT_QUOTES, 'UTF-8');
+        $cost = htmlspecialchars(number_format((float) $amount, 0), ENT_QUOTES, 'UTF-8');
+        $external = $externalId !== null ? '<p>Provider reference: <strong>' . htmlspecialchars((string) $externalId, ENT_QUOTES, 'UTF-8') . '</strong></p>' : '';
+        $body = '<!doctype html><html><body style="font-family:Arial,sans-serif;color:#172033;line-height:1.6">'
+            . '<h2>Order received</h2><p>Hello ' . $name . ',</p>'
+            . '<p>Your order <strong>#' . $order . '</strong> has been accepted by ' . htmlspecialchars(APP_NAME, ENT_QUOTES, 'UTF-8') . '.</p>'
+            . '<p>Service: <strong>' . $service . '</strong><br>Quantity: <strong>' . $qty . '</strong><br>Amount: <strong>' . $cost . ' TZS</strong></p>'
+            . $external . '<p>You can track progress from your Orders page.</p></body></html>';
+        return sendHtmlEmail($email, APP_NAME . ' order #' . $order . ' received', $body);
+    }
+}
+
+if (!function_exists('sendOrderStatusEmail')) {
+    function sendOrderStatusEmail($email, $username, $orderId, $serviceName, $status, $refundedAmount = 0)
+    {
+        $name = htmlspecialchars((string) $username, ENT_QUOTES, 'UTF-8');
+        $order = htmlspecialchars((string) $orderId, ENT_QUOTES, 'UTF-8');
+        $service = htmlspecialchars((string) $serviceName, ENT_QUOTES, 'UTF-8');
+        $safeStatus = htmlspecialchars((string) $status, ENT_QUOTES, 'UTF-8');
+        $refund = (float) $refundedAmount > 0 ? '<p>Refund credited: <strong>' . number_format((float) $refundedAmount, 0) . ' TZS</strong>.</p>' : '';
+        $body = '<!doctype html><html><body style="font-family:Arial,sans-serif;color:#172033;line-height:1.6">'
+            . '<h2>Order status update</h2><p>Hello ' . $name . ',</p>'
+            . '<p>Order <strong>#' . $order . '</strong> for <strong>' . $service . '</strong> is now <strong>' . $safeStatus . '</strong>.</p>'
+            . $refund . '<p>Open your Orders page for the latest details.</p></body></html>';
+        return sendHtmlEmail($email, APP_NAME . ' order #' . $order . ' update', $body);
     }
 }
 
