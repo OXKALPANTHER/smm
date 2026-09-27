@@ -18,7 +18,7 @@ try {
     // FastWay is the authoritative catalogue for every new order. Accept old
     // client aliases so cached clients keep working, but never fetch a legacy
     // Boost catalogue for a new purchase.
-    $provider = 'fastway';
+    $provider = defined('PRIMARY_PROVIDER') ? PRIMARY_PROVIDER : 'fastway';
 
     // "all"/empty platform means: do not filter by platform.
     if ($platform === '__all__' || $platform === 'all' || $platform === '') {

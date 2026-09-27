@@ -56,7 +56,7 @@ try {
     // FastWay is the authoritative catalogue and order provider for all new
     // orders. Ignoring stale client-side provider flags prevents a FastWay ID
     // from being resolved against an old Boost catalogue.
-    $provider = 'fastway';
+    $provider = defined('PRIMARY_PROVIDER') ? PRIMARY_PROVIDER : 'fastway';
     $services = (new APIHandler($provider))->getAllServices();
 
     // Resolve the service from the live catalogue (authoritative price/limits).

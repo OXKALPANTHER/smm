@@ -65,7 +65,7 @@ if (!defined('MYSQLI_BOTH')) {
 // ============================================
 // ENVIRONMENT & SECURITY SETTINGS
 // ============================================
-define('APP_NAME', 'Royal');
+define('APP_NAME', getenv('APP_NAME') ?: 'Royal');
 define('APP_VERSION', '2.0.0');
 define('ENVIRONMENT', 'production'); // development, staging, production
 define('DEBUG_MODE', false);
@@ -405,6 +405,18 @@ function ensureMySqlRuntimeTables($pdo)
     if (!$users) {
         throw new RuntimeException('MySQL database is empty. Import database.sql before starting Royal SMM.');
     }
+    $pdo->exec("CREATE TABLE IF NOT EXISTS activity_logs (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NULL,
+        action VARCHAR(100) NOT NULL,
+        details TEXT NULL,
+        status VARCHAR(50) DEFAULT 'success',
+        ip_address VARCHAR(45) NULL,
+        user_agent TEXT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_activity_logs_user_id (user_id),
+        INDEX idx_activity_logs_created_at (created_at)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
     $pdo->exec("CREATE TABLE IF NOT EXISTS notifications (
         id INT AUTO_INCREMENT PRIMARY KEY,
         user_id INT NULL,
@@ -421,6 +433,56 @@ function ensureMySqlRuntimeTables($pdo)
         INDEX idx_notifications_created_at (created_at),
         CONSTRAINT fk_notifications_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+    $pdo->exec("ALTER TABLE notifications MODIFY user_id INT NULL");
+    $pdo->exec("ALTER TABLE users MODIFY role VARCHAR(30) NOT NULL DEFAULT 'user'");
+    $pdo->exec("ALTER TABLE transactions MODIFY type VARCHAR(20) NOT NULL");
+    $tables = ['users', 'orders', 'transactions', 'notifications'];
+    $additions = [
+        'users' => [
+            'status' => "VARCHAR(20) DEFAULT 'active'",
+            'last_login' => 'DATETIME NULL',
+        ],
+        'orders' => [
+            'service_category' => 'VARCHAR(100) NULL',
+            'platform' => 'VARCHAR(50) NULL',
+            'progress' => 'INT DEFAULT 0',
+            'provider' => "VARCHAR(30) DEFAULT 'boost'",
+            'notes' => 'TEXT NULL',
+            'gateway' => "VARCHAR(50) DEFAULT 'primary'",
+            'delivered_quantity' => 'INT DEFAULT 0',
+            'remaining_quantity' => 'INT DEFAULT 0',
+            'refund_amount' => 'DECIMAL(15,2) NULL',
+            'refill_available' => 'TINYINT DEFAULT 0',
+            'refill_requested' => 'TINYINT DEFAULT 0',
+            'refill_status' => 'VARCHAR(50) NULL',
+            'refill_requested_at' => 'DATETIME NULL',
+        ],
+        'transactions' => [
+            'order_id' => 'INT NULL',
+            'payment_method' => 'VARCHAR(50) NULL',
+            'gateway' => 'VARCHAR(50) NULL',
+            'metadata' => 'TEXT NULL',
+            'completed_at' => 'DATETIME NULL',
+        ],
+        'notifications' => [
+            'target' => "VARCHAR(30) DEFAULT 'user'",
+            'status' => "VARCHAR(30) DEFAULT 'unread'",
+            'metadata' => 'TEXT NULL',
+            'read_at' => 'DATETIME NULL',
+        ],
+    ];
+    foreach ($tables as $table) {
+        $columns = [];
+        $stmt = $pdo->query("SELECT column_name FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = '" . $table . "'");
+        foreach ($stmt->fetchAll(PDO::FETCH_COLUMN) as $column) {
+            $columns[strtolower($column)] = true;
+        }
+        foreach ($additions[$table] ?? [] as $name => $definition) {
+            if (!isset($columns[strtolower($name)])) {
+                $pdo->exec("ALTER TABLE {$table} ADD COLUMN {$name} {$definition}");
+            }
+        }
+    }
 }
 
 function ensureMySqlRuntimeColumns($pdo)
@@ -541,10 +603,10 @@ define('PLATFORMS', json_encode([
 
 // Legacy SMM service retained only to sync/cancel orders that were created
 // before FastWay became the primary provider.
-define('BOOST_API_KEY', '5673ca1f6e026c293a54efb2c2cc228e8b08c48488e3df12e0f1136b87f3770b');
-define('BOOST_API_BASE_URL', 'https://boostapi.lazackorganisation.my.id/api/v1');
-define('BOOST_API_TIMEOUT', 30);
-define('BOOST_API_VERIFY_SSL', true);
+define('BOOST_API_KEY', getenv('BOOST_API_KEY') ?: '');
+define('BOOST_API_BASE_URL', getenv('BOOST_API_BASE_URL') ?: 'https://boostapi.lazackorganisation.my.id/api/v1');
+define('BOOST_API_TIMEOUT', max(5, (int) (getenv('BOOST_API_TIMEOUT') ?: 30)));
+define('BOOST_API_VERIFY_SSL', filter_var(getenv('BOOST_API_VERIFY_SSL') ?: '1', FILTER_VALIDATE_BOOLEAN));
 
 // Primary SMM service - FastWay (Perfect Panel API: POST /api/v2 with key+action).
 // FastWay quotes rates in USD/1000, so prices are converted to TZS via USD_TO_TZS_RATE.
@@ -557,11 +619,13 @@ define('FASTWAY_API_VERIFY_SSL', true);
 // Fixed conversion direction: 1 USD = 3,500 TSh. Applied to the provider's
 // raw USD rate BEFORE PRICE_MARKUP_PERCENT is added. Never divide TSh by this
 // value and never expose this internal supplier conversion to customers.
-define('USD_TO_TZS_RATE', 3500.0);
+define('USD_TO_TZS_RATE', (float) (getenv('USD_TO_TZS_RATE') ?: 3500));
 
 // FastWay is the sole provider for all new catalogue requests and orders.
 // Boost remains available only for legacy order-status and cancel operations.
-define('SMM_PROVIDERS', json_encode(['fastway']));
+define('PRIMARY_PROVIDER', in_array(strtolower((string) (getenv('PRIMARY_PROVIDER') ?: 'fastway')), ['fastway', 'boost'], true)
+    ? strtolower((string) getenv('PRIMARY_PROVIDER')) : 'fastway');
+define('SMM_PROVIDERS', json_encode([PRIMARY_PROVIDER]));
 
 // Backup SMM Service - Alternative Provider
 define('SMMDADDY_API_KEY', 'your_smmdaddy_api_key');
@@ -663,7 +727,7 @@ define('MAXIMUM_TOPUP', 10000000);
 
 // Customer pricing markup added on top of the provider's real price (percent).
 // e.g. 78 => the user sees and pays 78% more than the FastWay API price.
-define('PRICE_MARKUP_PERCENT', 78);
+define('PRICE_MARKUP_PERCENT', max(0, (float) (getenv('PRICE_MARKUP_PERCENT') ?: 78)));
 
 // Referral reward: the inviter earns this % of a friend's FIRST top-up.
 define('REFERRAL_BONUS_PERCENT', 20);

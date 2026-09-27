@@ -508,7 +508,7 @@ function statusBadge($status) {
 let userBalance = <?= json_encode($tzsBalance) ?>;
 let currentService = null;
 let currentPlatform = '';            // last platform chip / search context
-let currentProvider = 'boost';       // 'boost' (Kawaida) | 'fastway' (Pro)
+let currentProvider = <?= json_encode(defined('PRIMARY_PROVIDER') ? PRIMARY_PROVIDER : 'fastway') ?>; // configured primary lane
 
 // Append the active provider to an api-services.php URL.
 function withProvider(url) {
