@@ -9,9 +9,10 @@
 -- Advanced Boost Pro SMM Platform Database (MySQL / MariaDB only)
 -- ============================================
 
--- Create database
-CREATE DATABASE IF NOT EXISTS t20_booster;
-USE t20_booster;
+-- Create/select the database outside this file, then import this schema into it.
+-- Example:
+--   CREATE DATABASE t20_booster CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+--   mysql -u your_user -p t20_booster < database.sql
 
 -- ============================================
 -- USERS TABLE

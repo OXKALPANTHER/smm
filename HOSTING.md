@@ -4,8 +4,9 @@ Royal SMM is not locked to Render. The application is a PHP 8.2 web app with two
 
 - **SQLite** for a simple single-server installation. The host must allow PHP to write to `data/`.
 - **PostgreSQL/Supabase** for production and multiple app instances. Set `DB_DRIVER=pgsql` and the `DB_*` variables.
+- **MySQL/MariaDB** for shared hosts, VPSs, and managed MySQL. Set `DB_DRIVER=mysql` and the `DB_*` variables.
 
-The included Docker image installs PHP, cURL, SQLite, and PostgreSQL PDO support. This makes the same image usable on a VPS or a Docker host such as Fly.io, Koyeb, Railway, DigitalOcean, Hetzner, AWS, Google Cloud Run, or another provider that supports Docker.
+The included Docker image installs PHP, cURL, SQLite, MySQL PDO, and PostgreSQL PDO support. This makes the same image usable on a VPS or a Docker host such as Fly.io, Koyeb, Railway, DigitalOcean, Hetzner, AWS, Google Cloud Run, or another provider that supports Docker.
 
 ## Why `config.php` contains many settings
 
@@ -48,7 +49,7 @@ docker compose up -d --build
 
 The app listens on the host port in `APP_PORT` (default `8080`). Put HTTPS/TLS in front of it using the host's reverse proxy or Caddy/Nginx.
 
-For production with more than one app instance, use PostgreSQL instead of SQLite:
+For production with more than one app instance, use PostgreSQL or MySQL instead of SQLite:
 
 ```text
 DB_DRIVER=pgsql
@@ -61,12 +62,34 @@ DB_PASS=your-password
 
 Run `supabase_schema.sql` once when using Supabase/PostgreSQL. Keep `data/` on a persistent volume if SQLite is used.
 
+### MySQL/MariaDB
+
+Create a database and import the MySQL schema before starting the app:
+
+```bash
+mysql -u your_user -p -e "CREATE DATABASE t20_booster CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"
+mysql -u your_user -p t20_booster < database.sql
+```
+
+Set:
+
+```text
+DB_DRIVER=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_NAME=t20_booster
+DB_USER=your_user
+DB_PASS=your_password
+```
+
+The app creates its notification table and adds newer order columns automatically. It does not silently fall back to SQLite if a MySQL connection fails.
+
 ## Option 2: Existing PHP/Apache or Nginx server
 
 Required software:
 
 - PHP 8.2 or newer;
-- PHP extensions: `curl`, `pdo`, `pdo_sqlite` for SQLite, or `pdo_pgsql` for PostgreSQL;
+- PHP extensions: `curl`, `pdo`, plus `pdo_sqlite` for SQLite, `pdo_pgsql` for PostgreSQL, or `pdo_mysql` for MySQL/MariaDB;
 - Apache with PHP or Nginx with PHP-FPM;
 - outbound HTTPS access to FastWay and Brevo;
 - a writable `data/` directory when using SQLite.
@@ -75,17 +98,13 @@ Point the document root at this repository, copy `.env.example` to `.env`, set t
 
 The application now fails clearly when `DB_DRIVER=pgsql` is selected but PostgreSQL support or the database connection is unavailable; it will not silently create a new empty SQLite database in that situation.
 
-## What is not currently supported
-
-Typical shared PHP hosts that provide only MySQL are not drop-in compatible. This codebase uses SQLite or PostgreSQL through its PDO compatibility layer. Use a Docker/VPS host or PostgreSQL instead of uploading it to a MySQL-only shared host.
-
 ## Required host variables
 
 | Variable | Required | Purpose |
 |---|---:|---|
 | `APP_URL` | Recommended | Absolute URL used in email buttons |
-| `DB_DRIVER` | Yes | `sqlite` or `pgsql` |
-| `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASS` | PostgreSQL only | PostgreSQL/Supabase connection |
+| `DB_DRIVER` | Yes | `sqlite`, `pgsql`, or `mysql` |
+| `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASS` | PostgreSQL/MySQL | Database connection |
 | `DB_PATH` | SQLite only, optional | Custom writable SQLite file path |
 | `FASTWAY_API_KEY` | Yes | Supplier API credential |
 | `BREVO_API_KEY` | For real email | Brevo HTTPS API credential |

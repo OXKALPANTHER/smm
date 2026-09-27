@@ -76,6 +76,7 @@ define('DEBUG_MODE', false);
 // Driver is chosen by the DB_DRIVER env var:
 //   'sqlite' (default) -> local file DB, zero setup
 //   'pgsql'            -> Supabase / PostgreSQL (set DB_* env vars below)
+//   'mysql'            -> MySQL/MariaDB (run database.sql first)
 //
 // For Supabase, copy the "Connection string" values from
 //   Project Settings -> Database -> Connection info  (use the Session pooler)
@@ -87,11 +88,18 @@ define('DEBUG_MODE', false);
 //   DB_USER=postgres.xxxxxxxx
 //   DB_PASS=your-db-password
 $requestedDbDriver = strtolower((string) (getenv('DB_DRIVER') ?: 'sqlite'));
+if (!in_array($requestedDbDriver, ['sqlite', 'pgsql', 'mysql'], true)) {
+    die('Database configuration error: DB_DRIVER must be sqlite, pgsql, or mysql.');
+}
 if ($requestedDbDriver === 'pgsql' && !extension_loaded('pdo_pgsql')) {
     error_log('PostgreSQL was requested with DB_DRIVER=pgsql, but the pdo_pgsql PHP extension is missing.');
     die('Database configuration error: this host needs PHP PDO PostgreSQL support enabled.');
 }
-$effectiveDbDriver = $requestedDbDriver === 'pgsql' ? 'pgsql' : 'sqlite';
+if ($requestedDbDriver === 'mysql' && !extension_loaded('pdo_mysql')) {
+    error_log('MySQL was requested with DB_DRIVER=mysql, but the pdo_mysql PHP extension is missing.');
+    die('Database configuration error: this host needs PHP PDO MySQL support enabled.');
+}
+$effectiveDbDriver = $requestedDbDriver;
 define('DB_PATH', getenv('DB_PATH') ?: (__DIR__ . '/data/booster.db'));
 
 // Supabase REST API Credentials (optional, for REST integrations)
@@ -136,7 +144,31 @@ try {
         }
     }
 
-    if ($pdo === null) {
+    if ($effectiveDbDriver === 'mysql') {
+        try {
+            // ---- MySQL / MariaDB ----
+            $host = getenv('DB_HOST') ?: '127.0.0.1';
+            $port = getenv('DB_PORT') ?: '3306';
+            $name = getenv('DB_NAME') ?: 't20_booster';
+            $user = getenv('DB_USER') ?: 'root';
+            $pass = getenv('DB_PASS') ?: '';
+            $dsn = "mysql:host={$host};port={$port};dbname={$name};charset=utf8mb4";
+
+            $pdo = new PDO($dsn, $user, $pass, [
+                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                PDO::ATTR_EMULATE_PREPARES => false,
+            ]);
+            $pdo->query('SELECT 1');
+            ensureMySqlRuntimeTables($pdo);
+            ensureMySqlRuntimeColumns($pdo);
+        } catch (Exception $e) {
+            error_log("MySQL connection failed: " . $e->getMessage());
+            throw $e;
+        }
+    }
+
+    if ($effectiveDbDriver === 'sqlite') {
         if (!is_dir(__DIR__ . '/data')) {
             mkdir(__DIR__ . '/data', 0755, true);
         }
@@ -364,6 +396,53 @@ function ensurePgRuntimeTables($pdo)
         $pdo->exec("CREATE INDEX IF NOT EXISTS idx_notifications_created_at ON notifications(created_at)");
     } catch (Exception $e) {
         error_log("ensurePgRuntimeTables: " . $e->getMessage());
+    }
+}
+
+function ensureMySqlRuntimeTables($pdo)
+{
+    $users = $pdo->query("SELECT 1 FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'users' LIMIT 1")->fetchColumn();
+    if (!$users) {
+        throw new RuntimeException('MySQL database is empty. Import database.sql before starting Royal SMM.');
+    }
+    $pdo->exec("CREATE TABLE IF NOT EXISTS notifications (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NULL,
+        title VARCHAR(255) NOT NULL,
+        message TEXT NOT NULL,
+        type VARCHAR(30) DEFAULT 'info',
+        target VARCHAR(30) DEFAULT 'user',
+        status VARCHAR(30) DEFAULT 'unread',
+        metadata TEXT NULL,
+        read_at DATETIME NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_notifications_user_id (user_id),
+        INDEX idx_notifications_status (status),
+        INDEX idx_notifications_created_at (created_at),
+        CONSTRAINT fk_notifications_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+}
+
+function ensureMySqlRuntimeColumns($pdo)
+{
+    $columns = [];
+    $stmt = $pdo->query("SELECT column_name FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'orders'");
+    foreach ($stmt->fetchAll(PDO::FETCH_COLUMN) as $column) {
+        $columns[strtolower($column)] = true;
+    }
+    $additions = [
+        'refill_available' => 'TINYINT DEFAULT 0',
+        'refill_requested' => 'TINYINT DEFAULT 0',
+        'refill_status' => 'VARCHAR(50) NULL',
+        'refill_requested_at' => 'DATETIME NULL',
+        'gateway' => "VARCHAR(50) DEFAULT 'primary'",
+        'delivered_quantity' => 'INT DEFAULT 0',
+        'remaining_quantity' => 'INT DEFAULT 0',
+    ];
+    foreach ($additions as $name => $definition) {
+        if (!isset($columns[$name])) {
+            $pdo->exec("ALTER TABLE orders ADD COLUMN {$name} {$definition}");
+        }
     }
 }
 

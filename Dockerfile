@@ -1,10 +1,10 @@
 # Royal SMM — portable PHP + Apache image for Docker hosts
 FROM php:8.2-apache
 
-# PDO drivers: Postgres (Supabase) + SQLite, plus curl for the Boost API
+# PDO drivers: MySQL/MariaDB, Postgres (Supabase), SQLite, plus curl for APIs
 RUN apt-get update \
     && apt-get install -y libcurl4-openssl-dev libpq-dev libsqlite3-dev \
-    && docker-php-ext-install curl pdo pdo_pgsql pdo_sqlite \
+    && docker-php-ext-install curl pdo pdo_mysql pdo_pgsql pdo_sqlite \
     && a2enmod rewrite \
     && rm -rf /var/lib/apt/lists/*
 

@@ -25,7 +25,7 @@ choose the **Session pooler** tab. You'll get:
 
 ---
 
-## B. Point the app at Supabase
+## B. Point the app at Supabase or MySQL
 
 The app auto-selects the database from environment variables (it stays on local
 SQLite until you set these). Set:
@@ -41,6 +41,17 @@ DB_PASS=your-supabase-db-password
 
 - **Locally (Git Bash):** `export DB_DRIVER=pgsql DB_HOST=... DB_PORT=5432 DB_NAME=postgres DB_USER=... DB_PASS=...` then `php -S 127.0.0.1:8088`.
 - **On a host:** add them in the host's *Environment Variables* settings (see below).
+
+For MySQL/MariaDB, run `database.sql` against the selected database first, then set:
+
+```
+DB_DRIVER=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_NAME=t20_booster
+DB_USER=your-mysql-user
+DB_PASS=your-mysql-password
+```
 
 No code changes needed — `config.php` reads these at runtime.
 
@@ -70,12 +81,12 @@ Recommended production setup: **Supabase (DB) + any Docker host**. A portable
 Same idea: connect the GitHub repo, it builds the Dockerfile, add the `DB_*`
 env vars. (Railway gives trial credits rather than a permanent free tier.)
 
-### ⚠️ About classic free PHP hosts (000webhost, InfinityFree, etc.)
-They're the easiest *looking* option but usually:
-- only give **MySQL** (not Postgres) — you'd need a MySQL schema, and
-- **block outbound connections**, which breaks the live Boost API + Supabase.
-
-So they are **not recommended** for this app. Use a Docker host above instead.
+### Option 4 — MySQL/MariaDB shared host or VPS
+The app supports MySQL/MariaDB through PDO. Confirm that the host has PHP 8.2,
+`pdo_mysql`, cURL, and outbound HTTPS access. Import `database.sql`, set the
+`DB_DRIVER=mysql` variables above, and point the web root at this project.
+Some free shared hosts block outbound HTTPS or restrict cron/background work;
+those limitations can still prevent FastWay or Brevo from working.
 
 ---
 
