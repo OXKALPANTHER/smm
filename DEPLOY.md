@@ -1,4 +1,8 @@
-# Royal SMM — Database + Free Deployment Guide
+# Royal SMM — Database + Deployment Guide
+
+For Docker/VPS/shared-host requirements and non-Render deployment, see
+[`HOSTING.md`](HOSTING.md). Render is only one deployment option; the app also
+ships with a portable Docker image and `docker-compose.yml`.
 
 ## A. Create the database in Supabase (free)
 
@@ -44,8 +48,9 @@ No code changes needed — `config.php` reads these at runtime.
 
 ## C. Deploy for free
 
-The app needs: **PHP**, **outbound HTTPS** (to the Boost API + Supabase), and a DB.
-Recommended: **Supabase (DB) + Render (app)**. A `Dockerfile` is already included.
+The app needs: **PHP**, **outbound HTTPS** (to the FastWay API + Supabase), and a DB.
+Recommended production setup: **Supabase (DB) + any Docker host**. A portable
+`Dockerfile` and `docker-compose.yml` are included.
 
 ### Option 1 — Render (recommended, truly free)
 1. Push this folder to a **GitHub** repo.
@@ -92,7 +97,7 @@ does not wait for multiple external API requests.
 
 The app sends real transactional email through Brevo's HTTPS API on port 443
 for welcome messages, confirmed top-ups, accepted orders, and provider status
-changes. Set the Render environment variables below:
+changes. Set the following environment variables on the host:
 
 ```
 APP_URL=https://royal.t20tech.site

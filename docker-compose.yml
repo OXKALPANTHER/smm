@@ -1,0 +1,14 @@
+services:
+  royal-smm:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-8080}:80"
+    env_file:
+      - .env
+    environment:
+      # Apache listens on port 80 inside the container; APP_PORT is only the host port.
+      PORT: 80
+    volumes:
+      # Keep local SQLite data and the provider cache across container updates.
+      - ./data:/var/www/html/data

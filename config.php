@@ -87,8 +87,12 @@ define('DEBUG_MODE', false);
 //   DB_USER=postgres.xxxxxxxx
 //   DB_PASS=your-db-password
 $requestedDbDriver = strtolower((string) (getenv('DB_DRIVER') ?: 'sqlite'));
-$effectiveDbDriver = $requestedDbDriver === 'pgsql' && extension_loaded('pdo_pgsql') ? 'pgsql' : 'sqlite';
-define('DB_PATH', __DIR__ . '/data/booster.db');
+if ($requestedDbDriver === 'pgsql' && !extension_loaded('pdo_pgsql')) {
+    error_log('PostgreSQL was requested with DB_DRIVER=pgsql, but the pdo_pgsql PHP extension is missing.');
+    die('Database configuration error: this host needs PHP PDO PostgreSQL support enabled.');
+}
+$effectiveDbDriver = $requestedDbDriver === 'pgsql' ? 'pgsql' : 'sqlite';
+define('DB_PATH', getenv('DB_PATH') ?: (__DIR__ . '/data/booster.db'));
 
 // Supabase REST API Credentials (optional, for REST integrations)
 define('SUPABASE_URL', getenv('SUPABASE_URL') ?: 'https://urrdrmyewuvfzqjuceng.supabase.co');
@@ -124,6 +128,9 @@ try {
             ensurePgRuntimeColumns($pdo);
         } catch (Exception $e) {
             error_log("Postgres connection failed: " . $e->getMessage());
+            if ($requestedDbDriver === 'pgsql') {
+                throw $e;
+            }
             $effectiveDbDriver = 'sqlite';
             $pdo = null;
         }
@@ -517,7 +524,9 @@ define('PAYSTACK_CALLBACK_URL', 'https://yourdomain.com/webhooks/paystack.php');
 // Email Configuration (Brevo Transactional Email API over HTTPS/443).
 // The API avoids Render SMTP egress/IP restrictions. Keep the API key in the
 // deployment secret manager; never commit it to the repository.
-define('APP_URL', rtrim(getenv('APP_URL') ?: 'https://royal.t20tech.site', '/'));
+$detectedHost = preg_replace('/[^A-Za-z0-9.:-]/', '', (string) ($_SERVER['HTTP_HOST'] ?? 'localhost')) ?: 'localhost';
+$detectedScheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+define('APP_URL', rtrim(getenv('APP_URL') ?: ($detectedScheme . '://' . $detectedHost), '/'));
 define('BREVO_API_KEY', getenv('BREVO_API_KEY') ?: '');
 define('BREVO_API_URL', rtrim(getenv('BREVO_API_URL') ?: 'https://api.brevo.com/v3/smtp/email', '/'));
 define('BREVO_FROM_NAME', getenv('BREVO_FROM_NAME') ?: APP_NAME);

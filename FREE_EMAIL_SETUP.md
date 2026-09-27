@@ -9,7 +9,8 @@ SMTP-IP restrictions do not affect delivery.
 1. In Brevo, create or copy an **API key** from **SMTP & API → API keys**.
 2. Do not use the SMTP key for this integration.
 3. Verify the sender address in Brevo under **Transactional → Senders**.
-4. Set these Render environment variables:
+4. Set these environment variables in your hosting provider, Docker `.env` file,
+   or server process manager:
 
 ```text
 BREVO_API_KEY=your-brevo-api-key
@@ -21,7 +22,7 @@ BREVO_API_TIMEOUT=8
 ```
 
 `BREVO_FROM_EMAIL` must exactly match a verified Brevo sender. Keep
-`BREVO_API_KEY` in Render's secret environment settings and never commit it.
+`BREVO_API_KEY` in your host's secret environment settings and never commit it.
 
 ## Messages sent
 
@@ -38,10 +39,10 @@ Email failure does not roll back a successful registration, payment, or order.
 
 ## Testing
 
-1. Save the Render variables.
+1. Save the variables and redeploy/restart the application.
 2. Trigger a new registration using an accessible email address.
 3. Open **Brevo → Transactional → Logs** immediately.
-4. Check Render logs for either:
+4. Check your host's application logs for either:
    - `Brevo accepted transactional email: ...`
    - `Brevo email rejected HTTP ...`
    - `Brevo HTTPS email request failed: ...`
