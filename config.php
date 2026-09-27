@@ -623,8 +623,11 @@ define('USD_TO_TZS_RATE', (float) (getenv('USD_TO_TZS_RATE') ?: 3500));
 
 // FastWay is the sole provider for all new catalogue requests and orders.
 // Boost remains available only for legacy order-status and cancel operations.
-define('PRIMARY_PROVIDER', in_array(strtolower((string) (getenv('PRIMARY_PROVIDER') ?: 'fastway')), ['fastway', 'boost'], true)
-    ? strtolower((string) getenv('PRIMARY_PROVIDER')) : 'fastway');
+$configuredPrimaryProvider = strtolower(trim((string) (getenv('PRIMARY_PROVIDER') ?: 'fastway')));
+if (!in_array($configuredPrimaryProvider, ['fastway', 'boost'], true)) {
+    $configuredPrimaryProvider = 'fastway';
+}
+define('PRIMARY_PROVIDER', $configuredPrimaryProvider);
 define('SMM_PROVIDERS', json_encode([PRIMARY_PROVIDER]));
 
 // Backup SMM Service - Alternative Provider
