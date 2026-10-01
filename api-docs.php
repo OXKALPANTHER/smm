@@ -580,7 +580,7 @@ if (hash_equals($signature, $_SERVER['HTTP_X_WEBHOOK_SIGNATURE'])) {
         <!-- Footer -->
         <div class="doc-section text-center">
             <p class="mb-0"><small>Last updated: <?php echo date('Y-m-d'); ?> | Version <?php echo APP_VERSION; ?></small></p>
-            <p><small>For support, contact: support@<?php echo strtolower(APP_NAME); ?>.com</small></p>
+            <p><small>For support, contact: <a href="mailto:<?= htmlspecialchars(SUPPORT_EMAIL) ?>"><?= htmlspecialchars(SUPPORT_EMAIL) ?></a></small></p>
         </div>
     </div>
 

@@ -763,6 +763,7 @@ define('REFERRAL_BONUS_PERCENT', 20);
 // SUPPORT / COMMUNITY LINKS
 // ============================================
 define('WHATSAPP_SUPPORT_PHONE', '255627417402'); // direct chat (wa.me)
+define('SUPPORT_EMAIL', getenv('SUPPORT_EMAIL') ?: 'support@blazetech.site');
 define('WHATSAPP_GROUP_URL', 'https://chat.whatsapp.com/IPY94YyDh8N4qUx1yN3zj5');
 define('WHATSAPP_CHANNEL_URL', 'https://whatsapp.com/channel/0029VbAjawl9MF8vQQa0ZT32');
 
