@@ -704,9 +704,13 @@ define('BREVO_REPLY_TO', getenv('BREVO_REPLY_TO') ?: BREVO_FROM_EMAIL);
 define('BREVO_API_TIMEOUT', max(3, min(15, (int) (getenv('BREVO_API_TIMEOUT') ?: 8))));
 
 // SMS Gateway - Africa's Talking
-define('AFRICAS_TALKING_API_KEY', 'your_africas_talking_key');
-define('AFRICAS_TALKING_USERNAME', 'your_username');
-define('AFRICAS_TALKING_BASE_URL', 'https://api.sandbox.africastalking.com');
+define('SMS_PROVIDER', strtolower(trim((string) (getenv('SMS_PROVIDER') ?: 'africastalking'))));
+define('AFRICAS_TALKING_API_KEY', getenv('AFRICAS_TALKING_API_KEY') ?: '');
+define('AFRICAS_TALKING_USERNAME', getenv('AFRICAS_TALKING_USERNAME') ?: '');
+define('AFRICAS_TALKING_BASE_URL', rtrim(getenv('AFRICAS_TALKING_BASE_URL') ?: 'https://api.africastalking.com', '/'));
+define('AFRICAS_TALKING_SENDER_ID', getenv('AFRICAS_TALKING_SENDER_ID') ?: '');
+define('SMS_API_TIMEOUT', max(3, min(15, (int) (getenv('SMS_API_TIMEOUT') ?: 8))));
+define('APP_TIMEZONE', getenv('APP_TIMEZONE') ?: 'Africa/Dar_es_Salaam');
 
 // SMS Gateway - Twilio
 define('TWILIO_ACCOUNT_SID', 'your_twilio_sid');
@@ -933,6 +937,67 @@ if (!function_exists('sendTopupSuccessEmail')) {
             . '<p style="margin:22px 0 0;">Your balance is ready to use for placing orders. If you do not recognize this transaction, contact support immediately.</p>';
         $body = renderRoyalEmail('Payment confirmed', 'Your balance is updated', 'Hello ' . (string) $username . ', your top-up was completed successfully.', $content, 'Place an order', emailUrl('index.php'));
         return sendHtmlEmail($email, APP_NAME . ' balance updated', $body);
+    }
+}
+
+if (!function_exists('sendSms')) {
+    /** Send an SMS without allowing a notification failure to affect payment completion. */
+    function sendSms($phone, $message)
+    {
+        $phone = preg_replace('/[^0-9+]/', '', (string) $phone);
+        if ($phone !== '' && $phone[0] === '0') {
+            $phone = '+255' . substr($phone, 1);
+        } elseif ($phone !== '' && $phone[0] !== '+') {
+            $phone = '+' . $phone;
+        }
+        if ($phone === '' || !function_exists('curl_init')) {
+            error_log('SMS skipped: invalid phone number or cURL unavailable.');
+            return false;
+        }
+        if (SMS_PROVIDER !== 'africastalking' || AFRICAS_TALKING_API_KEY === '' || AFRICAS_TALKING_USERNAME === '') {
+            error_log('SMS skipped: configure SMS_PROVIDER, AFRICAS_TALKING_API_KEY, and AFRICAS_TALKING_USERNAME.');
+            return false;
+        }
+        $fields = ['username' => AFRICAS_TALKING_USERNAME, 'to' => $phone, 'message' => (string) $message];
+        if (AFRICAS_TALKING_SENDER_ID !== '') {
+            $fields['from'] = AFRICAS_TALKING_SENDER_ID;
+        }
+        $ch = curl_init(AFRICAS_TALKING_BASE_URL . '/version1/messaging');
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => http_build_query($fields),
+            CURLOPT_CONNECTTIMEOUT => 5,
+            CURLOPT_TIMEOUT => SMS_API_TIMEOUT,
+            CURLOPT_HTTPHEADER => ['apiKey: ' . AFRICAS_TALKING_API_KEY, 'Accept: application/json', 'Content-Type: application/x-www-form-urlencoded'],
+            CURLOPT_SSL_VERIFYPEER => true,
+            CURLOPT_SSL_VERIFYHOST => 2,
+        ]);
+        $body = curl_exec($ch);
+        $error = curl_error($ch);
+        $status = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+        $response = is_string($body) ? json_decode($body, true) : null;
+        $recipient = $response['SMSMessageData']['Recipients'][0] ?? null;
+        if ($body === false || $error !== '' || $status < 200 || $status >= 300 || ($recipient && (string) ($recipient['statusCode'] ?? '') !== '101')) {
+            error_log("Africa's Talking SMS failed HTTP {$status}" . ($error !== '' ? ': ' . $error : ''));
+            return false;
+        }
+        error_log("Africa's Talking SMS accepted for {$phone}.");
+        return true;
+    }
+}
+if (!function_exists('sendTopupSuccessSms')) {
+    function sendTopupSuccessSms($phone, $amount, $transactionId, $completedAt = null)
+    {
+        try {
+            $zone = new DateTimeZone(APP_TIMEZONE);
+        } catch (Exception $e) {
+            $zone = new DateTimeZone('Africa/Dar_es_Salaam');
+        }
+        $date = $completedAt ? new DateTimeImmutable((string) $completedAt, $zone) : new DateTimeImmutable('now', $zone);
+        $message = 'Royal Panel: Muamala umefanikiwa. Umeongeza TSh ' . number_format((float) $amount, 0) . '. ' . $date->format('d/m/Y H:i') . '. Endelea kutumia Royal Panel. Ref: ' . (string) $transactionId;
+        return sendSms($phone, $message);
     }
 }
 

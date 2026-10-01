@@ -166,7 +166,7 @@ class WebhookHandler {
             }
             
             // Find pending transaction
-            $stmt = $this->conn->prepare("SELECT id, user_id FROM transactions WHERE external_ref = ? AND status = 'pending'");
+            $stmt = $this->conn->prepare("SELECT t.id, t.user_id, t.amount, t.external_ref, u.phone FROM transactions t JOIN users u ON u.id = t.user_id WHERE t.external_ref = ? AND t.status = 'pending'");
             $stmt->bind_param("s", $external_ref);
             $stmt->execute();
             $result = $stmt->get_result();
@@ -200,6 +200,7 @@ class WebhookHandler {
                     $this->conn->commit();
                     
                     logActivity($row['user_id'], 'payment_completed', "Transaction: $external_ref, Amount: $amount", 'success');
+                    sendTopupSuccessSms($row['phone'], $row['amount'], $row['external_ref']);
                     
                     return $this->respondSuccess("Payment confirmed");
                     

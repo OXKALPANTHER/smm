@@ -115,7 +115,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // If completed, update transaction and user balance
             if ($status === 'COMPLETED') {
                 // Find the pending transaction
-                $stmt = $conn->prepare("SELECT t.id, t.user_id, t.amount, t.external_ref, u.email, u.username FROM transactions t JOIN users u ON u.id = t.user_id WHERE t.external_ref = ? AND t.status = 'pending'");
+                $stmt = $conn->prepare("SELECT t.id, t.user_id, t.amount, t.external_ref, u.email, u.username, u.phone FROM transactions t JOIN users u ON u.id = t.user_id WHERE t.external_ref = ? AND t.status = 'pending'");
                 $stmt->bind_param("s", $order_id);
                 $stmt->execute();
                 $result = $stmt->get_result();
@@ -169,6 +169,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $balanceRow['balance'],
                         $row['external_ref']
                     );
+                    sendTopupSuccessSms($row['phone'], $row['amount'], $row['external_ref']);
                 }
             } elseif ($status === 'FAILED') {
                 $stmt = $conn->prepare("UPDATE transactions SET status = 'failed' WHERE external_ref = ? AND status = 'pending'");
