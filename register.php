@@ -22,11 +22,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif (strlen($password) < PASSWORD_MIN_LENGTH) {
         $error = 'Neno siri liwe na herufi angalau ' . PASSWORD_MIN_LENGTH . '.';
     } else {
-        // Duplicate check
-        $stmt = $conn->prepare("SELECT id FROM users WHERE username = ? OR email = ?");
-        $stmt->bind_param("ss", $username, $email);
-        $stmt->execute();
-        if ($stmt->get_result()->fetch_assoc()) {
+        // Use PDO directly for registration. This avoids the compatibility
+        // wrapper converting the nullable referred_by value incorrectly on
+        // some MySQL/MariaDB hosts.
+        $stmt = $pdo->prepare("SELECT id FROM users WHERE username = ? OR email = ? LIMIT 1");
+        $stmt->execute([$username, $email]);
+        if ($stmt->fetch(PDO::FETCH_ASSOC)) {
             $error = 'Jina au email tayari limetumika.';
         } else {
             $hash = password_hash($password, PASSWORD_DEFAULT);
@@ -40,20 +41,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             $referredBy = null;
             if ($refInput !== '') {
-                $rs = $conn->prepare("SELECT id FROM users WHERE referral_code = ?");
-                $rs->bind_param("s", $refInput);
-                $rs->execute();
-                $rr = $rs->get_result()->fetch_assoc();
+                $rs = $pdo->prepare("SELECT id FROM users WHERE referral_code = ? LIMIT 1");
+                $rs->execute([$refInput]);
+                $rr = $rs->fetch(PDO::FETCH_ASSOC);
                 if ($rr)
                     $referredBy = (int) $rr['id'];
             }
 
             // Build insert: phone can be NULL (already converted above)
-            $stmt = $conn->prepare("INSERT INTO users (username, email, phone, password, referral_code, referred_by) VALUES (?, ?, ?, ?, ?, ?)");
-            $stmt->bind_param("sssssi", $username, $email, $phone, $hash, $ref, $referredBy);
+            $stmt = $pdo->prepare("INSERT INTO users (username, email, phone, password, referral_code, referred_by) VALUES (?, ?, ?, ?, ?, ?)");
 
-            if ($stmt->execute()) {
-                $_SESSION['user_id'] = $conn->insert_id();
+            if ($stmt->execute([$username, $email, $phone, $hash, $ref, $referredBy])) {
+                $_SESSION['user_id'] = (int) $pdo->lastInsertId();
                 $_SESSION['username'] = $username;
                 $_SESSION['role'] = 'user';
                 createNotification(
@@ -69,7 +68,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 exit;
             } else {
                 // Log the actual error for debugging
-                error_log("Registration error for user $username: " . $stmt->error);
+                error_log("Registration error for user $username: " . implode(' | ', $stmt->errorInfo()));
                 $error = 'Usajili umeshindikana. Jaribu tena.';
             }
         }
