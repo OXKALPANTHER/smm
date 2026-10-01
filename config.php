@@ -703,12 +703,9 @@ define('BREVO_FROM_EMAIL', getenv('BREVO_FROM_EMAIL') ?: '');
 define('BREVO_REPLY_TO', getenv('BREVO_REPLY_TO') ?: BREVO_FROM_EMAIL);
 define('BREVO_API_TIMEOUT', max(3, min(15, (int) (getenv('BREVO_API_TIMEOUT') ?: 8))));
 
-// SMS Gateway - Africa's Talking
-define('SMS_PROVIDER', strtolower(trim((string) (getenv('SMS_PROVIDER') ?: 'africastalking'))));
-define('AFRICAS_TALKING_API_KEY', getenv('AFRICAS_TALKING_API_KEY') ?: '');
-define('AFRICAS_TALKING_USERNAME', getenv('AFRICAS_TALKING_USERNAME') ?: '');
-define('AFRICAS_TALKING_BASE_URL', rtrim(getenv('AFRICAS_TALKING_BASE_URL') ?: 'https://api.africastalking.com', '/'));
-define('AFRICAS_TALKING_SENDER_ID', getenv('AFRICAS_TALKING_SENDER_ID') ?: '');
+// Brevo Transactional SMS uses the same BREVO_API_KEY as transactional email.
+define('BREVO_SMS_API_URL', rtrim(getenv('BREVO_SMS_API_URL') ?: 'https://api.brevo.com/v3/transactionalSMS/send', '/'));
+define('BREVO_SMS_SENDER', getenv('BREVO_SMS_SENDER') ?: 'Royal');
 define('SMS_API_TIMEOUT', max(3, min(15, (int) (getenv('SMS_API_TIMEOUT') ?: 8))));
 define('APP_TIMEZONE', getenv('APP_TIMEZONE') ?: 'Africa/Dar_es_Salaam');
 
@@ -954,22 +951,29 @@ if (!function_exists('sendSms')) {
             error_log('SMS skipped: invalid phone number or cURL unavailable.');
             return false;
         }
-        if (SMS_PROVIDER !== 'africastalking' || AFRICAS_TALKING_API_KEY === '' || AFRICAS_TALKING_USERNAME === '') {
-            error_log('SMS skipped: configure SMS_PROVIDER, AFRICAS_TALKING_API_KEY, and AFRICAS_TALKING_USERNAME.');
+        if (BREVO_API_KEY === '' || !preg_match('/^[A-Za-z0-9]{1,11}$/', BREVO_SMS_SENDER)) {
+            error_log('SMS skipped: configure BREVO_API_KEY and a valid BREVO_SMS_SENDER.');
             return false;
         }
-        $fields = ['username' => AFRICAS_TALKING_USERNAME, 'to' => $phone, 'message' => (string) $message];
-        if (AFRICAS_TALKING_SENDER_ID !== '') {
-            $fields['from'] = AFRICAS_TALKING_SENDER_ID;
+        $payload = json_encode([
+            'sender' => BREVO_SMS_SENDER,
+            'recipient' => $phone,
+            'content' => (string) $message,
+            'type' => 'transactional',
+            'tag' => 'topup-success',
+        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        if ($payload === false) {
+            error_log('SMS skipped: could not encode Brevo request.');
+            return false;
         }
-        $ch = curl_init(AFRICAS_TALKING_BASE_URL . '/version1/messaging');
+        $ch = curl_init(BREVO_SMS_API_URL);
         curl_setopt_array($ch, [
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_POST => true,
-            CURLOPT_POSTFIELDS => http_build_query($fields),
+            CURLOPT_POSTFIELDS => $payload,
             CURLOPT_CONNECTTIMEOUT => 5,
             CURLOPT_TIMEOUT => SMS_API_TIMEOUT,
-            CURLOPT_HTTPHEADER => ['apiKey: ' . AFRICAS_TALKING_API_KEY, 'Accept: application/json', 'Content-Type: application/x-www-form-urlencoded'],
+            CURLOPT_HTTPHEADER => ['api-key: ' . BREVO_API_KEY, 'Accept: application/json', 'Content-Type: application/json'],
             CURLOPT_SSL_VERIFYPEER => true,
             CURLOPT_SSL_VERIFYHOST => 2,
         ]);
@@ -978,12 +982,12 @@ if (!function_exists('sendSms')) {
         $status = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
         curl_close($ch);
         $response = is_string($body) ? json_decode($body, true) : null;
-        $recipient = $response['SMSMessageData']['Recipients'][0] ?? null;
-        if ($body === false || $error !== '' || $status < 200 || $status >= 300 || ($recipient && (string) ($recipient['statusCode'] ?? '') !== '101')) {
-            error_log("Africa's Talking SMS failed HTTP {$status}" . ($error !== '' ? ': ' . $error : ''));
+        if ($body === false || $error !== '' || $status < 200 || $status >= 300 || !is_array($response) || empty($response['messageId'])) {
+            $providerMessage = is_array($response) ? (string) ($response['message'] ?? $response['code'] ?? '') : '';
+            error_log('Brevo Transactional SMS failed HTTP ' . $status . ($providerMessage !== '' ? ': ' . $providerMessage : ($error !== '' ? ': ' . $error : '')));
             return false;
         }
-        error_log("Africa's Talking SMS accepted for {$phone}.");
+        error_log('Brevo Transactional SMS accepted for ' . $phone . '.');
         return true;
     }
 }
