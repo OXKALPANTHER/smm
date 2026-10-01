@@ -19,6 +19,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = 'Tafadhali jaza taarifa zote.';
     } elseif (!validateEmail($email)) {
         $error = 'Barua pepe si sahihi.';
+    } elseif (!emailDomainCanReceive($email)) {
+        $error = 'Kikoa cha barua pepe hakionekani kupokea barua. Tumia email halali.';
     } elseif (strlen($password) < PASSWORD_MIN_LENGTH) {
         $error = 'Neno siri liwe na herufi angalau ' . PASSWORD_MIN_LENGTH . '.';
     } else {
@@ -52,19 +54,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt = $pdo->prepare("INSERT INTO users (username, email, phone, password, referral_code, referred_by) VALUES (?, ?, ?, ?, ?, ?)");
 
             if ($stmt->execute([$username, $email, $phone, $hash, $ref, $referredBy])) {
-                $_SESSION['user_id'] = (int) $pdo->lastInsertId();
-                $_SESSION['username'] = $username;
-                $_SESSION['role'] = 'user';
-                createNotification(
-                    $_SESSION['user_id'],
-                    'Karibu kwa ' . APP_NAME,
-                    'Akaunti yako imeundwa kwa mafanikio. Karibu kwenye jukwaa letu ambapo unaweza kuagiza huduma, kuongeza salio, na kufuatilia maagizo yako kwa urahisi.',
-                    'success',
-                    'user',
-                    ['source' => 'registration']
-                );
-                sendWelcomeEmail($email, $username);
-                header("Location: index.php");
+                $userId = (int) $pdo->lastInsertId();
+                $verificationToken = issueEmailVerification($pdo, $userId, $email);
+                $_SESSION['verification_sent'] = sendEmailVerification($email, $username, $verificationToken);
+                header('Location: verify-email.php?email=' . rawurlencode($email));
                 exit;
             } else {
                 // Log the actual error for debugging

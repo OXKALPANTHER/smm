@@ -15,14 +15,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $user = $stmt->get_result()->fetch_assoc();
 
     if ($user && password_verify($password, $user['password'])) {
+        $pending = $pdo->prepare('SELECT id FROM email_verifications WHERE user_id = ? AND verified_at IS NULL AND expires_at > CURRENT_TIMESTAMP LIMIT 1');
+        $pending->execute([(int) $user['id']]);
+        if ($pending->fetch(PDO::FETCH_ASSOC)) {
+            $error = 'Thibitisha email yako kwanza. Fungua link tuliyotuma kwenye inbox yako.';
+        } else {
         $_SESSION['user_id']  = $user['id'];
         $_SESSION['username'] = $user['username'];
         $_SESSION['role']     = $user['role'];
         $conn->query("UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = " . (int)$user['id']);
         header("Location: " . ($user['role'] === 'admin' ? 'admin.php' : 'index.php'));
         exit;
+        }
     }
-    $error = "Jina la mtumiaji au neno siri si sahihi.";
+    if ($error === '') {
+        $error = "Jina la mtumiaji au neno siri si sahihi.";
+    }
 }
 
 ui_head('Ingia — ' . APP_NAME, 'auth');

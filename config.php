@@ -433,6 +433,18 @@ function ensureMySqlRuntimeTables($pdo)
         INDEX idx_notifications_created_at (created_at),
         CONSTRAINT fk_notifications_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+    $pdo->exec("CREATE TABLE IF NOT EXISTS email_verifications (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL,
+        email VARCHAR(255) NOT NULL,
+        token_hash CHAR(64) NOT NULL UNIQUE,
+        expires_at DATETIME NOT NULL,
+        verified_at DATETIME NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_email_verifications_user (user_id),
+        INDEX idx_email_verifications_expiry (expires_at),
+        CONSTRAINT fk_email_verifications_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
     $pdo->exec("ALTER TABLE notifications MODIFY user_id INT NULL");
     $pdo->exec("ALTER TABLE users MODIFY role VARCHAR(30) NOT NULL DEFAULT 'user'");
     $pdo->exec("ALTER TABLE transactions MODIFY type VARCHAR(20) NOT NULL");
@@ -532,6 +544,17 @@ function ensureNotificationsTable($pdo)
             $pdo->exec("CREATE INDEX IF NOT EXISTS idx_notifications_status ON notifications(status)");
             $pdo->exec("CREATE INDEX IF NOT EXISTS idx_notifications_created_at ON notifications(created_at)");
         }
+        $pdo->exec("CREATE TABLE IF NOT EXISTS email_verifications (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            email TEXT NOT NULL,
+            token_hash TEXT NOT NULL UNIQUE,
+            expires_at DATETIME NOT NULL,
+            verified_at DATETIME,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )");
+        $pdo->exec("CREATE INDEX IF NOT EXISTS idx_email_verifications_user ON email_verifications(user_id)");
+        $pdo->exec("CREATE INDEX IF NOT EXISTS idx_email_verifications_expiry ON email_verifications(expires_at)");
     } catch (Exception $e) {
         error_log('ensureNotificationsTable: ' . $e->getMessage());
     }
@@ -704,6 +727,7 @@ define('WEBHOOK_SECRET_KEY', 'your_webhook_secret_key_for_signing');
 define('SESSION_TIMEOUT', 3600); // 1 hour
 define('PASSWORD_MIN_LENGTH', 8);
 define('PASSWORD_REQUIRE_SPECIAL', true);
+define('EMAIL_VERIFICATION_TTL', max(900, min(172800, (int) (getenv('EMAIL_VERIFICATION_TTL') ?: 86400))));
 define('JWT_SECRET_KEY', 'your_jwt_secret_key_here');
 define('JWT_ALGORITHM', 'HS256');
 define('JWT_EXPIRY', 86400); // 24 hours
@@ -763,6 +787,29 @@ function sanitize($data)
 function validateEmail($email)
 {
     return filter_var($email, FILTER_VALIDATE_EMAIL) !== false;
+}
+
+function emailDomainCanReceive($email)
+{
+    if (!validateEmail($email)) {
+        return false;
+    }
+    $domain = strtolower((string) substr(strrchr($email, '@'), 1));
+    if ($domain === '' || !function_exists('checkdnsrr')) {
+        return true;
+    }
+    return checkdnsrr($domain, 'MX') || checkdnsrr($domain, 'A') || checkdnsrr($domain, 'AAAA');
+}
+
+if (!function_exists('issueEmailVerification')) {
+    function issueEmailVerification($pdo, $userId, $email)
+    {
+        $pdo->prepare('DELETE FROM email_verifications WHERE user_id = ? AND verified_at IS NULL')->execute([(int) $userId]);
+        $token = bin2hex(random_bytes(32));
+        $stmt = $pdo->prepare('INSERT INTO email_verifications (user_id, email, token_hash, expires_at) VALUES (?, ?, ?, ?)');
+        $stmt->execute([(int) $userId, $email, hash('sha256', $token), date('Y-m-d H:i:s', time() + EMAIL_VERIFICATION_TTL)]);
+        return $token;
+    }
 }
 
 if (!function_exists('sendHtmlEmail')) {
@@ -896,6 +943,16 @@ if (!function_exists('sendWelcomeEmail')) {
             . '<strong style="color:#4834d4;">Your next step</strong><br>Sign in and choose a service whenever you are ready to place your first order.</div>';
         $body = renderRoyalEmail('Welcome to Royal SMM', 'Your account is ready', 'Hello ' . (string) $username . ', welcome to Royal SMM.', $content, 'Open Royal SMM', emailUrl('index.php'));
         return sendHtmlEmail($email, 'Welcome to ' . APP_NAME, $body);
+    }
+}
+
+if (!function_exists('sendEmailVerification')) {
+    function sendEmailVerification($email, $username, $token)
+    {
+        $url = emailUrl('verify-email.php?token=' . rawurlencode($token));
+        $content = '<p style="margin:22px 0 0;">Click the button below to confirm that you own this email address. The link expires in 24 hours.</p>';
+        $body = renderRoyalEmail('Verify your email', 'Confirm your email address', 'Hello ' . (string) $username . ', one last step is needed before you can sign in.', $content, 'Verify email address', $url);
+        return sendHtmlEmail($email, 'Verify your ' . APP_NAME . ' email address', $body);
     }
 }
 

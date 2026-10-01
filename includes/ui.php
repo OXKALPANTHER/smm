@@ -135,7 +135,7 @@ body.app{
              radial-gradient(900px 500px at -10% 10%,#e6fbfa 0,transparent 55%),var(--bg);
   margin:0 0 30px;
 }
-body.app .container{max-width:540px;}
+body.app .container{max-width:1120px;width:100%;}
 
 /* ---- auth pages ---- */
 body.auth{
@@ -216,6 +216,23 @@ body.drawer-open .hamburger span:nth-child(3){transform:translateY(-6.4px) rotat
 .skeleton{background:linear-gradient(90deg,#eef1f8 25%,#f7f9ff 50%,#eef1f8 75%);background-size:200% 100%;animation:sk 1.2s infinite;border-radius:10px;height:14px;}
 @keyframes sk{0%{background-position:200% 0}100%{background-position:-200% 0}}
 @keyframes spin{to{transform:rotate(360deg);}}
+img,svg,video{max-width:100%;height:auto;}
+pre,code{max-width:100%;overflow-x:auto;}
+table{max-width:100%;}
+@media (max-width:767.98px){
+  body.app .container{padding-left:12px;padding-right:12px;}
+  .card-soft{padding:1rem;border-radius:20px;}
+  .hero{padding:1.2rem 1rem;border-radius:22px;}
+  .glass-card{padding:1.6rem 1rem;border-radius:22px;}
+  .royal-brand-lockup{max-width:calc(100vw - 90px);}
+  .table{font-size:.78rem;}
+  .table td,.table th{white-space:normal;word-break:break-word;}
+  .top-actions{top:10px;right:10px;}
+}
+@media (min-width:768px){
+  body.app .container{padding-left:24px;padding-right:24px;}
+  body.app .card-soft{padding:1.6rem;}
+}
 </style>
 {$extraHead}
 HTML;
