@@ -8,7 +8,7 @@ if (!isset($_SESSION['user_id'])) {
     exit;
 }
 
-define('API_TOKEN', 'E6NERlSG1Q0d8IFAILb1PoawHpCliX5fQKonfcxNtqExtpr8Mo7GzwsrE6q5');
+define('API_TOKEN', getenv('PALMPESA_API_TOKEN') ?: '');
 define('USER_ID', '498');
 define('BASE_URL', 'https://palmpesa.drmlelwa.co.tz/api');
 

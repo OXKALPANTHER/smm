@@ -1,0 +1,12 @@
+---
+deployment:
+  tasks:
+    - export DEPLOYPATH=/home/blazsbvh/public_html/
+    - /bin/cp -a ./.htaccess $DEPLOYPATH
+    - /bin/cp -a ./assets $DEPLOYPATH
+    - /bin/cp -a ./includes $DEPLOYPATH
+    - /bin/cp -a ./webhooks $DEPLOYPATH
+    - /bin/cp -a ./*.php $DEPLOYPATH
+    - /bin/cp -a ./database.sql $DEPLOYPATH
+    - /bin/cp -a ./manifest.webmanifest ./offline.html ./sw.js $DEPLOYPATH
+    - /bin/cp -a ./.env.example $DEPLOYPATH
