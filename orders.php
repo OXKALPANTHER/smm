@@ -650,7 +650,7 @@ ui_head('Orders Zangu — ' . APP_NAME, 'app');
                                 <span
                                     class="badge-soft <?= obadge($o['status']) ?>"><?= htmlspecialchars($statusLabel) ?></span>
                                 <button class="btn btn-sm favorite-btn <?= !empty($favoriteIds[(int) $o['id']]) ? 'is-favorite' : '' ?>" data-id="<?= (int) $o['id'] ?>" data-favorite="<?= !empty($favoriteIds[(int) $o['id']]) ? '1' : '0' ?>"><i class="bi <?= !empty($favoriteIds[(int) $o['id']]) ? 'bi-heart-fill' : 'bi-heart' ?>"></i> <span><?= !empty($favoriteIds[(int) $o['id']]) ? 'Saved' : 'Favorite' ?></span></button>
-                                <a class="btn btn-sm favorite-btn" href="index.php?service_id=<?= (int) $o['service_id'] ?>&reorder_id=<?= (int) $o['id'] ?>"><i class="bi bi-arrow-repeat"></i> Reorder</a>
+                                <a class="btn btn-sm favorite-btn" href="index.php?service_id=<?= (int) $o['service_id'] ?>&reorder_order_id=<?= (int) $o['id'] ?>"><i class="bi bi-arrow-repeat"></i> Reorder</a>
                                 <?php if ($canRefill): ?>
                                     <button class="btn btn-sm refill-btn" data-id="<?= (int) $o['id'] ?>"><i
                                             class="bi bi-arrow-repeat"></i> Omba Refill</button>
@@ -740,7 +740,7 @@ ui_head('Orders Zangu — ' . APP_NAME, 'app');
                                 <span
                                     class="badge-soft <?= obadge($o['status']) ?>"><?= htmlspecialchars($statusLabel) ?></span>
                                 <button class="btn btn-sm favorite-btn <?= !empty($favoriteIds[(int) $o['id']]) ? 'is-favorite' : '' ?>" data-id="<?= (int) $o['id'] ?>" data-favorite="<?= !empty($favoriteIds[(int) $o['id']]) ? '1' : '0' ?>"><i class="bi <?= !empty($favoriteIds[(int) $o['id']]) ? 'bi-heart-fill' : 'bi-heart' ?>"></i> <span><?= !empty($favoriteIds[(int) $o['id']]) ? 'Saved' : 'Favorite' ?></span></button>
-                                <a class="btn btn-sm favorite-btn" href="index.php?service_id=<?= (int) $o['service_id'] ?>&reorder_id=<?= (int) $o['id'] ?>"><i class="bi bi-arrow-repeat"></i> Reorder</a>
+                                <a class="btn btn-sm favorite-btn" href="index.php?service_id=<?= (int) $o['service_id'] ?>&reorder_order_id=<?= (int) $o['id'] ?>"><i class="bi bi-arrow-repeat"></i> Reorder</a>
                                 <?php if ($canRefill): ?>
                                     <button class="btn btn-sm refill-btn" data-id="<?= (int) $o['id'] ?>"><i
                                             class="bi bi-arrow-repeat"></i> Omba Refill</button>

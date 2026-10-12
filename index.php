@@ -25,6 +25,15 @@ if ($reorderFavoriteId > 0) {
         $reorderQuantity = max(1, (int) $saved['quantity']);
         $reorderLink = (string) $saved['link'];
     }
+} elseif ((int) ($_GET['reorder_order_id'] ?? 0) > 0) {
+    $reorderOrderId = (int) $_GET['reorder_order_id'];
+    $reorderStmt = $conn->prepare('SELECT quantity, link FROM orders WHERE id = ? AND user_id = ?');
+    $reorderStmt->bind_param('ii', $reorderOrderId, $user_id);
+    $reorderStmt->execute();
+    if ($saved = $reorderStmt->get_result()->fetch_assoc()) {
+        $reorderQuantity = max(1, (int) $saved['quantity']);
+        $reorderLink = (string) $saved['link'];
+    }
 }
 
 // Platforms (with bootstrap-icon mapping)
