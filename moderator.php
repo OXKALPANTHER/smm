@@ -107,14 +107,15 @@ function moderatorH($value): string { return htmlspecialchars((string) $value, E
 ui_head('Moderator Desk — ' . APP_NAME, 'app', '<style>
 .moderator-shell{padding:1.2rem 0 4rem}.mod-card{background:#fff;border:1px solid rgba(43,54,116,.06);border-radius:22px;padding:1.15rem;box-shadow:0 14px 34px rgba(43,54,116,.06)}
 .mod-stat{display:flex;align-items:center;gap:.8rem}.mod-stat i{width:42px;height:42px;display:flex;align-items:center;justify-content:center;border-radius:13px;background:#f0f2fb;color:var(--primary);font-size:1.2rem}.mod-stat strong{display:block;font-size:1.35rem;line-height:1.1}.mod-stat span{font-size:.72rem;color:var(--muted)}
-.mod-table{min-width:760px}.mod-table th{font-size:.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:.35px;white-space:nowrap}.mod-table td{font-size:.8rem;vertical-align:middle}.table-wrap{overflow-x:auto}.mod-note{background:linear-gradient(135deg,#f4f2ff,#f0fbfa);border:1px solid rgba(108,92,231,.12);border-radius:18px;padding:.9rem 1rem;font-size:.78rem;color:#526174}.btn-sm{border-radius:10px;font-weight:600}.mod-search{max-width:300px}
+.mod-table{min-width:760px}.mod-table th{font-size:.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:.35px;white-space:nowrap}.mod-table td{font-size:.8rem;vertical-align:middle}.table-wrap{overflow-x:auto}.mod-note{background:linear-gradient(135deg,#f4f2ff,#f0fbfa);border:1px solid rgba(108,92,231,.12);border-radius:18px;padding:.9rem 1rem;font-size:.78rem;color:#526174}.btn-sm{border-radius:10px;font-weight:600}.mod-search{max-width:300px}.quick-actions{display:grid;grid-template-columns:repeat(3,1fr);gap:.65rem}.quick-action{display:flex;align-items:center;justify-content:center;gap:.45rem;padding:.75rem .55rem;border-radius:15px;background:#fff;border:1px solid var(--line);color:var(--ink);font-size:.76rem;font-weight:700;box-shadow:0 8px 18px rgba(43,54,116,.05)}.quick-action i{color:var(--primary);font-size:1rem}.quick-action:hover{border-color:var(--primary);background:#faf9ff}.work-step{display:flex;gap:.55rem;align-items:flex-start;font-size:.76rem;color:#526174}.work-step b{width:21px;height:21px;flex:0 0 auto;display:flex;align-items:center;justify-content:center;border-radius:50%;background:#eeeaff;color:var(--primary-2);font-size:.68rem}
+@media(max-width:600px){.moderator-shell{padding-top:.8rem}.mod-card{padding:.9rem;border-radius:18px}.mod-table{min-width:650px}.mod-table th:nth-child(5),.mod-table td:nth-child(5),.mod-table th:nth-child(6),.mod-table td:nth-child(6){display:none}.mod-stat{gap:.45rem}.mod-stat i{width:34px;height:34px;font-size:1rem}.mod-stat strong{font-size:1.05rem}.mod-stat span{font-size:.62rem}.quick-action{font-size:.68rem;padding:.7rem .35rem}.hero h2{font-size:1.35rem}}
 </style>');
 ui_nav('moderator');
 ?>
 <main class="container moderator-shell">
     <div class="hero mb-3">
         <div class="d-flex align-items-start justify-content-between gap-3 position-relative" style="z-index:1">
-            <div><div class="pill mb-2" style="background:rgba(255,255,255,.18);color:#fff"><i class="bi bi-shield-check"></i> Moderator access</div><h2 class="fw-bold mb-1">Moderator Desk</h2><p class="mb-0" style="opacity:.86;font-size:.82rem">Simamia orders, refills na mawasiliano ya wateja.</p></div>
+            <div><div class="pill mb-2" style="background:rgba(255,255,255,.18);color:#fff"><i class="bi bi-shield-check"></i> Moderator access</div><h2 class="fw-bold mb-1">Moderator Desk</h2><p class="mb-0" style="opacity:.86;font-size:.82rem">Toa huduma kwa wateja kwa haraka: orders, refills na support.</p></div>
             <i class="bi bi-shield-lock" style="font-size:3rem;opacity:.28"></i>
         </div>
     </div>
@@ -125,6 +126,20 @@ ui_nav('moderator');
         <div class="col-4"><div class="mod-card mod-stat"><i class="bi bi-hourglass-split"></i><div><strong><?= number_format($openOrders) ?></strong><span>Open orders</span></div></div></div>
         <div class="col-4"><div class="mod-card mod-stat"><i class="bi bi-arrow-repeat"></i><div><strong><?= number_format($pendingRefills) ?></strong><span>Refills</span></div></div></div>
         <div class="col-4"><div class="mod-card mod-stat"><i class="bi bi-people"></i><div><strong><?= number_format($activeUsers) ?></strong><span>Active users</span></div></div></div>
+    </div>
+
+    <div class="quick-actions mb-3">
+        <a class="quick-action" href="#orders"><i class="bi bi-bag-check"></i> Toa huduma / Orders</a>
+        <a class="quick-action" href="#refills"><i class="bi bi-arrow-repeat"></i> Shughulikia refills</a>
+        <a class="quick-action" href="#support"><i class="bi bi-chat-left-text"></i> Msaidie user</a>
+    </div>
+    <div class="mod-card mb-3">
+        <div class="fw-bold mb-2" style="font-size:.86rem"><i class="bi bi-lightning-charge-fill text-warning me-1"></i> Mpangilio wa kazi</div>
+        <div class="row g-2">
+            <div class="col-md-4"><div class="work-step"><b>1</b><span>Angalia <strong>Refill queue</strong> na anza zilizo pending.</span></div></div>
+            <div class="col-md-4"><div class="work-step"><b>2</b><span>Fungua order, hakiki link/quantity, kisha badilisha <strong>status</strong>.</span></div></div>
+            <div class="col-md-4"><div class="work-step"><b>3</b><span>Mtumie user taarifa kupitia <strong>Support message</strong>.</span></div></div>
+        </div>
     </div>
 
     <section class="mod-card mb-3" id="refills">
@@ -150,7 +165,7 @@ ui_nav('moderator');
 <script>
 const postModerator = async (payload) => { const r=await fetch('moderator.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}); return r.json(); };
 const notify = (msg, ok=true) => { const el=document.createElement('div'); el.className='alert '+(ok?'alert-success':'alert-danger')+' shadow-sm'; el.textContent=msg; document.getElementById('toastWrap').appendChild(el); setTimeout(()=>el.remove(),3000); };
-document.querySelectorAll('.order-status').forEach(el=>el.addEventListener('change',async()=>{const old=el.dataset.old||el.value; const r=await postModerator({action:'update_order',order_id:el.dataset.id,status:el.value}); if(!r.success){el.value=old; notify(r.message,false)}else{el.dataset.old=el.value;notify(r.message)}}));
+document.querySelectorAll('.order-status').forEach(el=>{el.dataset.old=el.value;el.addEventListener('change',async()=>{const old=el.dataset.old; const r=await postModerator({action:'update_order',order_id:el.dataset.id,status:el.value}); if(!r.success){el.value=old; notify(r.message,false)}else{el.dataset.old=el.value;notify(r.message)}})});
 document.querySelectorAll('.refill-select').forEach(el=>{el.value=el.closest('tr').querySelector('.badge-soft').textContent.trim(); el.addEventListener('change',async()=>{const r=await postModerator({action:'update_refill',order_id:el.dataset.id,refill_status:el.value}); if(!r.success) notify(r.message,false); else {notify(r.message);setTimeout(()=>location.reload(),500)}})});
 document.getElementById('orderSearch').addEventListener('input',e=>{const q=e.target.value.toLowerCase().trim();document.querySelectorAll('#orderRows tr').forEach(row=>row.style.display=(!q||row.dataset.search.includes(q))?'':'none')});
 document.getElementById('messageForm').addEventListener('submit',async e=>{e.preventDefault();const f=new FormData(e.target);const r=await postModerator({action:'send_message',user_id:f.get('user_id'),title:f.get('title'),message:f.get('message')});notify(r.message,r.success);if(r.success)e.target.reset()});
