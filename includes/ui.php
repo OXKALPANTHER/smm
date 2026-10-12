@@ -236,7 +236,7 @@ function ui_nav($active = 'home', $opts = [])
 {
   $username = $_SESSION['username'] ?? 'Mteja';
   $role = $_SESSION['role'] ?? 'user';
-  $initial = strtoupper(mb_substr($username, 0, 1));
+  $initial = strtoupper(function_exists('mb_substr') ? mb_substr($username, 0, 1) : substr($username, 0, 1));
   $appName = APP_NAME;
 
   $notificationCount = isset($_SESSION['user_id']) ? getUnreadNotificationCount($_SESSION['user_id']) : 0;
@@ -254,6 +254,9 @@ function ui_nav($active = 'home', $opts = [])
   ];
   if ($role === 'admin') {
     $links['admin'] = ['admin.php', 'bi-speedometer2', 'Admin Panel'];
+  }
+  if (in_array($role, ['admin', 'moderator'], true)) {
+    $links['moderator'] = ['moderator.php', 'bi-shield-check', 'Moderator Desk'];
   }
 
   $linksHtml = '';

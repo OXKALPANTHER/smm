@@ -19,7 +19,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $_SESSION['username'] = $user['username'];
         $_SESSION['role']     = $user['role'];
         $conn->query("UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = " . (int)$user['id']);
-        header("Location: " . ($user['role'] === 'admin' ? 'admin.php' : 'index.php'));
+        $destination = in_array($user['role'], ['admin', 'moderator'], true) ? 'moderator.php' : 'index.php';
+        if ($user['role'] === 'admin') {
+            $destination = 'admin.php';
+        }
+        header("Location: " . $destination);
         exit;
     }
     $error = "Jina la mtumiaji au neno siri si sahihi.";

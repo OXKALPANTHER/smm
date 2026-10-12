@@ -1275,6 +1275,16 @@ function isAdmin($user_id = null)
     return $user && $user['role'] === 'admin';
 }
 
+/** Check whether a user may access the moderator workspace. Admins inherit access. */
+function isModerator($user_id = null)
+{
+    $uid = $user_id ?? ($_SESSION['user_id'] ?? null);
+    if (!$uid)
+        return false;
+    $user = getUser($uid);
+    return $user && in_array($user['role'], ['admin', 'moderator'], true);
+}
+
 /**
  * Check if user is logged in
  */
@@ -1319,6 +1329,15 @@ function requireSameOriginRequest()
 function requireAdmin()
 {
     if (!isLoggedIn() || !isAdmin()) {
+        header("Location: login.php");
+        exit;
+    }
+}
+
+/** Redirect users who are not admins or moderators. */
+function requireModerator()
+{
+    if (!isLoggedIn() || !isModerator()) {
         header("Location: login.php");
         exit;
     }
