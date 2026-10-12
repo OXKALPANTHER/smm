@@ -297,6 +297,11 @@ function statusBadge($status) {
 
         /* Link hint + guidance tips */
         .link-hint{font-size:.74rem;color:var(--muted);margin-top:.4rem;display:flex;align-items:center;gap:.35rem;}
+        .link-preview{display:none;margin-top:.7rem;padding:.85rem;border:1px solid #dfe4f2;border-radius:18px;background:linear-gradient(135deg,#fafbff,#f2f7ff);}
+        .link-preview.show{display:block;}.link-preview.invalid{border-color:#f3c5bb;background:#fff8f6;}
+        .link-preview-head{display:flex;align-items:center;gap:.65rem;}.link-preview-icon{width:38px;height:38px;border-radius:12px;background:#e9e6ff;color:var(--primary-2);display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex:0 0 auto;}
+        .link-preview-title{font-size:.78rem;font-weight:800;color:var(--ink);}.link-preview-status{font-size:.68rem;color:var(--success);}.link-preview.invalid .link-preview-status{color:var(--danger);}
+        .link-preview-url{display:block;margin-top:.6rem;padding:.6rem .7rem;border-radius:11px;background:#fff;border:1px solid #e9edf7;color:#526174;font-size:.72rem;line-height:1.35;word-break:break-all;}.link-preview-open{display:inline-flex;align-items:center;gap:.35rem;margin-top:.6rem;padding:.38rem .65rem;border-radius:10px;background:#eef1ff;color:var(--primary-2);font-size:.7rem;font-weight:700;}
         .tips-box{display:none;margin-top:.65rem;border-radius:14px;background:#fff7e6;border:1px solid #ffe0a3;padding:.75rem .85rem;font-size:.8rem;color:#8a6d3b;}
         .tips-box.show{display:block;animation:popIn .35s both;}
         .tips-box .th{font-weight:700;display:flex;align-items:center;gap:.4rem;color:#b8860b;margin-bottom:.3rem;}
@@ -426,6 +431,7 @@ function statusBadge($status) {
                 <label class="form-label" id="linkLabel">3. Link / Username</label>
                 <input type="text" class="form-control" id="linkInput" name="link" placeholder="Chagua huduma kwanza..." required>
                 <div class="link-hint" id="linkHint"><i class="bi bi-info-circle"></i> Chagua huduma ili kuona maelekezo sahihi ya link.</div>
+                <div class="link-preview" id="linkPreview" aria-live="polite"><div class="link-preview-head"><div class="link-preview-icon"><i class="bi bi-link-45deg" id="linkPreviewIcon"></i></div><div><div class="link-preview-title" id="linkPreviewTitle">Link preview</div><div class="link-preview-status" id="linkPreviewStatus"></div></div></div><div class="link-preview-url" id="linkPreviewUrl"></div><a class="link-preview-open" id="linkPreviewOpen" href="#" target="_blank" rel="noopener noreferrer"><i class="bi bi-box-arrow-up-right"></i> Fungua link</a></div>
                 <div class="tips-box" id="igTips"></div>
             </div>
 
@@ -666,6 +672,12 @@ const linkInput = document.getElementById('linkInput');
 const linkLabel = document.getElementById('linkLabel');
 const linkHint  = document.getElementById('linkHint');
 const igTips    = document.getElementById('igTips');
+const linkPreview = document.getElementById('linkPreview');
+const linkPreviewIcon = document.getElementById('linkPreviewIcon');
+const linkPreviewTitle = document.getElementById('linkPreviewTitle');
+const linkPreviewStatus = document.getElementById('linkPreviewStatus');
+const linkPreviewUrl = document.getElementById('linkPreviewUrl');
+const linkPreviewOpen = document.getElementById('linkPreviewOpen');
 
 const EXAMPLES = {
   instagram:{profile:'https://instagram.com/username', post:'https://instagram.com/p/Cxxxx/'},
@@ -678,6 +690,21 @@ const EXAMPLES = {
   linkedin:{profile:'https://linkedin.com/in/username', post:'https://linkedin.com/feed/update/...'},
   pinterest:{profile:'https://pinterest.com/username', post:'https://pinterest.com/pin/123'}
 };
+
+function renderLinkPreview(){
+  const raw=linkInput.value.trim();
+  if(!raw){linkPreview.classList.remove('show','invalid');linkPreviewOpen.removeAttribute('href');return;}
+  let parsed;
+  try{parsed=new URL(/^https?:\/\//i.test(raw)?raw:'https://'+raw);}catch(e){parsed=null;}
+  if(!parsed||!/^https?:$/.test(parsed.protocol)||!parsed.hostname.includes('.')){
+    linkPreview.classList.add('show','invalid');linkPreviewTitle.textContent='Link haijakamilika';linkPreviewStatus.textContent='Weka link ya http:// au https://';linkPreviewUrl.textContent=raw;linkPreviewIcon.className='bi bi-exclamation-triangle';linkPreviewOpen.removeAttribute('href');return;
+  }
+  const host=parsed.hostname.toLowerCase(),platform=Object.keys(EXAMPLES).find(p=>host.includes(p))||'web';
+  const icons={instagram:'bi-instagram',tiktok:'bi-music-note-beamed',facebook:'bi-facebook',youtube:'bi-youtube',twitter:'bi-twitter-x',telegram:'bi-telegram',web:'bi-globe2'};
+  linkPreview.classList.add('show');linkPreview.classList.remove('invalid');linkPreviewTitle.textContent=platform==='web'?'Link preview':platform.charAt(0).toUpperCase()+platform.slice(1)+' link preview';linkPreviewStatus.textContent='Link iko tayari kutumika';linkPreviewUrl.textContent=parsed.href;linkPreviewIcon.className='bi '+(icons[platform]||icons.web);linkPreviewOpen.href=parsed.href;
+}
+linkInput.addEventListener('input',renderLinkPreview);
+linkInput.addEventListener('paste',()=>setTimeout(renderLinkPreview,0));
 
 function svcText(s){ return ((s.name||'')+' '+(s.category||'')).toLowerCase(); }
 function platformOf(s){ const t=svcText(s); return ['instagram','tiktok','facebook','youtube','twitter','telegram','snapchat','linkedin','pinterest'].find(p=>t.includes(p))||''; }
@@ -692,6 +719,7 @@ function grab(name,key){ const m=name.match(new RegExp(key+'[:\\s]*([^|►⚡⏱
 function resetServiceUI(){
   svcDetail.classList.remove('show'); svcDetail.innerHTML='';
   igTips.classList.remove('show'); igTips.innerHTML='';
+  linkPreview.classList.remove('show','invalid'); linkPreviewOpen.removeAttribute('href');
   linkLabel.textContent='3. Link / Username';
   linkInput.placeholder='Chagua huduma kwanza...';
   linkHint.innerHTML='<i class="bi bi-info-circle"></i> Chagua huduma ili kuona maelekezo sahihi ya link.';
