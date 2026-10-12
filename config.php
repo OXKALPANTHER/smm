@@ -1129,10 +1129,11 @@ if (!function_exists('completeTopupTransaction')) {
 
         $conn->begin_transaction();
         try {
+            $lockClause = (defined('DB_DRIVER') && DB_DRIVER === 'mysql') ? ' FOR UPDATE' : '';
             $stmt = $conn->prepare(
                 "SELECT t.id, t.user_id, t.amount, t.status, u.email, u.username
                  FROM transactions t JOIN users u ON u.id = t.user_id
-                 WHERE t.external_ref = ? LIMIT 1 FOR UPDATE"
+                 WHERE t.external_ref = ? LIMIT 1{$lockClause}"
             );
             if (!$stmt) throw new RuntimeException('Could not find the payment transaction.');
             $stmt->bind_param('s', $externalRef);
@@ -1143,7 +1144,7 @@ if (!function_exists('completeTopupTransaction')) {
             $amount = (float) $row['amount'];
             if ($amount <= 0) throw new RuntimeException('Payment amount is invalid.');
 
-            $stmt = $conn->prepare('SELECT balance FROM users WHERE id = ? FOR UPDATE');
+            $stmt = $conn->prepare("SELECT balance FROM users WHERE id = ?{$lockClause}");
             $stmt->bind_param('i', $row['user_id']);
             $stmt->execute();
             $before = $stmt->get_result()->fetch_assoc();
@@ -1154,15 +1155,13 @@ if (!function_exists('completeTopupTransaction')) {
                 $status = 'completed';
                 $stmt = $conn->prepare('UPDATE transactions SET status = ?, completed_at = CURRENT_TIMESTAMP WHERE id = ? AND status = \'pending\'');
                 $stmt->bind_param('si', $status, $row['id']);
-                $stmt->execute();
-                if ($stmt->affected_rows !== 1) {
-                    $credited = false;
+                if (!$stmt->execute()) {
+                    throw new RuntimeException('Payment status update failed.');
                 }
                 if ($credited) {
                     $stmt = $conn->prepare('UPDATE users SET balance = balance + ? WHERE id = ?');
                     $stmt->bind_param('di', $amount, $row['user_id']);
-                    $stmt->execute();
-                    if ($stmt->affected_rows !== 1) throw new RuntimeException('Balance update failed.');
+                    if (!$stmt->execute()) throw new RuntimeException('Balance update failed.');
                     applyReferralBonus($conn, (int) $row['user_id'], $amount);
                 }
             }
