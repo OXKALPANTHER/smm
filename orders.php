@@ -34,6 +34,13 @@ $stmt = $conn->prepare(
 $stmt->bind_param("i", $user_id);
 $stmt->execute();
 $orders = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+$favoriteIds = [];
+$favoriteStmt = $conn->prepare('SELECT order_id FROM favorite_orders WHERE user_id = ?');
+$favoriteStmt->bind_param('i', $user_id);
+$favoriteStmt->execute();
+foreach ($favoriteStmt->get_result()->fetch_all(MYSQLI_ASSOC) as $favoriteRow) {
+    $favoriteIds[(int) $favoriteRow['order_id']] = true;
+}
 
 /** Bucket a provider status string into one of our tab groups. */
 function orderGroup($status)
@@ -330,6 +337,12 @@ ui_head('Orders Zangu — ' . APP_NAME, 'app');
         color: #9a2c00;
     }
 
+    .favorite-btn { background:#fff3fb; color:#b83280; border:1px solid #f4c7e6; border-radius:20px; font-size:.68rem; font-weight:600; padding:.25rem .75rem; transition:transform .18s, background .18s; }
+    .favorite-btn:hover { background:#ffe5f5; transform:translateY(-1px); }
+    .favorite-btn.is-favorite { background:#ffe5f5; color:#a61e69; }
+    .favorite-btn.is-favorite i { animation:heartPop .35s ease-out; }
+    @keyframes heartPop { 0%{transform:scale(.7)} 60%{transform:scale(1.25)} 100%{transform:scale(1)} }
+
     /* === Order Progress Bar === */
     .order-progress {
         padding: .8rem 0;
@@ -609,7 +622,7 @@ ui_head('Orders Zangu — ' . APP_NAME, 'app');
                         data-search="<?= strtolower(htmlspecialchars($o['id'] . ' ' . $o['service_name'] . ' ' . ($o['link'] ?? ''))) ?>">
                         <div class="oico"><i class="bi bi-bag-check"></i></div>
                         <div class="flex-grow-1">
-                            <div class="oname"><?= htmlspecialchars(mb_substr($o['service_name'], 0, 60)) ?></div>
+                            <div class="oname"><?= htmlspecialchars((function_exists('mb_substr') ? mb_substr($o['service_name'], 0, 60) : substr($o['service_name'], 0, 60))) ?></div>
                             <div class="ometa">
                                 #<?= $o['id'] ?> · <?= number_format($o['quantity']) ?> · <?= number_format($o['price']) ?> TZS
                                 · <?= date('d M Y', strtotime($o['created_at'])) ?>
@@ -619,7 +632,7 @@ ui_head('Orders Zangu — ' . APP_NAME, 'app');
                                 <div class="olink"><i class="bi bi-link-45deg"></i>
                                     <a href="<?= htmlspecialchars($o['link']) ?>" target="_blank" rel="noopener noreferrer"
                                         style="color:inherit;text-decoration:underline;">
-                                        <?= htmlspecialchars(mb_substr($o['link'], 0, 60)) ?>
+                                        <?= htmlspecialchars((function_exists('mb_substr') ? mb_substr($o['link'], 0, 60) : substr($o['link'], 0, 60))) ?>
                                     </a>
                                 </div>
                             <?php endif; ?>
@@ -636,6 +649,8 @@ ui_head('Orders Zangu — ' . APP_NAME, 'app');
                             <div class="mt-2 d-flex align-items-center gap-2 flex-wrap">
                                 <span
                                     class="badge-soft <?= obadge($o['status']) ?>"><?= htmlspecialchars($statusLabel) ?></span>
+                                <button class="btn btn-sm favorite-btn <?= !empty($favoriteIds[(int) $o['id']]) ? 'is-favorite' : '' ?>" data-id="<?= (int) $o['id'] ?>" data-favorite="<?= !empty($favoriteIds[(int) $o['id']]) ? '1' : '0' ?>"><i class="bi <?= !empty($favoriteIds[(int) $o['id']]) ? 'bi-heart-fill' : 'bi-heart' ?>"></i> <span><?= !empty($favoriteIds[(int) $o['id']]) ? 'Saved' : 'Favorite' ?></span></button>
+                                <a class="btn btn-sm favorite-btn" href="index.php?service_id=<?= (int) $o['service_id'] ?>&reorder_id=<?= (int) $o['id'] ?>"><i class="bi bi-arrow-repeat"></i> Reorder</a>
                                 <?php if ($canRefill): ?>
                                     <button class="btn btn-sm refill-btn" data-id="<?= (int) $o['id'] ?>"><i
                                             class="bi bi-arrow-repeat"></i> Omba Refill</button>
@@ -697,7 +712,7 @@ ui_head('Orders Zangu — ' . APP_NAME, 'app');
                         data-search="<?= strtolower(htmlspecialchars($o['id'] . ' ' . $o['service_name'] . ' ' . ($o['link'] ?? ''))) ?>">
                         <div class="oico"><i class="bi bi-bag-check"></i></div>
                         <div class="flex-grow-1">
-                            <div class="oname"><?= htmlspecialchars(mb_substr($o['service_name'], 0, 60)) ?></div>
+                            <div class="oname"><?= htmlspecialchars((function_exists('mb_substr') ? mb_substr($o['service_name'], 0, 60) : substr($o['service_name'], 0, 60))) ?></div>
                             <div class="ometa">
                                 #<?= $o['id'] ?> · <?= number_format($o['quantity']) ?> · <?= number_format($o['price']) ?> TZS
                                 · <?= date('d M Y', strtotime($o['created_at'])) ?>
@@ -707,7 +722,7 @@ ui_head('Orders Zangu — ' . APP_NAME, 'app');
                                 <div class="olink"><i class="bi bi-link-45deg"></i>
                                     <a href="<?= htmlspecialchars($o['link']) ?>" target="_blank" rel="noopener noreferrer"
                                         style="color:inherit;text-decoration:underline;">
-                                        <?= htmlspecialchars(mb_substr($o['link'], 0, 60)) ?>
+                                        <?= htmlspecialchars((function_exists('mb_substr') ? mb_substr($o['link'], 0, 60) : substr($o['link'], 0, 60))) ?>
                                     </a>
                                 </div>
                             <?php endif; ?>
@@ -724,6 +739,8 @@ ui_head('Orders Zangu — ' . APP_NAME, 'app');
                             <div class="mt-2 d-flex align-items-center gap-2 flex-wrap">
                                 <span
                                     class="badge-soft <?= obadge($o['status']) ?>"><?= htmlspecialchars($statusLabel) ?></span>
+                                <button class="btn btn-sm favorite-btn <?= !empty($favoriteIds[(int) $o['id']]) ? 'is-favorite' : '' ?>" data-id="<?= (int) $o['id'] ?>" data-favorite="<?= !empty($favoriteIds[(int) $o['id']]) ? '1' : '0' ?>"><i class="bi <?= !empty($favoriteIds[(int) $o['id']]) ? 'bi-heart-fill' : 'bi-heart' ?>"></i> <span><?= !empty($favoriteIds[(int) $o['id']]) ? 'Saved' : 'Favorite' ?></span></button>
+                                <a class="btn btn-sm favorite-btn" href="index.php?service_id=<?= (int) $o['service_id'] ?>&reorder_id=<?= (int) $o['id'] ?>"><i class="bi bi-arrow-repeat"></i> Reorder</a>
                                 <?php if ($canRefill): ?>
                                     <button class="btn btn-sm refill-btn" data-id="<?= (int) $o['id'] ?>"><i
                                             class="bi bi-arrow-repeat"></i> Omba Refill</button>
@@ -813,6 +830,26 @@ ui_foot(<<<'JS'
     if (empty) empty.style.display = shown ? 'none' : '';
   }));
 })();
+
+// Favorite orders: save or remove without leaving the order list.
+document.querySelectorAll('.favorite-btn[data-id]').forEach(btn => {
+  btn.addEventListener('click', async () => {
+    btn.disabled = true;
+    const wasSaved = btn.dataset.favorite === '1';
+    try {
+      const r = await fetch('favorite.php', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({action:'toggle', order_id:parseInt(btn.dataset.id)})});
+      const j = await r.json();
+      if (!j.success) throw new Error(j.message || 'Imeshindikana');
+      const saved = !!j.favorited;
+      btn.dataset.favorite = saved ? '1' : '0';
+      btn.classList.toggle('is-favorite', saved);
+      btn.querySelector('i').className = 'bi ' + (saved ? 'bi-heart-fill' : 'bi-heart');
+      btn.querySelector('span').textContent = saved ? 'Saved' : 'Favorite';
+      toast(j.message, 'success');
+    } catch (e) { toast(e.message || 'Imeshindikana kuhifadhi favorite.', 'danger'); }
+    finally { btn.disabled = false; }
+  });
+});
 
 // Refill requests
 document.querySelectorAll('.refill-btn').forEach(btn => {

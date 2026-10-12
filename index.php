@@ -14,6 +14,18 @@ $user = $stmt->get_result()->fetch_assoc();
 $tzsBalance = (float)($user['balance'] ?? 0);
 $username   = $user['username'] ?? 'Mteja';
 $requestedServiceId = trim((string) ($_GET['service_id'] ?? ''));
+$reorderQuantity = 100;
+$reorderLink = '';
+$reorderFavoriteId = (int) ($_GET['reorder_id'] ?? 0);
+if ($reorderFavoriteId > 0) {
+    $reorderStmt = $conn->prepare('SELECT o.quantity, o.link FROM favorite_orders f JOIN orders o ON o.id = f.order_id WHERE f.id = ? AND f.user_id = ?');
+    $reorderStmt->bind_param('ii', $reorderFavoriteId, $user_id);
+    $reorderStmt->execute();
+    if ($saved = $reorderStmt->get_result()->fetch_assoc()) {
+        $reorderQuantity = max(1, (int) $saved['quantity']);
+        $reorderLink = (string) $saved['link'];
+    }
+}
 
 // Platforms (with bootstrap-icon mapping)
 $platformsCfg = json_decode(PLATFORMS, true);
@@ -429,7 +441,7 @@ function statusBadge($status) {
             <!-- Link -->
             <div class="mt-3">
                 <label class="form-label" id="linkLabel">3. Link / Username</label>
-                <input type="text" class="form-control" id="linkInput" name="link" placeholder="Chagua huduma kwanza..." required>
+                <input type="text" class="form-control" id="linkInput" name="link" value="<?= htmlspecialchars($reorderLink, ENT_QUOTES, 'UTF-8') ?>" placeholder="Chagua huduma kwanza..." required>
                 <div class="link-hint" id="linkHint"><i class="bi bi-info-circle"></i> Chagua huduma ili kuona maelekezo sahihi ya link.</div>
                 <div class="link-preview" id="linkPreview" aria-live="polite"><div class="link-preview-head"><div class="link-preview-icon"><i class="bi bi-link-45deg" id="linkPreviewIcon"></i></div><div><div class="link-preview-title" id="linkPreviewTitle">Link preview</div><div class="link-preview-status" id="linkPreviewStatus"></div></div></div><div class="link-preview-url" id="linkPreviewUrl"></div><a class="link-preview-open" id="linkPreviewOpen" href="#" target="_blank" rel="noopener noreferrer"><i class="bi bi-box-arrow-up-right"></i> Fungua link</a></div>
                 <div class="tips-box" id="igTips"></div>
@@ -438,7 +450,7 @@ function statusBadge($status) {
             <!-- Quantity -->
             <div class="mt-3">
                 <label class="form-label">4. Idadi <span id="qtyRange" class="text-lowercase"></span></label>
-                <input type="number" class="form-control" id="quantity" name="quantity" min="1" value="100" required>
+                <input type="number" class="form-control" id="quantity" name="quantity" min="1" value="<?= (int) $reorderQuantity ?>" required>
                 <div class="qty-presets" id="qtyPresets">
                     <button type="button" data-q="100">100</button>
                     <button type="button" data-q="500">500</button>

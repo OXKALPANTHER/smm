@@ -184,6 +184,7 @@ try {
     }
 
     define('DB_DRIVER', $effectiveDbDriver);
+    ensureFavoriteOrdersTable($pdo);
 
     // Wrap PDO with MySQLi compatibility layer
     $conn = new MySQLiCompatibility($pdo);
@@ -566,6 +567,22 @@ function ensureRuntimeColumns($pdo)
         }
     } catch (Exception $e) {
         error_log("ensureRuntimeColumns: " . $e->getMessage());
+    }
+}
+
+/** Create the user-owned saved-order table on every supported database. */
+function ensureFavoriteOrdersTable($pdo)
+{
+    try {
+        if (DB_DRIVER === 'pgsql') {
+            $pdo->exec("CREATE TABLE IF NOT EXISTS favorite_orders (id SERIAL PRIMARY KEY, user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, order_id INTEGER NOT NULL REFERENCES orders(id) ON DELETE CASCADE, created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP, UNIQUE(user_id, order_id))");
+        } elseif (DB_DRIVER === 'mysql') {
+            $pdo->exec("CREATE TABLE IF NOT EXISTS favorite_orders (id INT AUTO_INCREMENT PRIMARY KEY, user_id INT NOT NULL, order_id INT NOT NULL, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, UNIQUE KEY uq_favorite_user_order (user_id, order_id), CONSTRAINT fk_favorite_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE, CONSTRAINT fk_favorite_order FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+        } else {
+            $pdo->exec("CREATE TABLE IF NOT EXISTS favorite_orders (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, order_id INTEGER NOT NULL REFERENCES orders(id) ON DELETE CASCADE, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, UNIQUE(user_id, order_id))");
+        }
+    } catch (Throwable $e) {
+        error_log('ensureFavoriteOrdersTable: ' . $e->getMessage());
     }
 }
 

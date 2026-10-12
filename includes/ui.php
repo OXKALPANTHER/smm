@@ -245,6 +245,7 @@ function ui_nav($active = 'home', $opts = [])
     'home' => ['index.php', 'bi-grid-1x2-fill', 'Dashboard'],
     'services' => ['services.php', 'bi-list-stars', 'Huduma'],
     'orders' => ['orders.php', 'bi-bag-check-fill', 'Orders Zangu'],
+    'favorites' => ['favorites.php', 'bi-heart-fill', 'Favorites'],
     'notifications' => ['notifications.php', 'bi-bell-fill', 'Notisi' . ($notificationCount ? ' (' . $notificationCount . ')' : '')],
     'pro' => ['pro-dashboard.php', 'bi-rocket-fill', 'Pro Dashboard'],
     'api' => ['api-center.php', 'bi-key-fill', 'API Center'],
