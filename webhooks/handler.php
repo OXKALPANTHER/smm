@@ -158,58 +158,15 @@ class WebhookHandler {
      */
     private function handlePaymentCompleted($data) {
         try {
-            $external_ref = $data['transaction_id'] ?? null;
-            $amount = $data['amount'] ?? 0;
+            $external_ref = $data['transaction_id'] ?? $data['external_ref'] ?? $data['order_id'] ?? null;
+            $amount = $data['amount'] ?? $data['paid_amount'] ?? 0;
             
             if (!$external_ref) {
                 return $this->respondError('Missing transaction_id', 400);
             }
             
-            // Find pending transaction
-            $stmt = $this->conn->prepare("SELECT id, user_id FROM transactions WHERE external_ref = ? AND status = 'pending'");
-            $stmt->bind_param("s", $external_ref);
-            $stmt->execute();
-            $result = $stmt->get_result();
-            
-            if ($row = $result->fetch_assoc()) {
-                $this->conn->begin_transaction();
-                
-                try {
-                    // Update transaction status
-                    $status = 'completed';
-                    $stmt = $this->conn->prepare("UPDATE transactions SET status = ?, completed_at = NOW() WHERE id = ?");
-                    $stmt->bind_param("si", $status, $row['id']);
-                    $stmt->execute();
-                    
-                    // Add balance to user (if amount doesn't already exist in DB)
-                    $stmt = $this->conn->prepare("SELECT amount FROM transactions WHERE id = ?");
-                    $stmt->bind_param("i", $row['id']);
-                    $stmt->execute();
-                    $trans_result = $stmt->get_result();
-                    $transaction = $trans_result->fetch_assoc();
-                    
-                    if ($transaction) {
-                        $stmt = $this->conn->prepare("UPDATE users SET balance = balance + ? WHERE id = ?");
-                        $stmt->bind_param("di", $transaction['amount'], $row['user_id']);
-                        $stmt->execute();
-
-                        // Reward the inviter on this user's first deposit.
-                        applyReferralBonus($this->conn, $row['user_id'], $transaction['amount']);
-                    }
-
-                    $this->conn->commit();
-                    
-                    logActivity($row['user_id'], 'payment_completed', "Transaction: $external_ref, Amount: $amount", 'success');
-                    
-                    return $this->respondSuccess("Payment confirmed");
-                    
-                } catch (Exception $e) {
-                    $this->conn->rollback();
-                    throw $e;
-                }
-            }
-            
-            return $this->respondError('Transaction not found', 404);
+            $credit = completeTopupTransaction($external_ref);
+            return $this->respondSuccess($credit['credited'] ? 'Payment confirmed and balance credited' : 'Payment already credited');
             
         } catch (Exception $e) {
             return $this->respondError($e->getMessage(), 500);

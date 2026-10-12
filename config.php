@@ -1100,6 +1100,99 @@ if (!function_exists('deleteAllNotifications')) {
     }
 }
 
+if (!function_exists('normalizePaymentStatus')) {
+    function normalizePaymentStatus($status)
+    {
+        $status = strtoupper(trim((string) $status));
+        if (in_array($status, ['COMPLETED', 'COMPLETE', 'SUCCESS', 'SUCCESSFUL', 'PAID', 'APPROVED'], true)) {
+            return 'COMPLETED';
+        }
+        if (in_array($status, ['FAILED', 'FAILURE', 'CANCELLED', 'CANCELED', 'DECLINED', 'REJECTED', 'EXPIRED'], true)) {
+            return 'FAILED';
+        }
+        return 'PENDING';
+    }
+}
+
+/**
+ * Complete one pending top-up exactly once and return the user's new balance.
+ * The row lock makes polling and a gateway callback safe when they arrive together.
+ */
+if (!function_exists('completeTopupTransaction')) {
+    function completeTopupTransaction($externalRef)
+    {
+        global $conn;
+        $externalRef = trim((string) $externalRef);
+        if ($externalRef === '') {
+            throw new RuntimeException('Missing payment reference.');
+        }
+
+        $conn->begin_transaction();
+        try {
+            $stmt = $conn->prepare(
+                "SELECT t.id, t.user_id, t.amount, t.status, u.email, u.username
+                 FROM transactions t JOIN users u ON u.id = t.user_id
+                 WHERE t.external_ref = ? LIMIT 1 FOR UPDATE"
+            );
+            if (!$stmt) throw new RuntimeException('Could not find the payment transaction.');
+            $stmt->bind_param('s', $externalRef);
+            $stmt->execute();
+            $row = $stmt->get_result()->fetch_assoc();
+            if (!$row) throw new RuntimeException('Payment transaction not found.');
+
+            $amount = (float) $row['amount'];
+            if ($amount <= 0) throw new RuntimeException('Payment amount is invalid.');
+
+            $stmt = $conn->prepare('SELECT balance FROM users WHERE id = ? FOR UPDATE');
+            $stmt->bind_param('i', $row['user_id']);
+            $stmt->execute();
+            $before = $stmt->get_result()->fetch_assoc();
+            if (!$before) throw new RuntimeException('Payment user was not found.');
+
+            $credited = strtolower((string) $row['status']) !== 'completed';
+            if ($credited) {
+                $status = 'completed';
+                $stmt = $conn->prepare('UPDATE transactions SET status = ?, completed_at = CURRENT_TIMESTAMP WHERE id = ? AND status = \'pending\'');
+                $stmt->bind_param('si', $status, $row['id']);
+                $stmt->execute();
+                if ($stmt->affected_rows !== 1) {
+                    $credited = false;
+                }
+                if ($credited) {
+                    $stmt = $conn->prepare('UPDATE users SET balance = balance + ? WHERE id = ?');
+                    $stmt->bind_param('di', $amount, $row['user_id']);
+                    $stmt->execute();
+                    if ($stmt->affected_rows !== 1) throw new RuntimeException('Balance update failed.');
+                    applyReferralBonus($conn, (int) $row['user_id'], $amount);
+                }
+            }
+
+            $stmt = $conn->prepare('SELECT balance FROM users WHERE id = ?');
+            $stmt->bind_param('i', $row['user_id']);
+            $stmt->execute();
+            $after = $stmt->get_result()->fetch_assoc();
+            if (!$after) throw new RuntimeException('Updated balance could not be read.');
+            $conn->commit();
+
+            if ($credited) {
+                try {
+                    createNotification((int) $row['user_id'], 'Top-up imekamilika', 'Malipo yako yamekamilika na salio lako limeongezwa kwa mafanikio.', 'success', 'user', ['source' => 'topup']);
+                    logActivity((int) $row['user_id'], 'payment_completed', "Top-up {$externalRef} credited {$amount} TZS", 'success');
+                    sendTopupSuccessEmail($row['email'], $row['username'], $amount, $after['balance'], $externalRef);
+                } catch (Throwable $notificationError) {
+                    error_log('Top-up post-credit notification failed: ' . $notificationError->getMessage());
+                }
+            }
+            return ['credited' => $credited, 'user_id' => (int) $row['user_id'], 'amount' => $amount, 'balance' => (float) $after['balance'], 'reference' => $externalRef];
+        } catch (Throwable $e) {
+            if ($conn->errno === 0 || $conn->errno !== 0) {
+                try { $conn->rollback(); } catch (Throwable $ignored) {}
+            }
+            throw $e;
+        }
+    }
+}
+
 /**
  * Award the referral bonus when a referred user makes their FIRST top-up.
  *

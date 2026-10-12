@@ -109,67 +109,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $payload = ["order_id" => $order_id];
         $response = callAPI('POST', BASE_URL . '/order-status', $payload);
 
-        if (isset($response['data'][0]['payment_status'])) {
-            $status = $response['data'][0]['payment_status']; // COMPLETED, PENDING, FAILED
+        $record = $response['data'][0] ?? $response['data'] ?? $response;
+        if (is_array($record)) {
+            $rawStatus = $record['payment_status'] ?? $record['status'] ?? $response['payment_status'] ?? null;
+            $status = normalizePaymentStatus($rawStatus);
 
-            // If completed, update transaction and user balance
             if ($status === 'COMPLETED') {
-                // Find the pending transaction
-                $stmt = $conn->prepare("SELECT t.id, t.user_id, t.amount, t.external_ref, u.email, u.username FROM transactions t JOIN users u ON u.id = t.user_id WHERE t.external_ref = ? AND t.status = 'pending'");
-                $stmt->bind_param("s", $order_id);
-                $stmt->execute();
-                $result = $stmt->get_result();
-                if ($row = $result->fetch_assoc()) {
-                    $conn->begin_transaction();
-                    $stmt = $conn->prepare("SELECT balance FROM users WHERE id = ?");
-                    $stmt->bind_param("i", $row['user_id']);
-                    $stmt->execute();
-                    $balanceResult = $stmt->get_result();
-                    $startingBalanceRow = $balanceResult->fetch_assoc();
-                    $startingBalance = $startingBalanceRow ? (float) $startingBalanceRow['balance'] : null;
-                    // Update transaction status
-                    $stmt = $conn->prepare("UPDATE transactions SET status = 'completed' WHERE id = ?");
-                    $stmt->bind_param("i", $row['id']);
-                    $stmt->execute();
-                    // Add to user balance
-                    $stmt = $conn->prepare("UPDATE users SET balance = balance + ? WHERE id = ?");
-                    $stmt->bind_param("di", $row['amount'], $row['user_id']);
-                    $stmt->execute();
-                    $stmt = $conn->prepare("SELECT balance FROM users WHERE id = ?");
-                    $stmt->bind_param("i", $row['user_id']);
-                    $stmt->execute();
-                    $balanceResult = $stmt->get_result();
-                    $balanceRow = $balanceResult->fetch_assoc();
-                    if ($startingBalance === null || !$balanceRow || (float) $balanceRow['balance'] <= $startingBalance) {
-                        $conn->rollback();
-                        error_log('Top-up balance update could not be verified for transaction ' . $row['external_ref'] . '.');
-                        echo json_encode(['success' => false, 'status' => 'ERROR']);
-                        exit;
-                    }
-                    // Award referral bonus if this is the user's first deposit
-                    applyReferralBonus($conn, $row['user_id'], $row['amount']);
-                    createNotification(
-                        $row['user_id'],
-                        'Top-up imekamilika',
-                        'Malipo yako yamekamilika na salio lako limeongezwa kwa mafanikio.',
-                        'success',
-                        'user',
-                        ['source' => 'topup']
-                    );
-                    $stmt = $conn->prepare("SELECT balance FROM users WHERE id = ?");
-                    $stmt->bind_param("i", $row['user_id']);
-                    $stmt->execute();
-                    $balanceResult = $stmt->get_result();
-                    $balanceRow = $balanceResult->fetch_assoc();
-                    $conn->commit();
-                    sendTopupSuccessEmail(
-                        $row['email'],
-                        $row['username'],
-                        $row['amount'],
-                        $balanceRow['balance'],
-                        $row['external_ref']
-                    );
+                try {
+                    $credit = completeTopupTransaction($order_id);
+                    echo json_encode(['success' => true, 'status' => 'COMPLETED', 'credited' => $credit['credited'], 'balance' => $credit['balance']]);
+                } catch (Throwable $e) {
+                    error_log('Top-up completion failed for ' . $order_id . ': ' . $e->getMessage());
+                    echo json_encode(['success' => false, 'status' => 'ERROR', 'message' => 'Malipo yamekamilika lakini salio halijasasishwa.']);
                 }
+                exit;
             } elseif ($status === 'FAILED') {
                 $stmt = $conn->prepare("UPDATE transactions SET status = 'failed' WHERE external_ref = ? AND status = 'pending'");
                 $stmt->bind_param("s", $order_id);
