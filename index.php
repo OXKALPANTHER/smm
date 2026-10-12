@@ -13,6 +13,7 @@ $stmt->execute();
 $user = $stmt->get_result()->fetch_assoc();
 $tzsBalance = (float)($user['balance'] ?? 0);
 $username   = $user['username'] ?? 'Mteja';
+$requestedServiceId = trim((string) ($_GET['service_id'] ?? ''));
 
 // Platforms (with bootstrap-icon mapping)
 $platformsCfg = json_decode(PLATFORMS, true);
@@ -509,6 +510,7 @@ let userBalance = <?= json_encode($tzsBalance) ?>;
 let currentService = null;
 let currentPlatform = '';            // last platform chip / search context
 let currentProvider = <?= json_encode(defined('PRIMARY_PROVIDER') ? PRIMARY_PROVIDER : 'fastway') ?>; // configured primary lane
+const requestedServiceId = <?= json_encode($requestedServiceId) ?>;
 
 // Append the active provider to an api-services.php URL.
 function withProvider(url) {
@@ -554,6 +556,16 @@ async function loadServices(url, opts = {}) {
             let msg = `${j.data.length} huduma zimepatikana`;
             if (j.truncated) msg = `Zinaonyeshwa ${fmt(j.data.length)} kati ya ${fmt(j.total)}+ — andika zaidi kupunguza`;
             toast(msg, 'success');
+            if (opts.selectId) {
+                const wanted = String(opts.selectId);
+                const match = Array.from($service[0].options).find(o => String(o.value) === wanted);
+                if (match) {
+                    $service.val(wanted).trigger('change');
+                    setTimeout(() => document.getElementById('orderForm')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80);
+                } else {
+                    toast('Huduma uliyochagua haipatikani kwa sasa.', 'warning');
+                }
+            }
             if (opts.openDropdown) { try { $service.select2('open'); } catch (e) {} }
         } else {
             $service.empty().append('<option value="">Hakuna huduma</option>').prop('disabled', true).trigger('change');
@@ -639,6 +651,15 @@ function exitProMode() {
 }
 
 if (proExit) proExit.addEventListener('click', exitProMode);
+
+// A service selected from the catalogue is fetched directly by ID, then
+// preselected here so the customer only fills link and quantity.
+if (/^\d+$/.test(requestedServiceId)) {
+    loadServices(withProvider(`api-services.php?service_id=${encodeURIComponent(requestedServiceId)}`), {
+        selectId: requestedServiceId,
+        emptyMsg: 'Huduma uliyochagua haipatikani kwa sasa'
+    });
+}
 
 // ---- Service detail + link guidance ----
 const linkInput = document.getElementById('linkInput');
