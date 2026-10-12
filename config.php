@@ -742,6 +742,11 @@ define('FEATURE_API_ACCESS', true);
 // ============================================
 define('CURRENCY_CODE', 'TZS');
 define('CURRENCY_SYMBOL', 'TSh');
+// Developer API activation: either spend at least $10 in completed orders,
+// or complete a top-up of at least $5. USD is converted using the app's fixed
+// internal rate and is never exposed as a provider markup detail.
+define('API_MIN_SPEND_TZS', 35000);
+define('API_MIN_DEPOSIT_TZS', 17500);
 define('MINIMUM_TOPUP', 1000);
 define('MAXIMUM_TOPUP', 10000000);
 
@@ -1338,6 +1343,42 @@ function requireSameOriginRequest()
         echo json_encode(['success' => false, 'message' => 'Request origin is not allowed.']);
         exit;
     }
+}
+
+function developerApiKeyFromRequest()
+{
+    $key = trim((string) ($_SERVER['HTTP_X_API_KEY'] ?? ''));
+    if ($key !== '') return $key;
+    $authorization = trim((string) ($_SERVER['HTTP_AUTHORIZATION'] ?? ''));
+    if (preg_match('/^Bearer\s+(.+)$/i', $authorization, $m)) return trim($m[1]);
+    return '';
+}
+
+function developerApiEligibility($userId)
+{
+    global $conn;
+    $userId = (int) $userId;
+    $spendStmt = $conn->prepare("SELECT COALESCE(SUM(amount), 0) AS total FROM transactions WHERE user_id = ? AND type = 'debit' AND status = 'completed'");
+    $spendStmt->bind_param('i', $userId); $spendStmt->execute();
+    $spend = (float) ($spendStmt->get_result()->fetch_assoc()['total'] ?? 0);
+    $depositStmt = $conn->prepare("SELECT COALESCE(MAX(amount), 0) AS largest FROM transactions WHERE user_id = ? AND type = 'credit' AND status = 'completed'");
+    $depositStmt->bind_param('i', $userId); $depositStmt->execute();
+    $deposit = (float) ($depositStmt->get_result()->fetch_assoc()['largest'] ?? 0);
+    return ['eligible' => $spend >= API_MIN_SPEND_TZS || $deposit >= API_MIN_DEPOSIT_TZS, 'spend' => $spend, 'deposit' => $deposit, 'spend_threshold' => API_MIN_SPEND_TZS, 'deposit_threshold' => API_MIN_DEPOSIT_TZS];
+}
+
+/** Authenticate a developer request and enforce the API activation requirement. */
+function requireDeveloperApi()
+{
+    global $conn;
+    $key = developerApiKeyFromRequest();
+    if ($key === '') { http_response_code(401); header('Content-Type: application/json'); echo json_encode(['success'=>false,'error'=>'API key required.']); exit; }
+    $stmt = $conn->prepare("SELECT id, username, email, balance, status FROM users WHERE api_key = ? LIMIT 1");
+    $stmt->bind_param('s', $key); $stmt->execute(); $user = $stmt->get_result()->fetch_assoc();
+    if (!$user || ($user['status'] ?? '') !== 'active') { http_response_code(401); header('Content-Type: application/json'); echo json_encode(['success'=>false,'error'=>'API key is invalid or inactive.']); exit; }
+    $eligibility = developerApiEligibility((int) $user['id']);
+    if (!$eligibility['eligible']) { http_response_code(403); header('Content-Type: application/json'); echo json_encode(['success'=>false,'error'=>'API access is not enabled for this account. Complete a deposit of at least $5 or spend at least $10 in completed orders.','eligibility'=>$eligibility]); exit; }
+    return ['user'=>$user, 'eligibility'=>$eligibility, 'key'=>$key];
 }
 
 /**

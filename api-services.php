@@ -9,6 +9,12 @@ require_once 'includes/APIHandler.php';
 
 header('Content-Type: application/json');
 
+// Browser sessions may use this endpoint for the customer UI. External
+// developer requests must provide an eligible API key.
+if (!isLoggedIn() || developerApiKeyFromRequest() !== '') {
+    requireDeveloperApi();
+}
+
 try {
     $platform = $_GET['platform'] ?? null;
     $query    = trim($_GET['q'] ?? '');

@@ -25,13 +25,16 @@ function jsonOut($success, $message, $extra = [], $code = 200)
     exit;
 }
 
-if (!isLoggedIn()) {
+// A developer call uses the API key; the normal web form continues to use the
+// logged-in session and same-origin protection.
+$developerAuth = developerApiKeyFromRequest() !== '' ? requireDeveloperApi() : null;
+if (!$developerAuth && !isLoggedIn()) {
     jsonOut(false, 'Tafadhali ingia kwanza.', [], 401);
 }
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     jsonOut(false, 'Method not allowed.', [], 405);
 }
-requireSameOriginRequest();
+if (!$developerAuth) requireSameOriginRequest();
 
 // Accept JSON body or form-encoded.
 $input = $_POST;
@@ -43,7 +46,7 @@ if (empty($input)) {
     }
 }
 
-$user_id = $_SESSION['user_id'];
+$user_id = $developerAuth ? (int) $developerAuth['user']['id'] : (int) $_SESSION['user_id'];
 $service_id = (int) ($input['service_id'] ?? 0);
 $quantity = (int) ($input['quantity'] ?? 0);
 $link = trim($input['link'] ?? '');

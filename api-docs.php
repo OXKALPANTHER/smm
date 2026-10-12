@@ -1,591 +1,67 @@
 <?php
-/**
- * API Documentation & Testing
- * 
- * This file provides comprehensive API documentation and testing endpoints
- */
-
-require_once 'config.php';
+require_once __DIR__ . '/config.php';
+require_once __DIR__ . '/includes/ui.php';
 requireLogin();
-
+$baseUrl = defined('APP_URL') && APP_URL ? rtrim(APP_URL, '/') : ((isset($_SERVER['HTTPS']) ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? 'your-domain.com'));
+ui_head('Developer API Documentation — ' . APP_NAME, 'app', '<style>
+.docs-hero{background:linear-gradient(135deg,#102a43,#087f8b);border-radius:28px;padding:1.4rem 1.2rem;color:#fff;box-shadow:0 20px 42px rgba(8,127,139,.25);margin-bottom:1rem}.docs-card{background:#fff;border-radius:22px;padding:1.1rem;box-shadow:0 14px 34px rgba(43,54,116,.06);border:1px solid rgba(43,54,116,.04);margin-bottom:1rem}.docs-card h4{font-weight:800;font-size:1rem;color:#164e63}.docs-card h5{font-weight:800;font-size:.86rem;margin-top:1.1rem}.endpoint{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;margin:.65rem 0}.method{font:800 .68rem ui-monospace,monospace;border-radius:7px;padding:.35rem .5rem;background:#e4faf3;color:#00876a}.path{font:700 .76rem ui-monospace,monospace;color:#164e63;word-break:break-all}.code{background:#111827;color:#f9fafb;border-radius:14px;padding:.85rem;font:.71rem/1.55 ui-monospace,SFMono-Regular,Menlo,monospace;overflow:auto;white-space:pre-wrap}.note{border-left:4px solid #087f8b;background:#effafb;color:#365b65;border-radius:10px;padding:.7rem .8rem;font-size:.76rem}.docs-nav{display:flex;gap:.45rem;overflow:auto;margin-bottom:1rem}.docs-nav a{white-space:nowrap;border-radius:999px;background:#fff;border:1px solid #e5edf0;padding:.45rem .7rem;color:#087f8b;font-size:.7rem;font-weight:700}.param{width:100%;border-collapse:collapse;font-size:.72rem}.param th,.param td{text-align:left;padding:.5rem;border-bottom:1px solid #edf0f6;vertical-align:top}.param th{color:#8a93b2;font-size:.64rem;text-transform:uppercase}.badge-req{color:#b83227;font-weight:800}.badge-opt{color:#8a93b2}
+</style>');
+ui_nav('api');
 ?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?php echo APP_NAME; ?> - API Documentation</title>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/atom-one-dark.min.css" rel="stylesheet">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
-    <style>
-        :root {
-            --primary: #667eea;
-            --secondary: #764ba2;
-        }
-        body {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: #2b3674;
-            font-family: 'Poppins', sans-serif;
-            min-height: 100vh;
-            padding: 2rem 0;
-        }
-        .container { max-width: 1200px; }
-        .doc-section {
-            background: white;
-            border-radius: 15px;
-            padding: 2rem;
-            margin-bottom: 2rem;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-        }
-        .doc-section h2 {
-            color: var(--primary);
-            border-bottom: 3px solid var(--secondary);
-            padding-bottom: 1rem;
-            margin-bottom: 1.5rem;
-        }
-        .endpoint {
-            background: #f8f9fa;
-            border-left: 4px solid var(--primary);
-            padding: 1rem;
-            margin: 1rem 0;
-            border-radius: 5px;
-        }
-        .method {
-            display: inline-block;
-            padding: 0.3rem 0.8rem;
-            border-radius: 5px;
-            color: white;
-            font-weight: 600;
-            font-size: 0.85rem;
-        }
-        .method.get { background: #0dcaf0; }
-        .method.post { background: #198754; }
-        .method.put { background: #0d6efd; }
-        .method.delete { background: #dc3545; }
-        code {
-            background: #f8f9fa;
-            padding: 0.2rem 0.5rem;
-            border-radius: 3px;
-            color: #e83e8c;
-        }
-        pre {
-            background: #1e1e1e;
-            color: #d4d4d4;
-            padding: 1rem;
-            border-radius: 5px;
-            overflow-x: auto;
-        }
-        .api-key-display {
-            background: #fff3cd;
-            border: 1px solid #ffc107;
-            padding: 1rem;
-            border-radius: 5px;
-            margin: 1rem 0;
-        }
-        .toc {
-            background: #f8f9fa;
-            border-radius: 10px;
-            padding: 1.5rem;
-            margin-bottom: 2rem;
-        }
-        .toc ul { list-style: none; padding: 0; }
-        .toc li { margin: 0.5rem 0; }
-        .toc a {
-            color: var(--primary);
-            text-decoration: none;
-            transition: 0.2s;
-        }
-        .toc a:hover { color: var(--secondary); text-decoration: underline; }
-        .parameter-table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        .parameter-table th {
-            background: var(--primary);
-            color: white;
-            padding: 0.8rem;
-            text-align: left;
-        }
-        .parameter-table td {
-            border: 1px solid #ddd;
-            padding: 0.8rem;
-        }
-        .parameter-table tr:nth-child(even) { background: #f9f9f9; }
-        .response-example {
-            margin: 1rem 0;
-        }
-        .badge-required {
-            background: #dc3545;
-            color: white;
-            padding: 0.2rem 0.5rem;
-            border-radius: 3px;
-            font-size: 0.75rem;
-        }
-        .badge-optional {
-            background: #6c757d;
-            color: white;
-            padding: 0.2rem 0.5rem;
-            border-radius: 3px;
-            font-size: 0.75rem;
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="mb-3">
-            <a href="orders.php" onclick="if(history.length>1){history.back();return false;}" class="btn btn-outline-light btn-sm rounded-pill" style="border-color:rgba(255,255,255,.35);color:#fff;background:rgba(255,255,255,.14);backdrop-filter:blur(8px);">
-                <i class="bi bi-arrow-left"></i> Back
-            </a>
-        </div>
-
-        <div class="doc-section">
-            <h1 class="mb-3"><?php echo APP_NAME; ?> API Documentation</h1>
-            <p class="lead">Complete reference for <?php echo APP_NAME; ?> REST API and integrations.</p>
-            <p><strong>Version:</strong> <?php echo APP_VERSION; ?></p>
-        </div>
-
-        <!-- Table of Contents -->
-        <div class="toc">
-            <h4>Quick Navigation</h4>
-            <ul>
-                <li><a href="#authentication">Authentication</a></li>
-                <li><a href="#services">Services API</a></li>
-                <li><a href="#orders">Orders API</a></li>
-                <li><a href="#payments">Payments API</a></li>
-                <li><a href="#analytics">Analytics API</a></li>
-                <li><a href="#webhooks">Webhooks</a></li>
-                <li><a href="#errors">Error Handling</a></li>
-            </ul>
-        </div>
-
-        <!-- Authentication Section -->
-        <div class="doc-section" id="authentication">
-            <h2>Authentication</h2>
-            <p>All API requests require authentication using an API key or JWT token.</p>
-
-            <h4 class="mt-4">API Key Authentication</h4>
-            <p>Include your API key in the request header:</p>
-            <pre><code class="language-bash">curl -H "Authorization: Bearer YOUR_API_KEY" https://yoursite.com/api/endpoint</code></pre>
-
-            <h4 class="mt-4">JWT Token</h4>
-            <p>Obtain a token by logging in, then use it for subsequent requests:</p>
-            <pre><code class="language-bash">curl -H "Authorization: Bearer JWT_TOKEN" https://yoursite.com/api/endpoint</code></pre>
-
-            <div class="api-key-display">
-                <strong>🔑 Your API Key:</strong> Generate from account settings
-            </div>
-        </div>
-
-        <!-- Services API -->
-        <div class="doc-section" id="services">
-            <h2>Services API</h2>
-            <p>Retrieve available social media services and their details.</p>
-
-            <div class="endpoint">
-                <span class="method get">GET</span>
-                <code>/api/services</code>
-                <p class="mt-2"><strong>Description:</strong> Get list of all available services</p>
-            </div>
-
-            <h5 class="mt-4">Query Parameters</h5>
-            <table class="parameter-table">
-                <thead>
-                    <tr>
-                        <th>Parameter</th>
-                        <th>Type</th>
-                        <th>Required</th>
-                        <th>Description</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td>platform</td>
-                        <td>string</td>
-                        <td><span class="badge-optional">Optional</span></td>
-                        <td>Filter by platform (instagram, facebook, tiktok, etc.)</td>
-                    </tr>
-                    <tr>
-                        <td>category</td>
-                        <td>string</td>
-                        <td><span class="badge-optional">Optional</span></td>
-                        <td>Filter by category (followers, likes, views, etc.)</td>
-                    </tr>
-                    <tr>
-                        <td>limit</td>
-                        <td>integer</td>
-                        <td><span class="badge-optional">Optional</span></td>
-                        <td>Number of results (default: 50, max: 500)</td>
-                    </tr>
-                </tbody>
-            </table>
-
-            <h5 class="mt-4">Example Response</h5>
-            <div class="response-example">
-                <pre><code class="language-json">{
+<main class="container px-3" style="padding-top:4.4rem;padding-bottom:4rem;">
+  <div class="docs-hero"><div class="d-flex align-items-center gap-2"><i class="bi bi-journal-code" style="font-size:1.5rem"></i><div><h3 class="fw-bold mb-1">Developer API Documentation</h3><p class="mb-0 small opacity-75">Version 1 · Secure service catalogue and order integration</p></div></div></div>
+  <nav class="docs-nav"><a href="#access">Access</a><a href="#auth">Authentication</a><a href="#services">Services</a><a href="#orders">Orders</a><a href="#errors">Errors</a><a href="#examples">Examples</a></nav>
+  <section class="docs-card" id="access"><h4><i class="bi bi-shield-check me-2"></i>Before you integrate</h4><p class="small text-muted">Developer API access is intentionally gated to protect the platform and customers.</p><div class="note"><strong>Activation requirement:</strong> complete either a deposit of at least <strong>$5</strong>, or spend at least <strong>$10</strong> on completed orders. The account only needs to satisfy one condition. The API Center shows your current progress.</div><p class="small text-muted mt-3 mb-0">If a key leaks, open <a href="api-center.php">Developer API</a> and click <strong>Regenerate API key</strong>. The old key is invalid immediately; update your application with the new key.</p></section>
+  <section class="docs-card" id="auth"><h4><i class="bi bi-key-fill me-2"></i>Authentication</h4><p class="small text-muted">Send your key on every developer request. The recommended header is:</p><div class="code">X-API-Key: YOUR_API_KEY</div><p class="small text-muted mt-2">Bearer authentication is also accepted:</p><div class="code">Authorization: Bearer YOUR_API_KEY</div><div class="note mt-3"><strong>Never</strong> expose the key in browser JavaScript, mobile app binaries, public Git repositories, screenshots, or client-side HTML. Keep it in server-side environment variables.</div></section>
+  <section class="docs-card" id="services"><h4><i class="bi bi-list-stars me-2"></i>List services</h4><div class="endpoint"><span class="method">GET</span><span class="path"><?= htmlspecialchars($baseUrl) ?>/api-services.php</span></div><p class="small text-muted">Returns the current FastWay service catalogue. Use query parameters to filter or find a specific service.</p><table class="param"><tr><th>Parameter</th><th>Required</th><th>Description</th></tr><tr><td>platform</td><td class="badge-opt">Optional</td><td>Filter by platform, for example instagram, tiktok, youtube.</td></tr><tr><td>q</td><td class="badge-opt">Optional</td><td>Search by Service ID, name, or category.</td></tr><tr><td>service_id</td><td class="badge-opt">Optional</td><td>Return the matching service by numeric ID.</td></tr><tr><td>refresh</td><td class="badge-opt">Optional</td><td>Set true to request a fresh provider catalogue.</td></tr></table><h5>Example</h5><div class="code">curl -s "<?= htmlspecialchars($baseUrl) ?>/api-services.php?platform=instagram" \
+  -H "X-API-Key: $ROYAL_SMM_API_KEY"</div><h5>Success response</h5><div class="code">{
   "success": true,
-  "data": {
-    "services": [
-      {
-        "id": 123,
-        "name": "Instagram Followers",
-        "platform": "instagram",
-        "category": "followers",
-        "min_quantity": 100,
-        "max_quantity": 100000,
-        "prices": {
-          "TZS": 150.00
-        },
-        "description": "Add Instagram followers to your account"
-      }
-    ]
-  },
-  "timestamp": 1234567890
-}</code></pre>
-            </div>
-
-            <div class="endpoint">
-                <span class="method get">GET</span>
-                <code>/api/services/:service_id</code>
-                <p class="mt-2"><strong>Description:</strong> Get details of a specific service</p>
-            </div>
-        </div>
-
-        <!-- Orders API -->
-        <div class="doc-section" id="orders">
-            <h2>Orders API</h2>
-            <p>Create and manage service orders.</p>
-
-            <div class="endpoint">
-                <span class="method post">POST</span>
-                <code>/api/orders</code>
-                <p class="mt-2"><strong>Description:</strong> Create a new order</p>
-            </div>
-
-            <h5 class="mt-4">Request Body</h5>
-            <table class="parameter-table">
-                <thead>
-                    <tr>
-                        <th>Parameter</th>
-                        <th>Type</th>
-                        <th>Required</th>
-                        <th>Description</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td>service_id</td>
-                        <td>integer</td>
-                        <td><span class="badge-required">Required</span></td>
-                        <td>ID of the service to order</td>
-                    </tr>
-                    <tr>
-                        <td>link</td>
-                        <td>string</td>
-                        <td><span class="badge-required">Required</span></td>
-                        <td>Username or post link</td>
-                    </tr>
-                    <tr>
-                        <td>quantity</td>
-                        <td>integer</td>
-                        <td><span class="badge-required">Required</span></td>
-                        <td>Quantity of service</td>
-                    </tr>
-                </tbody>
-            </table>
-
-            <h5 class="mt-4">Example Request</h5>
-            <pre><code class="language-bash">curl -X POST https://yoursite.com/api/orders \
-  -H "Authorization: Bearer API_KEY" \
+  "data": [{
+    "id": 123,
+    "name": "Instagram Followers",
+    "category": "Followers",
+    "min": 100,
+    "max": 100000,
+    "rate": 0.25,
+    "price_per_1000": 250
+  }],
+  "count": 1,
+  "provider": "fastway"
+}</div></section>
+  <section class="docs-card" id="orders"><h4><i class="bi bi-bag-check-fill me-2"></i>Create an order</h4><div class="endpoint"><span class="method" style="background:#fff6e5;color:#9a6700">POST</span><span class="path"><?= htmlspecialchars($baseUrl) ?>/place-order.php</span></div><p class="small text-muted">The server resolves the service from the live FastWay catalogue, validates limits, checks balance, submits the provider order, and records the order atomically.</p><table class="param"><tr><th>Field</th><th>Required</th><th>Description</th></tr><tr><td>service_id</td><td class="badge-req">Required</td><td>Numeric ID returned by the services endpoint.</td></tr><tr><td>quantity</td><td class="badge-req">Required</td><td>Integer within the service min/max limits.</td></tr><tr><td>link</td><td class="badge-req">Required</td><td>Public profile, post, video, or target link accepted by the selected service.</td></tr></table><h5>cURL</h5><div class="code">curl -X POST "<?= htmlspecialchars($baseUrl) ?>/place-order.php" \
+  -H "X-API-Key: $ROYAL_SMM_API_KEY" \
   -H "Content-Type: application/json" \
-  -d '{
-    "service_id": 123,
-    "link": "https://instagram.com/username",
-    "quantity": 500
-  }'</code></pre>
-
-            <h5 class="mt-4">Example Response</h5>
-            <pre><code class="language-json">{
+  -d '{"service_id":123,"quantity":500,"link":"https://instagram.com/username"}'</div><h5>Success response</h5><div class="code">{
   "success": true,
-  "data": {
-    "order_id": "ORD_1234567890",
-    "external_order_id": "EXT_ORD_123",
-    "status": "Pending",
-    "service_name": "Instagram Followers",
-    "quantity": 500,
-    "price": 75000,
-    "currency": "TZS",
-    "created_at": "2024-01-15T10:30:00Z"
-  },
-  "message": "Order created successfully",
-  "timestamp": 1234567890
-}</code></pre>
-
-            <div class="endpoint">
-                <span class="method get">GET</span>
-                <code>/api/orders/:order_id</code>
-                <p class="mt-2"><strong>Description:</strong> Get order status</p>
-            </div>
-
-            <div class="endpoint">
-                <span class="method get">GET</span>
-                <code>/api/orders</code>
-                <p class="mt-2"><strong>Description:</strong> Get all user orders (paginated)</p>
-            </div>
-        </div>
-
-        <!-- Payments API -->
-        <div class="doc-section" id="payments">
-            <h2>Payments API</h2>
-            <p>Handle payment processing and balance management.</p>
-
-            <div class="endpoint">
-                <span class="method post">POST</span>
-                <code>/api/payments/initiate</code>
-                <p class="mt-2"><strong>Description:</strong> Initiate a payment/top-up</p>
-            </div>
-
-            <h5 class="mt-4">Request Body</h5>
-            <table class="parameter-table">
-                <thead>
-                    <tr>
-                        <th>Parameter</th>
-                        <th>Type</th>
-                        <th>Description</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td>amount</td>
-                        <td>decimal</td>
-                        <td>Amount to top-up</td>
-                    </tr>
-                    <tr>
-                        <td>phone</td>
-                        <td>string</td>
-                        <td>Phone number for payment</td>
-                    </tr>
-                    <tr>
-                        <td>email</td>
-                        <td>string</td>
-                        <td>Email address</td>
-                    </tr>
-                    <tr>
-                        <td>gateway</td>
-                        <td>string</td>
-                        <td>Payment gateway (mpesa, stripe, flutterwave, paystack)</td>
-                    </tr>
-                </tbody>
-            </table>
-
-            <div class="endpoint">
-                <span class="method get">GET</span>
-                <code>/api/payments/status/:transaction_id</code>
-                <p class="mt-2"><strong>Description:</strong> Check payment status</p>
-            </div>
-
-            <div class="endpoint">
-                <span class="method get">GET</span>
-                <code>/api/account/balance</code>
-                <p class="mt-2"><strong>Description:</strong> Get current account balance</p>
-            </div>
-        </div>
-
-        <!-- Analytics API -->
-        <div class="doc-section" id="analytics">
-            <h2>Analytics API</h2>
-            <p>Access detailed analytics and statistics.</p>
-
-            <div class="endpoint">
-                <span class="method get">GET</span>
-                <code>/api/analytics/dashboard</code>
-                <p class="mt-2"><strong>Description:</strong> Get dashboard analytics (summary)</p>
-            </div>
-
-            <h5 class="mt-4">Example Response</h5>
-            <pre><code class="language-json">{
-  "success": true,
-  "data": {
-    "total_orders": 150,
-    "total_spent": 45000,
-    "completed_orders": 145,
-    "pending_orders": 5,
-    "failed_orders": 0,
-    "current_balance": 5000,
-    "monthly_spending": 12000,
-    "top_platform": "instagram"
-  }
-}</code></pre>
-
-            <div class="endpoint">
-                <span class="method get">GET</span>
-                <code>/api/analytics/history</code>
-                <p class="mt-2"><strong>Description:</strong> Get detailed order history with filters</p>
-            </div>
-
-            <h5 class="mt-4">Query Parameters</h5>
-            <table class="parameter-table">
-                <thead>
-                    <tr>
-                        <th>Parameter</th>
-                        <th>Type</th>
-                        <th>Description</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td>start_date</td>
-                        <td>date (YYYY-MM-DD)</td>
-                        <td>Filter from date</td>
-                    </tr>
-                    <tr>
-                        <td>end_date</td>
-                        <td>date (YYYY-MM-DD)</td>
-                        <td>Filter to date</td>
-                    </tr>
-                    <tr>
-                        <td>status</td>
-                        <td>string</td>
-                        <td>Filter by status (Pending, Completed, Failed)</td>
-                    </tr>
-                    <tr>
-                        <td>page</td>
-                        <td>integer</td>
-                        <td>Page number for pagination</td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-
-        <!-- Webhooks -->
-        <div class="doc-section" id="webhooks">
-            <h2>Webhooks</h2>
-            <p>Real-time event notifications for important platform events.</p>
-
-            <h5 class="mt-4">Event Types</h5>
-            <ul>
-                <li><code>order.completed</code> - Order completed successfully</li>
-                <li><code>order.failed</code> - Order failed</li>
-                <li><code>payment.completed</code> - Payment confirmed</li>
-                <li><code>payment.failed</code> - Payment failed</li>
-                <li><code>refund.issued</code> - Refund processed</li>
-            </ul>
-
-            <h5 class="mt-4">Webhook Payload Structure</h5>
-            <pre><code class="language-json">{
-  "event": "order.completed",
-  "data": {
-    "order_id": "ORD_1234567890",
-    "external_order_id": "EXT_ORD_123",
-    "service_name": "Instagram Followers",
-    "quantity": 500,
-    "status": "Completed"
-  },
-  "timestamp": 1234567890,
-  "signature": "hmac_sha256_signature"
-}</code></pre>
-
-            <h5 class="mt-4">Verifying Webhooks</h5>
-            <p>Verify webhook signatures using HMAC-SHA256 with your webhook secret:</p>
-            <pre><code class="language-php">$signature = hash_hmac('sha256', $payload, WEBHOOK_SECRET_KEY);
-if (hash_equals($signature, $_SERVER['HTTP_X_WEBHOOK_SIGNATURE'])) {
-    // Webhook is valid
-}</code></pre>
-
-            <h5 class="mt-4">Setting Up Webhooks</h5>
-            <div class="endpoint">
-                <span class="method post">POST</span>
-                <code>/api/webhooks</code>
-                <p class="mt-2"><strong>Description:</strong> Create a new webhook</p>
-            </div>
-
-            <pre><code class="language-bash">curl -X POST https://yoursite.com/api/webhooks \
-  -H "Authorization: Bearer API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "url": "https://your-server.com/webhooks",
-    "events": ["order.completed", "payment.completed"]
-  }'</code></pre>
-        </div>
-
-        <!-- Error Handling -->
-        <div class="doc-section" id="errors">
-            <h2>Error Handling</h2>
-            <p>The API returns standard HTTP status codes and error messages.</p>
-
-            <h5 class="mt-4">HTTP Status Codes</h5>
-            <table class="parameter-table">
-                <thead>
-                    <tr>
-                        <th>Code</th>
-                        <th>Meaning</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td>200</td>
-                        <td>OK - Request successful</td>
-                    </tr>
-                    <tr>
-                        <td>201</td>
-                        <td>Created - Resource created successfully</td>
-                    </tr>
-                    <tr>
-                        <td>400</td>
-                        <td>Bad Request - Invalid parameters</td>
-                    </tr>
-                    <tr>
-                        <td>401</td>
-                        <td>Unauthorized - Missing or invalid API key</td>
-                    </tr>
-                    <tr>
-                        <td>403</td>
-                        <td>Forbidden - Insufficient permissions</td>
-                    </tr>
-                    <tr>
-                        <td>404</td>
-                        <td>Not Found - Resource not found</td>
-                    </tr>
-                    <tr>
-                        <td>429</td>
-                        <td>Too Many Requests - Rate limit exceeded</td>
-                    </tr>
-                    <tr>
-                        <td>500</td>
-                        <td>Server Error - Internal server error</td>
-                    </tr>
-                </tbody>
-            </table>
-
-            <h5 class="mt-4">Error Response Format</h5>
-            <pre><code class="language-json">{
+  "message": "Order placed successfully.",
+  "order_id": 456,
+  "external_order_id": "FW-789",
+  "service_id": 123,
+  "quantity": 500,
+  "cost": 125,
+  "new_balance": 4875
+}</div></section>
+  <section class="docs-card" id="examples"><h4><i class="bi bi-terminal me-2"></i>Server-side examples</h4><h5>PHP</h5><div class="code">$key = getenv('ROYAL_SMM_API_KEY');
+$ch = curl_init('<?= htmlspecialchars($baseUrl) ?>/api-services.php?q=123');
+curl_setopt_array($ch, [
+  CURLOPT_RETURNTRANSFER =&gt; true,
+  CURLOPT_HTTPHEADER =&gt; ['X-API-Key: ' . $key]
+]);
+$response = json_decode(curl_exec($ch), true);
+curl_close($ch);</div><h5>Node.js</h5><div class="code">const response = await fetch('<?= htmlspecialchars($baseUrl) ?>/place-order.php', {
+  method: 'POST',
+  headers: {'X-API-Key': process.env.ROYAL_SMM_API_KEY, 'Content-Type': 'application/json'},
+  body: JSON.stringify({service_id: 123, quantity: 500, link: 'https://instagram.com/username'})
+});
+const result = await response.json();</div><h5>Python</h5><div class="code">import os, requests
+r = requests.post('<?= htmlspecialchars($baseUrl) ?>/place-order.php',
+  headers={'X-API-Key': os.environ['ROYAL_SMM_API_KEY']},
+  json={'service_id': 123, 'quantity': 500, 'link': 'https://instagram.com/username'})
+print(r.json())</div></section>
+  <section class="docs-card" id="errors"><h4><i class="bi bi-exclamation-triangle me-2"></i>Errors and HTTP codes</h4><table class="param"><tr><th>Code</th><th>Meaning</th><th>Action</th></tr><tr><td>401</td><td>Missing, invalid, or old API key</td><td>Check the secret or regenerate and update your server.</td></tr><tr><td>403</td><td>Account is not eligible or inactive</td><td>Complete the $5 deposit or $10 completed-spend requirement.</td></tr><tr><td>405</td><td>Wrong HTTP method</td><td>Use GET for services and POST for orders.</td></tr><tr><td>422</td><td>Invalid service, link, or quantity</td><td>Read the service limits and correct the request.</td></tr><tr><td>503</td><td>Provider catalogue unavailable</td><td>Retry with backoff; do not submit repeatedly.</td></tr></table><div class="code mt-3">{
   "success": false,
-  "message": "Insufficient balance",
-  "error_code": "INSUFFICIENT_BALANCE",
-  "timestamp": 1234567890
-}</code></pre>
-
-            <h5 class="mt-4">Common Error Codes</h5>
-            <ul>
-                <li><code>INVALID_API_KEY</code> - Invalid or expired API key</li>
-                <li><code>INSUFFICIENT_BALANCE</code> - User has insufficient balance</li>
-                <li><code>SERVICE_NOT_FOUND</code> - Requested service not found</li>
-                <li><code>INVALID_QUANTITY</code> - Quantity is outside allowed range</li>
-                <li><code>RATE_LIMIT_EXCEEDED</code> - Too many requests</li>
-                <li><code>EXTERNAL_API_ERROR</code> - Error from upstream provider</li>
-            </ul>
-        </div>
-
-        <!-- Footer -->
-        <div class="doc-section text-center">
-            <p class="mb-0"><small>Last updated: <?php echo date('Y-m-d'); ?> | Version <?php echo APP_VERSION; ?></small></p>
-            <p><small>For support, contact: support@<?php echo strtolower(APP_NAME); ?>.com</small></p>
-        </div>
-    </div>
-
-    <script>
-        hljs.highlightAll();
-    </script>
-</body>
-</html>
+  "message": "Human-readable explanation",
+  "error": "Machine-readable context"
+}</div></section>
+</main>
+<?php ui_foot(); ?>
