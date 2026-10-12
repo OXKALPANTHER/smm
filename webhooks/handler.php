@@ -4,7 +4,7 @@
  * Processes incoming webhooks from payment gateways and external APIs
  */
 
-require_once 'config.php';
+require_once __DIR__ . '/../config.php';
 
 class WebhookHandler {
     
