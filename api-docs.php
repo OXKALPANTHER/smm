@@ -135,7 +135,7 @@ requireLogin();
 <body>
     <div class="container">
         <div class="mb-3">
-            <a href="orders.php" class="btn btn-outline-light btn-sm rounded-pill" style="border-color:rgba(255,255,255,.35);color:#fff;background:rgba(255,255,255,.14);backdrop-filter:blur(8px);">
+            <a href="orders.php" onclick="if(history.length>1){history.back();return false;}" class="btn btn-outline-light btn-sm rounded-pill" style="border-color:rgba(255,255,255,.35);color:#fff;background:rgba(255,255,255,.14);backdrop-filter:blur(8px);">
                 <i class="bi bi-arrow-left"></i> Back
             </a>
         </div>

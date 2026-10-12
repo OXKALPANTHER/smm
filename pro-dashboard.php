@@ -46,7 +46,7 @@ ui_head('Pro Dashboard — ' . APP_NAME, 'app');
 
 <div class="container px-3" style="margin-top:-1.2rem;">
     <div class="d-flex justify-content-between align-items-center mb-3">
-        <a href="orders.php" class="btn btn-outline-light btn-sm rounded-pill" style="border-color:rgba(255,255,255,.4);color:#fff;background:rgba(255,255,255,.12);backdrop-filter:blur(8px);">
+        <a href="orders.php" onclick="if(history.length>1){history.back();return false;}" class="btn btn-outline-light btn-sm rounded-pill" style="border-color:rgba(255,255,255,.4);color:#fff;background:rgba(255,255,255,.12);backdrop-filter:blur(8px);">
             <i class="bi bi-arrow-left"></i> Back
         </a>
     </div>

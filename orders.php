@@ -134,9 +134,9 @@ foreach ($orders as $o) {
 
 $tabs = [
     'all' => ['Zote', 'bi-collection'],
-    'active' => ['Zinaendelea', 'bi-hourglass-split'],
-    'completed' => ['Zimekamilika', 'bi-check2-circle'],
-    'canceled' => ['Zilizoghairiwa', 'bi-x-circle'],
+    'active' => ['Pending / Zinaendelea', 'bi-hourglass-split'],
+    'completed' => ['Completed / Zimekamilika', 'bi-check2-circle'],
+    'canceled' => ['Cancelled / Zilizoghairiwa', 'bi-x-circle'],
 ];
 
 $gateways = [
@@ -564,19 +564,6 @@ ui_head('Orders Zangu — ' . APP_NAME, 'app');
 
 <div class="container px-3" style="margin-top:-1.5rem;">
 
-    <div class="card-soft" style="margin-bottom:2.5rem;">
-        <div class="d-flex align-items-center justify-content-between gap-2 flex-wrap">
-            <div>
-                <div class="section-title"><span class="section-ico"><i class="bi bi-rocket-fill"></i></span> Dashboard
-                    ya Pro</div>
-                <p class="mb-0 small text-muted" style="margin-left:3.1rem;">Kipengele cha kuzalisha na kusimamia huduma
-                    cha Pro kimehifadhiwa kwenye dashboard maalum.</p>
-            </div>
-            <a href="pro-dashboard.php" class="btn-grad"
-                style="width:auto;padding:.7rem 1rem;border-radius:999px;font-size:.82rem;">Fungua Dashboard ya Pro</a>
-        </div>
-    </div>
-
     <!-- Search Box -->
     <div class="search-box">
         <i class="bi bi-search"></i>
@@ -783,52 +770,36 @@ ui_foot(<<<'JS'
   const searchInput = document.getElementById('searchInput');
   const clearBtn = document.getElementById('clearBtn');
   const providers = ['primary', 'partner'];
+  const activeGroup = {primary:'all', partner:'all'};
 
-  function filterAll() {
-    const query = searchInput.value.toLowerCase().trim();
-    clearBtn.style.display = query ? 'block' : 'none';
-
-    providers.forEach(provider => {
-      const cards = document.querySelectorAll(`#ordersList-${provider} [data-search]`);
-      const empty = document.getElementById(`emptyFiltered-${provider}`);
-      let shown = 0;
-
-      cards.forEach(c => {
-        const matches = c.dataset.search.includes(query);
-        c.style.display = matches ? '' : 'none';
-        if (matches) shown++;
-      });
-
-      if (empty) empty.style.display = (shown || !query) ? 'none' : '';
-    });
-  }
-
-  // Search input listener
-  searchInput.addEventListener('input', filterAll);
-
-  // Tab filtering
-  const tabs = document.querySelectorAll('.otab');
-  tabs.forEach(t => t.addEventListener('click', () => {
-    const provider = t.dataset.gw;
-    const tabsInProvider = document.querySelectorAll(`.otabs[data-gw="${provider}"] .otab`);
-    
-    tabsInProvider.forEach(x => x.classList.remove('active'));
-    t.classList.add('active');
-
-    const group = t.dataset.g;
+  function applyFilter(provider) {
+    const query = (searchInput.value || '').toLowerCase().trim();
+    const group = activeGroup[provider] || 'all';
     const cards = document.querySelectorAll(`#ordersList-${provider} [data-group]`);
     const empty = document.getElementById(`emptyFiltered-${provider}`);
     let shown = 0;
-
-    cards.forEach(c => {
-      const ok = (group === 'all' || c.dataset.group === group);
-      const searchOk = searchInput.value.toLowerCase().trim() === '' || c.dataset.search.includes(searchInput.value.toLowerCase());
-      c.style.display = (ok && searchOk) ? '' : 'none';
-      if (ok && searchOk) shown++;
+    cards.forEach(card => {
+      const matchesGroup = group === 'all' || card.dataset.group === group;
+      const matchesSearch = !query || (card.dataset.search || '').toLowerCase().includes(query);
+      card.hidden = !(matchesGroup && matchesSearch);
+      if (!card.hidden) shown++;
     });
+    if (empty) empty.style.display = cards.length && !shown ? '' : 'none';
+  }
 
-    if (empty) empty.style.display = shown ? 'none' : '';
+  function applyAll() {
+    clearBtn.style.display = searchInput.value.trim() ? 'block' : 'none';
+    providers.forEach(applyFilter);
+  }
+
+  searchInput.addEventListener('input', applyAll);
+  document.querySelectorAll('.otab').forEach(tab => tab.addEventListener('click', () => {
+    const provider = tab.dataset.gw;
+    activeGroup[provider] = tab.dataset.g;
+    document.querySelectorAll(`.otabs[data-gw="${provider}"] .otab`).forEach(item => item.classList.toggle('active', item === tab));
+    applyFilter(provider);
   }));
+  applyAll();
 })();
 
 // Favorite orders: save or remove without leaving the order list.
