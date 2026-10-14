@@ -140,6 +140,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $reply(true, 'Notification imetumwa.');
                 break;
 
+            case 'send_user_email':
+                $userId = (int) ($in['user_id'] ?? 0);
+                $subject = trim((string) ($in['subject'] ?? ''));
+                $message = trim((string) ($in['message'] ?? ''));
+                if ($userId <= 0 || $subject === '' || $message === '' || strlen($subject) > 180 || strlen($message) > 10000) {
+                    $reply(false, 'Chagua mtumiaji mmoja, weka mada (hadi herufi 180) na ujumbe (hadi herufi 10,000).');
+                }
+                $userRow = $conn->prepare('SELECT id, username, email FROM users WHERE id = ? LIMIT 1');
+                $userRow->bind_param('i', $userId);
+                $userRow->execute();
+                $recipient = $userRow->get_result()->fetch_assoc();
+                if (!$recipient || !validateEmail($recipient['email'] ?? '')) {
+                    $reply(false, 'Mtumiaji huyo hana anwani halali ya barua pepe.');
+                }
+                $sent = sendAdminUpdateEmail($recipient['email'], $recipient['username'], $subject, $message);
+                logActivity($admin_id, 'admin_send_email', "Email " . ($sent ? 'sent' : 'failed') . " to user_id={$userId}", $sent ? 'success' : 'failed');
+                if (!$sent) {
+                    $reply(false, 'Barua pepe haikutumwa. Hakikisha huduma ya email imesanidiwa kisha ujaribu tena.');
+                }
+                $reply(true, 'Barua pepe imetumwa kwa ' . $recipient['username'] . '.');
+                break;
+
             case 'delete_notification':
                 $notificationId = (int) ($in['notification_id'] ?? 0);
                 if ($notificationId <= 0 || !deleteNotification($notificationId)) {
@@ -656,7 +678,7 @@ ui_head(APP_NAME . ' — Admin', 'admin', $extraHead);
                         <select class="form-select" id="notificationUserId">
                             <option value="">-- Chagua --</option>
                             <?php foreach ($users as $u): ?>
-                                <option value="<?= (int) $u['id'] ?>"><?= htmlspecialchars($u['username']) ?></option>
+                                <option value="<?= (int) $u['id'] ?>"><?= htmlspecialchars($u['username']) ?> — <?= htmlspecialchars($u['email']) ?></option>
                             <?php endforeach; ?>
                         </select>
                     </div>
@@ -670,21 +692,22 @@ ui_head(APP_NAME . ' — Admin', 'admin', $extraHead);
                         </select>
                     </div>
                     <div class="col-md-3">
-                        <label class="form-label">Kichwa</label>
+                        <label class="form-label">Kichwa / mada ya email</label>
                         <input type="text" class="form-control" id="notificationTitle"
-                            placeholder="Mfano: Update ya mfumo">
+                            maxlength="180" placeholder="Mfano: Update ya mfumo">
                     </div>
                 </div>
                 <div class="mt-3">
                     <label class="form-label">Ujumbe</label>
                     <textarea class="form-control" id="notificationMessage" rows="4"
-                        placeholder="Andika ujumbe wa notisi..."></textarea>
+                        maxlength="10000" placeholder="Andika ujumbe wa notisi au email..."></textarea>
                 </div>
                 <div class="d-flex justify-content-between align-items-center mt-3 flex-wrap gap-2">
-                    <small class="text-muted">Notisi zitatumwa moja kwa moja kwenye mfumo wa ndani na zinaweza kuonekana
-                        kwenye ukurasa wa notisi.</small>
-                    <button class="btn-grad" style="width:auto;padding:.65rem 1.2rem;" onclick="sendNotification()"><i
-                            class="bi bi-send"></i> Tuma</button>
+                    <small class="text-muted">Tuma notisi ndani ya app, au email moja kwa mteja aliyechaguliwa kupitia email ya mfumo.</small>
+                    <div class="d-flex gap-2 flex-wrap">
+                        <button class="btn btn-outline-primary rounded-pill" id="sendUserEmailButton" type="button" onclick="sendUserEmail()"><i class="bi bi-envelope-paper me-1"></i> Tuma Email</button>
+                        <button class="btn-grad" style="width:auto;padding:.65rem 1.2rem;" type="button" onclick="sendNotification()"><i class="bi bi-bell me-1"></i> Tuma Notisi</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1058,6 +1081,23 @@ async function sendNotification(){
   if(j.success){ document.getElementById('notificationTitle').value=''; document.getElementById('notificationMessage').value=''; }
 }
 
+async function sendUserEmail(){
+  const userId=document.getElementById('notificationUserId').value;
+  const subject=document.getElementById('notificationTitle').value.trim();
+  const message=document.getElementById('notificationMessage').value.trim();
+  const button=document.getElementById('sendUserEmailButton');
+  if(document.getElementById('notificationTarget').value!=='user') return toast('Chagua mteja mmoja pekee kwa email.','warning');
+  if(!userId) return toast('Chagua mpokeaji wa email.','warning');
+  if(!subject||!message) return toast('Jaza mada na ujumbe wa email.','warning');
+  button.disabled=true;
+  try{
+    const j=await postAction({action:'send_user_email',user_id:userId,subject,message});
+    toast(j.message,j.success?'success':'danger');
+    if(j.success){document.getElementById('notificationTitle').value='';document.getElementById('notificationMessage').value='';}
+  }catch(e){toast('Email haikutumwa. Tafadhali jaribu tena.','danger');}
+  finally{button.disabled=false;}
+}
+
 async function deleteNotification(id, button){
     if(!confirm('Delete this notification permanently?')) return;
     const card=button.closest('.notification-item');
@@ -1086,9 +1126,11 @@ document.querySelectorAll('.notification-filter').forEach(filter=>filter.addEven
 
 const targetSelect=document.getElementById('notificationTarget');
 const userSelectWrap=document.getElementById('userSelectWrap');
+const sendUserEmailButton=document.getElementById('sendUserEmailButton');
 function toggleUserSelector(){
   if(!userSelectWrap) return;
   userSelectWrap.style.display = targetSelect.value === 'user' ? '' : 'none';
+  if(sendUserEmailButton) sendUserEmailButton.hidden = targetSelect.value !== 'user';
 }
 targetSelect.addEventListener('change', toggleUserSelector);
 toggleUserSelector();
