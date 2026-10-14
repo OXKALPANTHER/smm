@@ -35,7 +35,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['change_password'])) {
 }
 
 // User info
-$stmt = $conn->prepare("SELECT username, email, phone, balance, created_at, referral_code FROM users WHERE id = ?");
+$stmt = $conn->prepare("SELECT username, email, phone, balance, created_at, referral_code, is_verified FROM users WHERE id = ?");
 $stmt->bind_param("i", $user_id);
 $stmt->execute();
 $user = $stmt->get_result()->fetch_assoc();
@@ -173,8 +173,9 @@ ui_head('Profile — ' . APP_NAME, 'app');
         <div class="d-flex align-items-center gap-3">
             <div class="avatar"><i class="bi bi-person-circle"></i></div>
             <div>
-                <h4 class="fw-bold mb-0"><?= htmlspecialchars($user['username']) ?></h4>
+                <h4 class="fw-bold mb-0"><?= htmlspecialchars($user['username']) ?> <?= verifiedBadge((int) ($user['is_verified'] ?? 0) === 1) ?></h4>
                 <p class="mb-0 small opacity-75"><?= htmlspecialchars($user['email']) ?></p>
+                <?php if (!empty($user['is_verified'])): ?><span class="badge rounded-pill mt-1" style="background:rgba(255,255,255,.2);color:#fff;"><i class="bi bi-patch-check-fill me-1"></i>Verified pricing</span><?php endif; ?>
             </div>
         </div>
     </div>
@@ -221,6 +222,7 @@ ui_head('Profile — ' . APP_NAME, 'app');
         <div class="section-title mb-3">
             <div class="section-ico"><i class="bi bi-person-vcard"></i></div> Taarifa za Akaunti
         </div>
+        <div class="d-flex justify-content-between py-2 border-bottom"><span class="text-muted small">Account status</span><span class="fw-semibold"><?= !empty($user['is_verified']) ? 'Verified ' . verifiedBadge(true) . ' · Verified pricing' : 'Unverified' ?></span></div>
         <div class="d-flex justify-content-between py-2 border-bottom"><span class="text-muted small">Namba ya
                 Simu</span><span class="fw-semibold"><?= htmlspecialchars($user['phone'] ?: '—') ?></span></div>
         <div class="d-flex justify-content-between py-2 border-bottom"><span class="text-muted small">Jumla

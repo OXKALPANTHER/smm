@@ -60,6 +60,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $reply(true, 'Status imebadilishwa.');
                 break;
 
+            case 'set_verification':
+                $uid = (int) ($in['user_id'] ?? 0);
+                if ($uid <= 0) {
+                    $reply(false, 'Mtumiaji hajachaguliwa.');
+                }
+                $isVerified = !empty($in['is_verified']) ? 1 : 0;
+                $stmt = $conn->prepare("UPDATE users SET is_verified = ? WHERE id = ?");
+                $stmt->bind_param('ii', $isVerified, $uid);
+                if (!$stmt->execute()) {
+                    $reply(false, 'Imeshindikana kubadilisha uthibitisho.');
+                }
+                logActivity($admin_id, 'admin_set_verification', "User #{$uid} -> " . ($isVerified ? 'verified' : 'unverified'));
+                $reply(true, $isVerified ? 'Akaunti imethibitishwa.' : 'Uthibitisho wa akaunti umeondolewa.');
+                break;
+
             case 'delete_user':
                 $uid = (int) ($in['user_id'] ?? 0);
                 if ($uid === (int) $admin_id)
@@ -149,7 +164,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
  * DATA
  * ============================================================ */
 $adminPageLimit = 250;
-$users = $conn->query("SELECT id, username, email, phone, balance, role, status, created_at FROM users ORDER BY id DESC LIMIT {$adminPageLimit}")->fetch_all(MYSQLI_ASSOC);
+$users = $conn->query("SELECT id, username, email, phone, balance, role, status, is_verified, created_at FROM users ORDER BY id DESC LIMIT {$adminPageLimit}")->fetch_all(MYSQLI_ASSOC);
 $orders = $conn->query("SELECT o.id, o.service_name, o.platform, o.quantity, o.price, o.status, o.external_order_id, o.link, o.created_at, u.username
                         FROM orders o LEFT JOIN users u ON o.user_id = u.id ORDER BY o.id DESC LIMIT 200")->fetch_all(MYSQLI_ASSOC);
 
@@ -784,6 +799,7 @@ ui_head(APP_NAME . ' — Admin', 'admin', $extraHead);
                     <tr>
                         <th>ID</th>
                         <th>Username</th>
+                        <th>Verification</th>
                         <th>Email</th>
                         <th>Balance</th>
                         <th>Role</th>
@@ -795,7 +811,8 @@ ui_head(APP_NAME . ' — Admin', 'admin', $extraHead);
                     <?php foreach ($users as $u): ?>
                         <tr>
                             <td class="text-muted">#<?= $u['id'] ?></td>
-                            <td class="fw-semibold"><?= htmlspecialchars($u['username']) ?></td>
+                            <td class="fw-semibold"><?= htmlspecialchars($u['username']) ?> <?= verifiedBadge((int) ($u['is_verified'] ?? 0) === 1) ?></td>
+                            <td><span class="badge-soft <?= !empty($u['is_verified']) ? 'badge-success' : 'badge-secondary' ?>"><?= !empty($u['is_verified']) ? 'Verified' : 'Unverified' ?></span></td>
                             <td><?= htmlspecialchars($u['email']) ?></td>
                             <td class="fw-bold text-success"><?= number_format($u['balance']) ?></td>
                             <td><span
@@ -811,6 +828,9 @@ ui_head(APP_NAME . ' — Admin', 'admin', $extraHead);
                                 <button class="btn-ico" title="Hariri"
                                     onclick='openManage(<?= htmlspecialchars(json_encode($u), ENT_QUOTES) ?>)'><i
                                         class="bi bi-gear"></i></button>
+                                <button class="btn-ico" title="<?= !empty($u['is_verified']) ? 'Ondoa uthibitisho' : 'Thibitisha akaunti' ?>"
+                                    onclick="toggleVerification(<?= (int) $u['id'] ?>, <?= empty($u['is_verified']) ? 'true' : 'false' ?>)"><i
+                                        class="bi <?= !empty($u['is_verified']) ? 'bi-patch-check-fill text-primary' : 'bi-patch-check' ?>"></i></button>
                                 <button class="btn-ico" title="Futa"
                                     onclick='delUser(<?= (int) $u['id'] ?>,"<?= htmlspecialchars(addslashes($u['username'])) ?>")'><i
                                         class="bi bi-trash"></i></button>
@@ -970,6 +990,12 @@ document.querySelectorAll('.sidebar a[href^="#"]').forEach(a=>a.addEventListener
 async function postAction(payload){
   const r=await fetch('admin.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
   return r.json();
+}
+
+async function toggleVerification(id, verified){
+  const j=await postAction({action:'set_verification',user_id:id,is_verified:verified?1:0});
+  toast(j.message, j.success?'success':'danger');
+  if(j.success) setTimeout(()=>location.reload(),700);
 }
 
 // Balance

@@ -55,12 +55,23 @@ if ($service_id <= 0 || $quantity <= 0 || $link === '') {
     jsonOut(false, 'Tafadhali jaza huduma, idadi na link.', [], 422);
 }
 
+// Load the customer before resolving catalogue prices so the server always
+// applies this account's own tier (never a client-supplied price or status).
+$stmt = $conn->prepare("SELECT balance, email, username FROM users WHERE id = ?");
+$stmt->bind_param("i", $user_id);
+$stmt->execute();
+$u = $stmt->get_result()->fetch_assoc();
+if (!$u) {
+    jsonOut(false, 'Akaunti haipatikani.', [], 401);
+}
+$markupPercent = getUserPriceMarkupPercent($user_id);
+
 try {
     // FastWay is the authoritative catalogue and order provider for all new
     // orders. Ignoring stale client-side provider flags prevents a FastWay ID
     // from being resolved against an old Boost catalogue.
     $provider = defined('PRIMARY_PROVIDER') ? PRIMARY_PROVIDER : 'fastway';
-    $services = (new APIHandler($provider))->getAllServices();
+    $services = (new APIHandler($provider))->getAllServices(true, $markupPercent);
 
     // Resolve the service from the live catalogue (authoritative price/limits).
     $service = null;
@@ -91,11 +102,7 @@ try {
         jsonOut(false, 'Bei ya huduma hii haipatikani.', [], 422);
     }
 
-    // Check the user's balance.
-    $stmt = $conn->prepare("SELECT balance, email, username FROM users WHERE id = ?");
-    $stmt->bind_param("i", $user_id);
-    $stmt->execute();
-    $u = $stmt->get_result()->fetch_assoc();
+    // Check the user's balance against the tier-priced amount.
     $balance = (float) ($u['balance'] ?? 0);
     $email = $u['email'] ?? null;
     $username = $u['username'] ?? 'Mteja';

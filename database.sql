@@ -26,6 +26,7 @@ CREATE TABLE users (
     balance DECIMAL(15,2) DEFAULT 0.00,
     role ENUM('user', 'admin', 'moderator') DEFAULT 'user',
     status ENUM('active', 'suspended', 'banned') DEFAULT 'active',
+    is_verified TINYINT(1) NOT NULL DEFAULT 0,
     two_factor_enabled BOOLEAN DEFAULT FALSE,
     two_factor_secret VARCHAR(255),
     referral_code VARCHAR(20) UNIQUE,

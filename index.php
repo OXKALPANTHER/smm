@@ -7,12 +7,13 @@ requireLogin();
 $user_id = $_SESSION['user_id'];
 
 // Current user + balance
-$stmt = $conn->prepare("SELECT username, balance FROM users WHERE id = ?");
+$stmt = $conn->prepare("SELECT username, balance, is_verified FROM users WHERE id = ?");
 $stmt->bind_param("i", $user_id);
 $stmt->execute();
 $user = $stmt->get_result()->fetch_assoc();
 $tzsBalance = (float)($user['balance'] ?? 0);
 $username   = $user['username'] ?? 'Mteja';
+$isVerified = (int) ($user['is_verified'] ?? 0) === 1;
 $requestedServiceId = trim((string) ($_GET['service_id'] ?? ''));
 $reorderQuantity = 100;
 $reorderLink = '';
@@ -373,7 +374,7 @@ function statusBadge($status) {
     <!-- Top bar -->
     <div class="topbar">
         <div class="brand"><?= ui_logo(true, 40) ?></div>
-        <div class="text-muted" style="font-size:.74rem;">Habari, <?= htmlspecialchars($username) ?> 👋</div>
+        <div class="text-muted" style="font-size:.74rem;">Habari, <?= htmlspecialchars($username) ?> <?= verifiedBadge($isVerified) ?> 👋<?php if ($isVerified): ?> <span class="badge rounded-pill" style="background:#e8f4ff;color:#1475c7;font-size:.65rem;"><i class="bi bi-patch-check-fill me-1"></i>Verified pricing</span><?php endif; ?></div>
     </div>
 
     <!-- Balance hero -->

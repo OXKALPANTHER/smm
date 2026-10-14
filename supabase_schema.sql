@@ -44,6 +44,7 @@ CREATE TABLE users (
     balance             NUMERIC(15,2) DEFAULT 0.00,
     role                TEXT DEFAULT 'user'   CHECK (role   IN ('user','admin','moderator')),
     status              TEXT DEFAULT 'active' CHECK (status IN ('active','suspended','banned')),
+    is_verified         BOOLEAN NOT NULL DEFAULT FALSE,
     two_factor_enabled  SMALLINT DEFAULT 0,
     two_factor_secret   TEXT,
     referral_code       TEXT UNIQUE,

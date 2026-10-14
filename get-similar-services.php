@@ -37,7 +37,8 @@ if ($service_id <= 0 && $platform === '') {
 try {
     // Get all services from fallback provider
     $api = new APIHandler('fastway');
-    $all_services = $api->getAllServices();
+    $markupPercent = getUserPriceMarkupPercent((int) $_SESSION['user_id']);
+    $all_services = $api->getAllServices(true, $markupPercent);
 
     if (empty($all_services)) {
         jsonOut(true, 'Huduma nyingine hazipo kwa sasa.', ['services' => []]);

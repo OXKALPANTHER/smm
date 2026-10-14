@@ -4,10 +4,11 @@ require_once 'includes/ui.php';
 requireLogin();
 
 $userId = (int) $_SESSION['user_id'];
-$stmt = $conn->prepare('SELECT username, balance FROM users WHERE id = ?');
+$stmt = $conn->prepare('SELECT username, balance, is_verified FROM users WHERE id = ?');
 $stmt->bind_param('i', $userId);
 $stmt->execute();
 $user = $stmt->get_result()->fetch_assoc() ?: [];
+$isVerified = (int) ($user['is_verified'] ?? 0) === 1;
 $platformConfig = json_decode(PLATFORMS, true) ?: [];
 
 ui_head('Huduma — ' . APP_NAME, 'app');
@@ -17,7 +18,7 @@ ui_nav('services', ['balance' => (float) ($user['balance'] ?? 0)]);
 .catalogue-card{background:#fff;border-radius:22px;padding:1rem;box-shadow:0 14px 34px rgba(43,54,116,.07);border:1px solid rgba(43,54,116,.05);margin-bottom:.75rem}.catalogue-card h6{font-weight:700;margin:0 0 .25rem}.catalogue-meta{font-size:.75rem;color:#8a93b2}.catalogue-price{font-weight:800;color:#4834d4;font-size:1rem}.id-chip{font-size:.68rem;background:#f0f2fb;color:#5a6a85;border-radius:999px;padding:.25rem .55rem;font-weight:700}.result-count{font-size:.75rem;color:#8a93b2}.catalogue-tabs{display:flex;gap:.5rem;overflow-x:auto;padding:.15rem .1rem .65rem;scrollbar-width:thin}.catalogue-tabs::-webkit-scrollbar{height:4px}.catalogue-tabs::-webkit-scrollbar-thumb{background:#dfe4f2;border-radius:99px}.catalogue-tab{border:1px solid #e5e9f3;background:#fff;color:#5a6a85;border-radius:999px;padding:.55rem .85rem;white-space:nowrap;font-size:.76rem;font-weight:700;cursor:pointer;transition:.15s}.catalogue-tab.active{background:linear-gradient(135deg,#6c5ce7,#4834d4);border-color:#6c5ce7;color:#fff;box-shadow:0 8px 18px rgba(72,52,212,.2)}.category-wrap{display:flex;flex-wrap:wrap;gap:.45rem;margin:.15rem 0 1rem}.category-tab{border:1px solid #e7eaf3;background:#f8f9fd;color:#65718d;border-radius:12px;padding:.48rem .7rem;font-size:.72rem;font-weight:700;cursor:pointer}.category-tab.active{background:#e9e6ff;border-color:#b8b0ff;color:#4834d4}.catalogue-empty{padding:1.3rem;text-align:center;color:#8a93b2}
 </style>
 <div class="container px-3" style="padding-top:4.5rem;">
-  <div class="hero mb-3"><div class="d-flex align-items-center gap-2"><i class="bi bi-list-stars fs-3"></i><div><h4 class="fw-bold mb-1">Huduma zote</h4><p class="mb-0 small opacity-75">Chagua platform na category kuona huduma zote pamoja na gharama zake za TSh.</p></div></div></div>
+  <div class="hero mb-3"><div class="d-flex align-items-center gap-2"><i class="bi bi-list-stars fs-3"></i><div><h4 class="fw-bold mb-1">Huduma zote</h4><p class="mb-0 small opacity-75">Chagua platform na category kuona huduma zote pamoja na gharama zake za TSh.</p><?php if ($isVerified): ?><span class="badge rounded-pill mt-1" style="background:rgba(255,255,255,.2);color:#fff;"><i class="bi bi-patch-check-fill me-1"></i>Verified pricing</span><?php endif; ?></div></div></div>
   <div class="card-soft mb-3">
     <label class="form-label" for="serviceSearch">Tafuta huduma au Service ID</label>
     <div class="input-group"><span class="input-group-text bg-white border-end-0" style="border-radius:15px 0 0 15px"><i class="bi bi-search"></i></span><input id="serviceSearch" class="form-control border-start-0" placeholder="Mfano: 5557 au Followers" autocomplete="off"><button id="clearSearch" class="btn btn-light" type="button">Clear</button></div>
