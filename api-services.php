@@ -11,9 +11,14 @@ header('Content-Type: application/json');
 
 // Browser sessions may use this endpoint for the customer UI. External
 // developer requests must provide an eligible API key.
+$pricingUserId = 0;
 if (!isLoggedIn() || developerApiKeyFromRequest() !== '') {
-    requireDeveloperApi();
+    $apiAuth = requireDeveloperApi();
+    $pricingUserId = (int) $apiAuth['user']['id'];
+} else {
+    $pricingUserId = (int) $_SESSION['user_id'];
 }
+$markupPercent = getUserPriceMarkupPercent($pricingUserId);
 
 try {
     $platform = $_GET['platform'] ?? null;
@@ -38,7 +43,7 @@ try {
         // Global search across the whole catalogue (ID + name + category).
         // Reachable for every service, regardless of platform chips.
         $needle = function_exists('mb_strtolower') ? mb_strtolower($query) : strtolower($query);
-        $all = $api->getAllServices(!$refresh);
+        $all = $api->getAllServices(!$refresh, $markupPercent);
         $matched = array_values(array_filter($all, function ($s) use ($needle, $serviceId) {
             $hay = strtolower(($s['name'] ?? '') . ' ' . ($s['category'] ?? ''));
             return ($serviceId > 0 && (int) ($s['id'] ?? 0) === $serviceId)
@@ -61,7 +66,7 @@ try {
     }
 
     // Fetch services for a platform (or all when $platform is null)
-    $services = $api->getServices($platform, !$refresh);
+    $services = $api->getServices($platform, !$refresh, $markupPercent);
 
     if (empty($services)) {
         // Return error if no services

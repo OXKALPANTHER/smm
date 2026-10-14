@@ -147,9 +147,9 @@ class APIHandler
      * `category` query param and always returns the full catalogue, so we
      * cache the full formatted list once and filter by platform in PHP.
      */
-    public function getServices($platform = null, $use_cache = true)
+    public function getServices($platform = null, $use_cache = true, $markup_percent = null)
     {
-        $all = $this->getAllServices($use_cache);
+        $all = $this->getAllServices($use_cache, $markup_percent);
 
         if (!$platform) {
             return $all;
@@ -168,12 +168,16 @@ class APIHandler
     /**
      * Fetch and cache the full formatted service catalogue.
      */
-    public function getAllServices($use_cache = true)
+    public function getAllServices($use_cache = true, $markup_percent = null)
     {
         // Cache key is per-provider so legacy Boost and FastWay catalogues never
-        // overwrite each other's cache file. Bump whenever pricing rules change.
-        // v8 removes supplier USD/markup metadata from browser-facing service payloads.
-        $cache_key = "services_all_v8_" . $this->service;
+        // overwrite each other's cache file; isolate each account markup tier.
+        // v9 adds per-user markup pricing and continues hiding supplier metadata.
+        $markup_percent = $markup_percent === null
+            ? (defined('UNVERIFIED_PRICE_MARKUP_PERCENT') ? (float) UNVERIFIED_PRICE_MARKUP_PERCENT : 100.0)
+            : max(0.0, (float) $markup_percent);
+        $cache_markup = rtrim(rtrim(number_format($markup_percent, 4, '.', ''), '0'), '.');
+        $cache_key = "services_all_v9_{$this->service}_markup_{$cache_markup}";
 
         if ($use_cache) {
             $cached = $this->getCache($cache_key);
@@ -195,7 +199,7 @@ class APIHandler
 
         if ($response['success'] && !empty($response['data'])) {
             $services_data = $this->extractServicesFromResponse($response['data']);
-            $services = $this->formatServices($services_data);
+            $services = $this->formatServices($services_data, $markup_percent);
 
             if (!empty($services)) {
                 $this->setCache($cache_key, $services);
@@ -233,7 +237,7 @@ class APIHandler
     /**
      * Format services for consistency
      */
-    private function formatServices($services)
+    private function formatServices($services, $markup_percent = null)
     {
         if (!is_array($services)) {
             return [];
@@ -268,12 +272,10 @@ class APIHandler
                 $provider_price_per_k = $price_per_k;
             }
 
-            // Apply the configured customer pricing markup on top of the
-            // provider's real price. The FastWay primary catalogue is kept at
-            // the configured 78% markup.
-            $markup = defined('PRICE_MARKUP_PERCENT') && (float) PRICE_MARKUP_PERCENT > 0
-                ? (float) PRICE_MARKUP_PERCENT
-                : 78;
+            // Apply the caller's account-specific markup to the provider cost.
+            $markup = $markup_percent === null
+                ? (defined('UNVERIFIED_PRICE_MARKUP_PERCENT') ? (float) UNVERIFIED_PRICE_MARKUP_PERCENT : 100.0)
+                : max(0.0, (float) $markup_percent);
             $customer_price_per_k = $price_per_k > 0 ? $price_per_k * (1 + $markup / 100) : 0;
             $customer_rate = $customer_price_per_k > 0 ? $customer_price_per_k / 1000 : 0;
 

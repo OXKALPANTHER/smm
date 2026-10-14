@@ -232,6 +232,7 @@ function initializeSQLiteDatabase($pdo)
                 balance REAL DEFAULT 0.00,
                 role TEXT DEFAULT 'user',
                 status TEXT DEFAULT 'active',
+                is_verified INTEGER NOT NULL DEFAULT 0,
                 two_factor_enabled INTEGER DEFAULT 0,
                 two_factor_secret TEXT,
                 referral_code TEXT UNIQUE,
@@ -355,6 +356,11 @@ function initializeSQLiteDatabase($pdo)
  */
 function ensurePgRuntimeColumns($pdo)
 {
+    try {
+        $pdo->exec("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_verified BOOLEAN NOT NULL DEFAULT FALSE");
+    } catch (Exception $e) {
+        error_log('ensurePgRuntimeColumns (users.is_verified): ' . $e->getMessage());
+    }
     $additions = [
         'refill_available' => "SMALLINT DEFAULT 0",
         'refill_requested' => "SMALLINT DEFAULT 0",
@@ -441,6 +447,7 @@ function ensureMySqlRuntimeTables($pdo)
     $additions = [
         'users' => [
             'status' => "VARCHAR(20) DEFAULT 'active'",
+            'is_verified' => 'TINYINT(1) NOT NULL DEFAULT 0',
             'last_login' => 'DATETIME NULL',
         ],
         'orders' => [
@@ -541,6 +548,13 @@ function ensureNotificationsTable($pdo)
 function ensureRuntimeColumns($pdo)
 {
     try {
+        $userCols = [];
+        foreach ($pdo->query("PRAGMA table_info(users)") as $c) {
+            $userCols[$c['name']] = true;
+        }
+        if (!isset($userCols['is_verified'])) {
+            $pdo->exec('ALTER TABLE users ADD COLUMN is_verified INTEGER NOT NULL DEFAULT 0');
+        }
         $cols = [];
         foreach ($pdo->query("PRAGMA table_info(orders)") as $c) {
             $cols[$c['name']] = true;
@@ -749,10 +763,14 @@ define('API_MIN_SPEND_TZS', 35000);
 define('API_MIN_DEPOSIT_TZS', 17500);
 define('MINIMUM_TOPUP', 1000);
 define('MAXIMUM_TOPUP', 10000000);
-
 // Customer pricing markup added on top of the provider's real price (percent).
-// e.g. 78 => the user sees and pays 78% more than the FastWay API price.
-define('PRICE_MARKUP_PERCENT', max(0, (float) (getenv('PRICE_MARKUP_PERCENT') ?: 78)));
+// A 78% markup means provider cost * 1.78; the standard tier uses 100% (x2).
+$verifiedMarkupEnv = getenv('VERIFIED_PRICE_MARKUP_PERCENT');
+$unverifiedMarkupEnv = getenv('UNVERIFIED_PRICE_MARKUP_PERCENT');
+define('VERIFIED_PRICE_MARKUP_PERCENT', max(0, (float) ($verifiedMarkupEnv !== false && $verifiedMarkupEnv !== '' ? $verifiedMarkupEnv : 78)));
+define('UNVERIFIED_PRICE_MARKUP_PERCENT', max(0, (float) ($unverifiedMarkupEnv !== false && $unverifiedMarkupEnv !== '' ? $unverifiedMarkupEnv : 100)));
+// Legacy constant alias; set VERIFIED_PRICE_MARKUP_PERCENT for overrides.
+define('PRICE_MARKUP_PERCENT', VERIFIED_PRICE_MARKUP_PERCENT);
 
 // Referral reward: the inviter earns this % of a friend's FIRST top-up.
 define('REFERRAL_BONUS_PERCENT', 20);
@@ -1283,6 +1301,35 @@ function getUser($user_id)
     $stmt->bind_param("i", $user_id);
     $stmt->execute();
     return $stmt->get_result()->fetch_assoc();
+}
+
+/** Return the markup percentage for a customer's verified or standard tier. */
+function getUserPriceMarkupPercent($user_id)
+{
+    global $conn;
+    $verified = false;
+    $userId = (int) $user_id;
+    if ($userId > 0) {
+        $stmt = $conn->prepare('SELECT is_verified FROM users WHERE id = ? LIMIT 1');
+        if ($stmt) {
+            $stmt->bind_param('i', $userId);
+            if ($stmt->execute()) {
+                $row = $stmt->get_result()->fetch_assoc();
+                $verified = (int) ($row['is_verified'] ?? 0) === 1;
+            }
+        }
+    }
+    return $verified ? VERIFIED_PRICE_MARKUP_PERCENT : UNVERIFIED_PRICE_MARKUP_PERCENT;
+}
+
+/** Blue check badge markup shared by account surfaces. */
+function verifiedBadge($verified, $size = '')
+{
+    if (!$verified) {
+        return '';
+    }
+    $style = ' style="color:#1d9bf0' . ($size !== '' ? ';font-size:' . htmlspecialchars((string) $size, ENT_QUOTES, 'UTF-8') : '') . '"';
+    return '<i class="bi bi-patch-check-fill verified-badge" title="Verified account" aria-label="Verified account"' . $style . '></i>';
 }
 
 /**
