@@ -968,6 +968,29 @@ if (!function_exists('sendOrderStatusEmail')) {
     }
 }
 
+if (!function_exists('sendAdminUpdateEmail')) {
+    /** Send a single-recipient admin update through the regular Brevo sender. */
+    function sendAdminUpdateEmail($email, $username, $subject, $message)
+    {
+        $subject = trim((string) $subject);
+        $message = trim((string) $message);
+        if ($subject === '' || strlen($subject) > 180 || $message === '' || strlen($message) > 10000) {
+            return false;
+        }
+        $content = '<div style="padding:18px 20px;background:#f8f9fd;border:1px solid #e9edf7;border-radius:10px;color:#526174;white-space:normal;">'
+            . nl2br(emailSafe($message), false) . '</div>';
+        $body = renderRoyalEmail(
+            'Message from our team',
+            $subject,
+            'Hello ' . (string) $username . ', you have an update from the Royal SMM team.',
+            $content,
+            'Open your account',
+            emailUrl('index.php')
+        );
+        return sendHtmlEmail($email, $subject, $body);
+    }
+}
+
 /**
  * Generate unique token
  */

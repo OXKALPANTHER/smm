@@ -14,6 +14,17 @@
 
 require_once __DIR__ . '/APIHandler.php';
 
+/** Canonicalize provider status aliases so a completed order is synced once. */
+function normalizeSyncedOrderStatus($status) {
+    $status = trim((string)$status);
+    $low = strtolower($status);
+    if (strpos($low, 'partial') !== false) return 'Partial';
+    if (strpos($low, 'complet') !== false || in_array($low, ['success', 'successful', 'approved', 'done', 'finished'], true)) return 'Completed';
+    if (strpos($low, 'cancel') !== false || strpos($low, 'refund') !== false) return 'Canceled';
+    if (in_array($low, ['failed', 'failure', 'error', 'rejected'], true)) return 'Failed';
+    return $status;
+}
+
 /**
  * Sync a single user's non-final orders with the live provider.
  *
@@ -54,7 +65,8 @@ function syncUserOrders($conn, $user_id, $force = false, array &$notifications =
             AND external_order_id IS NOT NULL
             AND external_order_id <> ''
             AND LOWER(status) NOT IN
-                ('completed','complete','canceled','cancelled','refunded','partial','failed','error')
+                ('completed','complete','success','successful','approved','done','finished',
+                 'canceled','cancelled','refunded','partial','failed','failure','error','rejected')
           ORDER BY id DESC
           LIMIT 30"
     );
@@ -104,11 +116,12 @@ function syncUserOrders($conn, $user_id, $force = false, array &$notifications =
             continue;
         }
 
-        $low = strtolower($newStatus);
-        $isCompleted = strpos($low, 'complet') !== false;
-        $isPartial   = strpos($low, 'partial') !== false;
-        $isCanceled  = strpos($low, 'cancel') !== false || strpos($low, 'refund') !== false;
-        $unchanged   = strcasecmp($newStatus, (string)$o['status']) === 0;
+        $normalizedStatus = normalizeSyncedOrderStatus($newStatus);
+        $low = strtolower($normalizedStatus);
+        $isCompleted = $normalizedStatus === 'Completed';
+        $isPartial   = $normalizedStatus === 'Partial';
+        $isCanceled  = $normalizedStatus === 'Canceled';
+        $unchanged   = strcasecmp($normalizedStatus, (string)$o['status']) === 0;
 
         $orderQuantity = (int)($o['quantity'] ?? 0);
         $existingDelivered = (int)($o['delivered_quantity'] ?? 0);
@@ -144,7 +157,9 @@ function syncUserOrders($conn, $user_id, $force = false, array &$notifications =
             $remainingQty = max(0, $orderQuantity - $deliveredQty);
         }
 
-        if ($unchanged && !$isCanceled && $deliveredQty === $existingDelivered && $remainingQty === $existingRemaining) {
+        $deliveredChanged = $deliveredQty !== null && $deliveredQty !== $existingDelivered;
+        $remainingChanged = $remainingQty !== null && $remainingQty !== $existingRemaining;
+        if ($unchanged && !$isCanceled && !$deliveredChanged && !$remainingChanged) {
             continue; // nothing to do
         }
 
@@ -167,13 +182,15 @@ function syncUserOrders($conn, $user_id, $force = false, array &$notifications =
                             delivered_quantity = ?, remaining_quantity = ?
                       WHERE id = ?"
                 );
-                $stmt->bind_param("siii", $newStatus, $updatedDelivered, $updatedRemaining, $o['id']);
+                $stmt->bind_param("siii", $normalizedStatus, $updatedDelivered, $updatedRemaining, $o['id']);
                 $stmt->execute();
 
-                $notifications[] = [
-                    'type' => 'success',
-                    'message' => "Order #{$o['id']} imekamilika: {$newStatus}.",
-                ];
+                if (!$unchanged) {
+                    $notifications[] = [
+                        'type' => 'success',
+                        'message' => "Order #{$o['id']} imekamilika: {$normalizedStatus}.",
+                    ];
+                }
 
             } elseif ($isCanceled && $o['refund_amount'] === null) {
                 $price = (float)$o['price'];
@@ -187,7 +204,7 @@ function syncUserOrders($conn, $user_id, $force = false, array &$notifications =
                             delivered_quantity = ?, remaining_quantity = ?
                       WHERE id = ?"
                 );
-                $stmt->bind_param("sdiii", $newStatus, $price, $updatedDelivered, $updatedRemaining, $o['id']);
+                $stmt->bind_param("sdiii", $normalizedStatus, $price, $updatedDelivered, $updatedRemaining, $o['id']);
                 $stmt->execute();
 
                 $stmt = $conn->prepare("UPDATE users SET balance = balance + ? WHERE id = ?");
@@ -209,10 +226,12 @@ function syncUserOrders($conn, $user_id, $force = false, array &$notifications =
                 logActivity($user_id, 'order_refunded',
                     "Order #{$o['id']} refunded {$price} TZS (provider: {$newStatus})", 'success');
 
-                $notifications[] = [
-                    'type' => 'danger',
-                    'message' => "Order #{$o['id']} imekatizwa/imirudishwa: {$newStatus}.",
-                ];
+                if (!$unchanged) {
+                    $notifications[] = [
+                        'type' => 'danger',
+                        'message' => "Order #{$o['id']} imekatizwa/imirudishwa: {$normalizedStatus}.",
+                    ];
+                }
 
             } else {
                 // In progress / processing / partial-but-not-final etc.
@@ -233,10 +252,10 @@ function syncUserOrders($conn, $user_id, $force = false, array &$notifications =
                         delivered_quantity = ?, remaining_quantity = ?
                       WHERE id = ?"
                 );
-                $stmt->bind_param("siiii", $newStatus, $progress, $updatedDelivered, $updatedRemaining, $o['id']);
+                $stmt->bind_param("siiii", $normalizedStatus, $progress, $updatedDelivered, $updatedRemaining, $o['id']);
                 $stmt->execute();
 
-                if (strpos($low, 'delay') !== false || strpos($low, 'late') !== false || strpos($low, 'hold') !== false) {
+                if (!$unchanged && (strpos($low, 'delay') !== false || strpos($low, 'late') !== false || strpos($low, 'hold') !== false)) {
                     $notifications[] = [
                         'type' => 'warning',
                         'message' => "Order #{$o['id']} inaonekana kuchelewa: {$newStatus}.",
@@ -253,7 +272,7 @@ function syncUserOrders($conn, $user_id, $force = false, array &$notifications =
                     $syncUser['username'] ?? 'Mteja',
                     $o['id'],
                     $o['service_name'] ?? 'order',
-                    $newStatus,
+                    $normalizedStatus,
                     $refundForEmail
                 );
             }
