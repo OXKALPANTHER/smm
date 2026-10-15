@@ -202,14 +202,22 @@ body.app{
              radial-gradient(900px 500px at -10% 10%,#e6fbfa 0,transparent 55%),var(--bg);
   margin:0 0 calc(var(--bottom-nav-height) + env(safe-area-inset-bottom) + 18px);
   padding-top:env(safe-area-inset-top);
+  min-height:100dvh;display:flex;flex-direction:column;
 }
 body.app .container{max-width:540px;}
+body.app>.site-footer,body.auth>.site-footer{margin-top:auto;}
+.site-footer{width:100%;max-width:none!important;margin:0;padding:14px 18px calc(14px + env(safe-area-inset-bottom));display:flex;flex-direction:column;align-items:center;gap:8px;background:#171431;border-top:1px solid rgba(255,255,255,.14);color:#e8e4ff;text-align:center;}
+.site-footer nav{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:8px 14px;}
+.site-footer nav a{color:#a99cff;font-size:.8rem;line-height:1.5;font-weight:600;text-decoration:none;display:inline-flex;align-items:center;}
+.site-footer nav a:hover,.site-footer nav a:focus-visible{color:#fff;text-decoration:underline;}
+.site-footer .copyright{font-size:.75rem;color:#c5c0dc;line-height:1.4;}
 
 /* ---- auth pages ---- */
 body.auth{
-  min-height:100vh;display:flex;align-items:center;justify-content:center;padding:1rem;
+  min-height:100dvh;display:flex;flex-direction:column;align-items:stretch;padding:1rem;
   background:linear-gradient(145deg,var(--primary) 0%,var(--primary-2) 100%);
 }
+.auth>.glass-card{margin-block:auto;}
 .glass-card{
   background:rgba(255,255,255,.96);backdrop-filter:blur(12px);border-radius:28px;
   box-shadow:0 25px 50px rgba(0,0,0,.25);padding:2.4rem 2rem;width:100%;max-width:430px;border:1px solid rgba(255,255,255,.3);
@@ -510,8 +518,9 @@ function toast(msg,type='primary'){
 {$extraScript}
 HTML;
   renderChatbotWidget();
-  echo '<footer class="container text-center py-3" style="font-size:.72rem;color:var(--muted);"><div class="d-flex flex-wrap justify-content-center gap-3"><a href="services.php">Services</a><a href="pricing.php">Pricing</a><a href="api.php">Reseller API</a><a href="terms.php">Terms</a><a href="privacy.php">Privacy</a><a href="refund-refill.php">Refund / Refill</a></div></footer>';
   pwa_foot();
+  $footerYear = date('Y');
+  echo '<footer class="site-footer"><nav aria-label="Footer"><a href="services.php">Services</a><a href="pricing.php">Pricing</a><a href="api.php">Reseller API</a><a href="terms.php">Terms</a><a href="privacy.php">Privacy</a><a href="refund-refill.php">Refund / Refill</a></nav><div class="copyright">&copy; ' . htmlspecialchars($footerYear, ENT_QUOTES, 'UTF-8') . ' Royal SMM Panel</div></footer>';
   echo <<<HTML
 </body>
 </html>
