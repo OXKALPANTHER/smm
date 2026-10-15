@@ -35,6 +35,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     jsonOut(false, 'Method not allowed.', [], 405);
 }
 if (!$developerAuth) requireSameOriginRequest();
+if (!$developerAuth) require_csrf();
 
 // Accept JSON body or form-encoded.
 $input = $_POST;

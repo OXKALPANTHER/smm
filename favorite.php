@@ -2,6 +2,7 @@
 require_once __DIR__ . '/config.php';
 requireLogin();
 requireSameOriginRequest();
+require_csrf();
 header('Content-Type: application/json; charset=utf-8');
 
 $userId = (int) $_SESSION['user_id'];

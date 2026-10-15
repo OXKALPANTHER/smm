@@ -1,0 +1,5 @@
+<?php
+require_once 'config.php'; require_once 'includes/ui.php'; ui_head('Reseller API — ' . APP_NAME, 'app');
+?>
+<div class="container py-4"><div class="hero mb-3"><h1 class="h3 fw-bold">Royal SMM reseller API</h1><p class="mb-0 opacity-75">Connect your own storefront to the live services catalogue, order flow, and status tracking.</p></div><div class="card-soft mb-3"><h2 class="h5 fw-bold">Start with the documentation</h2><p class="text-muted">API access is gated for account safety. Review eligibility, authentication, endpoints, limits, and examples before requesting an API key.</p><a class="btn btn-primary rounded-pill" href="api-docs.php">Read API docs <i class="bi bi-arrow-right"></i></a></div><div class="card-soft"><h2 class="h5 fw-bold">Manage your key</h2><p class="text-muted">Eligible users can open the API Center to create or regenerate a key. Never expose your key in client-side code.</p><a class="btn btn-outline-primary rounded-pill" href="api-center.php">Open API Center</a></div></div>
+<?php ui_foot(); ?>

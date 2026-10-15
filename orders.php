@@ -808,7 +808,7 @@ document.querySelectorAll('.favorite-btn[data-id]').forEach(btn => {
     btn.disabled = true;
     const wasSaved = btn.dataset.favorite === '1';
     try {
-      const r = await fetch('favorite.php', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({action:'toggle', order_id:parseInt(btn.dataset.id)})});
+      const r = await fetch('favorite.php', {method:'POST', headers:{'Content-Type':'application/json','X-CSRF-Token':document.querySelector('meta[name=csrf-token]')?.content||''}, body:JSON.stringify({action:'toggle', order_id:parseInt(btn.dataset.id)})});
       const j = await r.json();
       if (!j.success) throw new Error(j.message || 'Imeshindikana');
       const saved = !!j.favorited;
@@ -828,7 +828,7 @@ document.querySelectorAll('.refill-btn').forEach(btn => {
     if(!confirm('Omba refill kwa order hii?')) return;
     btn.disabled = true; btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Inatuma...';
     try{
-      const r = await fetch('refill.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({order_id:parseInt(btn.dataset.id)})});
+      const r = await fetch('refill.php',{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':document.querySelector('meta[name=csrf-token]')?.content||''},body:JSON.stringify({order_id:parseInt(btn.dataset.id)})});
       const j = await r.json();
       toast(j.message, j.success?'success':'danger');
       if(j.success) setTimeout(()=>location.reload(),1200);
@@ -842,7 +842,7 @@ document.querySelectorAll('.cancel-btn').forEach(btn => {
         if(!confirm('Omba cancellation kwa order hii?')) return;
         btn.disabled = true; btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Inatuma...';
         try{
-            const r = await fetch('cancel-order.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({order_id:parseInt(btn.dataset.id)})});
+            const r = await fetch('cancel-order.php',{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':document.querySelector('meta[name=csrf-token]')?.content||''},body:JSON.stringify({order_id:parseInt(btn.dataset.id)})});
             const j = await r.json();
             toast(j.message, j.success?'success':'warning');
             if(j.success) setTimeout(()=>location.reload(),1200);
@@ -850,6 +850,17 @@ document.querySelectorAll('.cancel-btn').forEach(btn => {
         }catch(e){ toast('Kosa la mtandao.','danger'); btn.disabled=false; btn.innerHTML='<i class="bi bi-slash-circle"></i> Cancel'; }
     });
 });
+// Pull down from the top of the Orders page to refresh provider status.
+(function(){
+  let startY = 0, refreshing = false;
+  document.addEventListener('touchstart', e => { if (window.scrollY <= 2 && e.touches[0]) startY = e.touches[0].clientY; }, {passive:true});
+  document.addEventListener('touchend', e => {
+    if (refreshing || !startY || window.scrollY > 2 || !e.changedTouches[0]) return;
+    const distance = e.changedTouches[0].clientY - startY;
+    startY = 0;
+    if (distance > 90) { refreshing = true; toast('Inasasisha orders...', 'primary'); setTimeout(() => location.href = 'orders.php?sync=1', 350); }
+  }, {passive:true});
+})();
 </script>
 JS);
 ?>

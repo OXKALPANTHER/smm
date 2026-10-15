@@ -17,7 +17,7 @@ if (!function_exists('pwa_head')) {
     function pwa_head() {
         $app = htmlspecialchars(APP_NAME . ' SMM', ENT_QUOTES);
         echo <<<HTML
-<link rel="manifest" href="manifest.webmanifest">
+<link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#6c5ce7">
 <meta name="application-name" content="{$app}">
 <meta name="mobile-web-app-capable" content="yes">
@@ -32,7 +32,9 @@ HTML;
 
 if (!function_exists('pwa_foot')) {
     function pwa_foot() {
-        echo <<<'HTML'
+        $phone = defined('WHATSAPP_SUPPORT_PHONE') ? preg_replace('/[^0-9]/', '', (string) WHATSAPP_SUPPORT_PHONE) : '255627417402';
+        echo <<<HTML
+<a class="royal-whatsapp" href="https://wa.me/{$phone}" target="_blank" rel="noopener" aria-label="WhatsApp support"><i class="bi bi-whatsapp"></i><span>Support</span></a>
 <!-- PWA install button -->
 <button id="pwaInstallBtn" type="button" aria-label="Pakua App"
   style="display:none;position:fixed;left:14px;bottom:18px;z-index:1200;border:none;cursor:pointer;
@@ -52,7 +54,11 @@ if (!function_exists('pwa_foot')) {
   <button type="button" onclick="this.parentElement.style.display='none'"
           style="border:none;background:#f0f2fb;border-radius:10px;width:30px;height:30px;color:#2b3674;cursor:pointer;">&times;</button>
 </div>
-<style>@keyframes pwaPulse{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}</style>
+<style>
+.royal-whatsapp{position:fixed;right:16px;bottom:calc(18px + env(safe-area-inset-bottom));z-index:1199;display:inline-flex;align-items:center;gap:.4rem;min-height:48px;padding:.7rem .95rem;border-radius:999px;background:#25D366;color:#073b1d;box-shadow:0 12px 26px rgba(37,211,102,.28);font:700 .82rem Poppins,sans-serif;text-decoration:none}.royal-whatsapp:hover{color:#073b1d;transform:translateY(-2px)}
+@media(max-width:768px){.royal-whatsapp{right:14px;bottom:calc(86px + env(safe-area-inset-bottom));}.royal-whatsapp span{display:none}.royal-whatsapp{width:50px;justify-content:center;padding:.7rem}}
+@keyframes pwaPulse{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+</style>
 <script>
 (function(){
   // --- Service worker (offline + installable) ---
@@ -65,6 +71,7 @@ if (!function_exists('pwa_foot')) {
   // --- Install prompt (Android / desktop Chrome) ---
   var deferred = null;
   var btn = document.getElementById('pwaInstallBtn');
+  if (window.top !== window.self && btn) btn.style.display = 'none';
   var isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
 
   window.addEventListener('beforeinstallprompt', function(e){

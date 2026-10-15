@@ -9,13 +9,22 @@ if (isLoggedIn()) {
 
 $error = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    require_csrf();
+    if (!rate_limit('register', 5, 900)) {
+        $error = 'Majaribio mengi sana. Subiri dakika chache kisha ujaribu tena.';
+    }
+    if ($error === '' && !captcha_is_valid($_POST['cf-turnstile-response'] ?? '', $_POST['website'] ?? '')) {
+        $error = 'Thibitisha kuwa wewe si roboti kisha ujaribu tena.';
+    }
     $username = trim($_POST['username'] ?? '');
     $email = trim($_POST['email'] ?? '');
     $phone = trim($_POST['phone'] ?? '');
     $phone = $phone ? $phone : null;  // Convert empty string to NULL
     $password = $_POST['password'] ?? '';
 
-    if ($username === '' || $email === '' || $password === '') {
+    if ($error !== '') {
+        // Rate limit message is already set.
+    } elseif ($username === '' || $email === '' || $password === '') {
         $error = 'Tafadhali jaza taarifa zote.';
     } elseif (!validateEmail($email)) {
         $error = 'Barua pepe si sahihi.';
@@ -89,6 +98,7 @@ ui_head('Jisajili — ' . APP_NAME, 'auth');
     <?php endif; ?>
 
     <form method="post">
+        <?= csrf_field() ?>
         <div class="mb-3">
             <label class="form-label">Jina la mtumiaji</label>
             <input type="text" name="username" class="form-control" placeholder="royal"
@@ -117,6 +127,7 @@ ui_head('Jisajili — ' . APP_NAME, 'auth');
             <input type="text" name="ref" class="form-control" placeholder="ROYA886"
                 value="<?= htmlspecialchars($refPrefill) ?>">
         </div>
+        <?php captcha_widget(); ?>
         <button type="submit" class="btn-grad mt-3"><i class="bi bi-check2-circle"></i> JISAJILI SASA</button>
     </form>
 

@@ -1,0 +1,5 @@
+<?php
+require_once 'config.php'; require_once 'includes/ui.php'; ui_head('Privacy Policy — ' . APP_NAME, 'app');
+?>
+<div class="container py-4"><div class="card-soft"><h1 class="h3 fw-bold">Privacy Policy</h1><p class="text-muted">Last updated: <?= date('Y-m-d') ?></p><h2 class="h5 mt-4">Information we use</h2><p>Royal SMM stores the account information you submit, including username, email, phone number when provided, wallet activity, order details, and support messages. Passwords are stored as one-way hashes.</p><h2 class="h5 mt-4">Why we use it</h2><p>We use this information to authenticate accounts, process top-ups, submit and track orders, send transactional messages, prevent abuse, and provide support.</p><h2 class="h5 mt-4">Sharing</h2><p>Order and payment details may be sent to the service or payment providers needed to complete the requested transaction. We do not sell account information.</p><h2 class="h5 mt-4">Your choices</h2><p>Contact support to request account corrections or help with privacy questions. Keep your login details private and log out from shared devices.</p></div></div>
+<?php ui_foot(); ?>

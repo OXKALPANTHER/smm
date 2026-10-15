@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /admin.php
+Disallow: /moderator.php
+Disallow: /config.php
+Disallow: /data/
+Sitemap: https://royal.t20tech.site/sitemap.xml

@@ -1,0 +1,5 @@
+<?php
+require_once 'config.php'; require_once 'includes/ui.php'; ui_head('Refund and Refill Policy — ' . APP_NAME, 'app');
+?>
+<div class="container py-4"><div class="card-soft"><h1 class="h3 fw-bold">Refund and Refill Policy</h1><p class="text-muted">Last updated: <?= date('Y-m-d') ?></p><h2 class="h5 mt-4">Before ordering</h2><p>Review the service description, minimum, maximum, link requirements, refill period, and cancellation availability before confirming an order.</p><h2 class="h5 mt-4">Refunds</h2><p>If an order is canceled, fails, or is eligible for a provider refund, the system may credit the eligible amount back to your Royal SMM balance. Completed delivery is not refundable merely because the target later changes.</p><h2 class="h5 mt-4">Refills</h2><p>Where a service supports refill, submit the request from the Orders page while the refill window is active. Refill approval and timing depend on the provider terms shown for that service.</p><h2 class="h5 mt-4">Help</h2><p>Keep the order ID and payment reference when contacting support so we can investigate efficiently.</p></div></div>
+<?php ui_foot(); ?>

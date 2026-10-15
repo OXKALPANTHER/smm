@@ -108,6 +108,7 @@ function ui_head($title, $bodyClass = 'app', $extraHead = '')
   $app = APP_NAME;
   $description = htmlspecialchars(APP_NAME . ' SMM Panel in Tanzania for Instagram, TikTok, YouTube and other social media growth services. Manage orders, mobile-money top-ups and account support.', ENT_QUOTES, 'UTF-8');
   $canonical = htmlspecialchars(rtrim(APP_URL, '/') . '/' . basename((string) ($_SERVER['SCRIPT_NAME'] ?? 'index.php')), ENT_QUOTES, 'UTF-8');
+  $csrf = htmlspecialchars(csrf_token(), ENT_QUOTES, 'UTF-8');
   echo <<<HTML
 <!DOCTYPE html>
 <html lang="sw">
@@ -117,6 +118,7 @@ function ui_head($title, $bodyClass = 'app', $extraHead = '')
 <title>{$title}</title>
 <meta name="description" content="{$description}">
 <meta name="robots" content="noindex,follow">
+<meta name="csrf-token" content="{$csrf}">
 <link rel="canonical" href="{$canonical}">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -129,16 +131,21 @@ function ui_head($title, $bodyClass = 'app', $extraHead = '')
   --primary:#6c5ce7; --primary-2:#4834d4; --accent:#00cec9;
   --success:#00b894; --warning:#fdcb6e; --danger:#e17055;
   --ink:#2b3674; --muted:#8a93b2; --card:#ffffff; --bg:#eef1fb; --line:#e9edf7;
+  --bottom-nav-height:74px;
 }
-*{-webkit-tap-highlight-color:transparent;}
+*{-webkit-tap-highlight-color:transparent;box-sizing:border-box;}
+html,body{max-width:100%;overflow-x:hidden;}
 body{font-family:'Poppins',sans-serif;color:var(--ink);margin:0;}
 a{text-decoration:none;}
+button,a,input,select,textarea{font-size:16px;}
+button,a{min-height:44px;}
 
 /* ---- app (mobile) pages ---- */
 body.app{
   background:radial-gradient(1200px 600px at 100% -10%,#e8ecff 0,transparent 60%),
              radial-gradient(900px 500px at -10% 10%,#e6fbfa 0,transparent 55%),var(--bg);
-  margin:0 0 30px;
+  margin:0 0 calc(var(--bottom-nav-height) + env(safe-area-inset-bottom) + 18px);
+  padding-top:env(safe-area-inset-top);
 }
 body.app .container{max-width:540px;}
 
@@ -209,6 +216,25 @@ body.drawer-open .hamburger span:nth-child(3){transform:translateY(-6.4px) rotat
 .drawer-link.danger{color:var(--danger);}
 .drawer-link.danger .di{background:#fdeee9;color:#c0392b;}
 .drawer-foot{padding:.9rem 1.3rem;border-top:1px solid #f0f2f8;font-size:.7rem;color:var(--muted);text-align:center;}
+.mobile-tabbar{display:none;}
+.sticky-order-fab{position:fixed;right:16px;bottom:calc(var(--bottom-nav-height) + env(safe-area-inset-bottom) + 14px);z-index:1250;border-radius:999px;box-shadow:0 14px 28px rgba(72,52,212,.32);}
+
+@media (max-width: 768px){
+  body.app{padding-bottom:calc(var(--bottom-nav-height) + env(safe-area-inset-bottom) + 18px);}
+  .mobile-tabbar{position:fixed;left:0;right:0;bottom:0;z-index:1300;display:grid;grid-template-columns:repeat(5,1fr);padding:.45rem .35rem calc(.45rem + env(safe-area-inset-bottom));background:rgba(255,255,255,.94);backdrop-filter:blur(18px);border-top:1px solid rgba(108,92,231,.12);box-shadow:0 -10px 28px rgba(43,54,116,.12);}
+  .mobile-tabbar a{min-height:52px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.16rem;color:var(--muted);font-size:.64rem;font-weight:700;border-radius:14px;}
+  .mobile-tabbar a i{font-size:1.1rem;line-height:1;}
+  .mobile-tabbar a.active{color:var(--primary-2);background:rgba(108,92,231,.10);}
+  .sticky-order-fab{bottom:calc(var(--bottom-nav-height) + env(safe-area-inset-bottom) + 76px);}
+}
+@media (prefers-color-scheme: dark){
+  :root{--ink:#edf0ff;--muted:#aab3d0;--card:#182044;--bg:#0e1430;--line:#2a3560;}
+  body.app{background:radial-gradient(900px 500px at 100% -10%,#202657 0,transparent 60%),var(--bg);}
+  .card-soft,.drawer,.nav-bell,.hamburger,.mobile-tabbar,.glass-card{background:#182044;color:var(--ink);border-color:#2a3560;}
+  .form-control,.form-select{background:#111832;color:var(--ink);border-color:#34416f;}
+  .form-control:focus,.form-select:focus{background:#111832;color:var(--ink);}
+  .drawer-link{color:var(--ink);}.drawer-link:hover{background:#222b50;}.drawer-foot{border-color:#2a3560;}
+}
 
 /* toast */
 .toast-wrap{position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:2000;width:calc(100% - 28px);max-width:512px;}
@@ -292,6 +318,19 @@ HTML;
     $bellBadge = '<span class="nav-bell-badge">' . ($notificationCount > 99 ? '99+' : (int) $notificationCount) . '</span>';
   }
 
+  $mobileItems = [
+    'home' => ['index.php', 'bi-house-fill', 'Home'],
+    'services' => ['services.php', 'bi-grid-3x3-gap-fill', 'Services'],
+    'new' => ['index.php#orderForm', 'bi-plus-circle-fill', 'New Order'],
+    'orders' => ['orders.php', 'bi-bag-check-fill', 'Orders'],
+    'profile' => ['profile.php', 'bi-person-fill', 'Account'],
+  ];
+  $mobileHtml = '';
+  foreach ($mobileItems as $key => [$href, $icon, $label]) {
+    $cls = ($active === $key || ($key === 'new' && $active === 'home')) ? 'active' : '';
+    $mobileHtml .= "<a class=\"{$cls}\" href=\"{$href}\"><i class=\"bi {$icon}\"></i><span>{$label}</span></a>";
+  }
+
   echo <<<HTML
 <div class="top-actions">
   <a href="notifications.php" class="nav-bell" aria-label="Notisi" title="Notisi"><i class="bi bi-bell-fill"></i>{$bellBadge}</a>
@@ -314,6 +353,8 @@ HTML;
   <a href="logout.php" class="drawer-link danger js-nav-link" style="margin:0 .8rem .7rem;"><span class="di"><i class="bi bi-box-arrow-right"></i></span>Toka (Logout)</a>
   <div class="drawer-foot">{$appName} SMM Panel &middot; v2.0</div>
 </aside>
+<nav class="mobile-tabbar" aria-label="Quick navigation">{$mobileHtml}</nav>
+<a class="sticky-order-fab btn btn-primary d-md-none" href="index.php#orderForm" aria-label="New Order"><i class="bi bi-plus-lg me-1"></i> New Order</a>
 <script>
 (function(){
   var t=document.getElementById('navToggle'),d=document.getElementById('appDrawer'),b=document.getElementById('navBackdrop'),c=document.getElementById('navClose');
@@ -393,6 +434,7 @@ function toast(msg,type='primary'){
 {$extraScript}
 HTML;
   renderChatbotWidget();
+  echo '<footer class="container text-center py-3" style="font-size:.72rem;color:var(--muted);"><div class="d-flex flex-wrap justify-content-center gap-3"><a href="services.php">Services</a><a href="pricing.php">Pricing</a><a href="api.php">Reseller API</a><a href="terms.php">Terms</a><a href="privacy.php">Privacy</a><a href="refund-refill.php">Refund / Refill</a></div></footer>';
   pwa_foot();
   echo <<<HTML
 </body>

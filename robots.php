@@ -12,4 +12,4 @@ Disallow: /profile.php
 Disallow: /orders.php
 Disallow: /notifications.php
 Disallow: /topup.php
-Sitemap: <?= $origin ?>/sitemap.php
+Sitemap: <?= $origin ?>/sitemap.xml

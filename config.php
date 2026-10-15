@@ -46,7 +46,75 @@ if (!function_exists('loadLocalEnvironment')) {
 loadLocalEnvironment(__DIR__ . '/.env');
 
 if (session_status() === PHP_SESSION_NONE) {
+    $appUrlIsHttps = str_starts_with((string) (getenv('APP_URL') ?: ''), 'https://');
+    $requestIsHttps = !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off';
+    session_set_cookie_params([
+        'lifetime' => 0,
+        'path' => '/',
+        'secure' => $requestIsHttps || $appUrlIsHttps,
+        'httponly' => true,
+        'samesite' => 'Lax',
+    ]);
     session_start();
+}
+
+if (!function_exists('csrf_token')) {
+    function csrf_token(): string
+    {
+        if (empty($_SESSION['csrf_token'])) $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+        return (string) $_SESSION['csrf_token'];
+    }
+    function csrf_field(): string
+    {
+        return '<input type="hidden" name="csrf_token" value="' . htmlspecialchars(csrf_token(), ENT_QUOTES, 'UTF-8') . '">';
+    }
+    function csrf_is_valid(?string $token = null): bool
+    {
+        $token = $token ?? ($_POST['csrf_token'] ?? ($_SERVER['HTTP_X_CSRF_TOKEN'] ?? ''));
+        return is_string($token) && $token !== '' && hash_equals((string) ($_SESSION['csrf_token'] ?? ''), $token);
+    }
+    function require_csrf(): void
+    {
+        if (csrf_is_valid()) return;
+        http_response_code(419);
+        if (stripos((string) ($_SERVER['CONTENT_TYPE'] ?? ''), 'application/json') !== false) {
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['success' => false, 'message' => 'Session expired. Refresh and try again.']);
+        } else {
+            echo 'Session expired. Refresh the page and try again.';
+        }
+        exit;
+    }
+    function rate_limit(string $bucket, int $limit, int $windowSeconds): bool
+    {
+        $key = 'rate_' . hash('sha256', $bucket . '|' . ($_SERVER['REMOTE_ADDR'] ?? 'unknown'));
+        $now = time();
+        $state = $_SESSION[$key] ?? ['count' => 0, 'started' => $now];
+        if (($now - (int) ($state['started'] ?? $now)) >= $windowSeconds) $state = ['count' => 0, 'started' => $now];
+        $state['count'] = (int) ($state['count'] ?? 0) + 1;
+        $_SESSION[$key] = $state;
+        return $state['count'] <= $limit;
+    }
+    function captcha_widget(): void
+    {
+        $siteKey = trim((string) (getenv('CAPTCHA_SITE_KEY') ?: ''));
+        echo '<input type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px;opacity:0;height:1px;width:1px">';
+        if ($siteKey === '') return;
+        echo '<div class="cf-turnstile my-3" data-sitekey="' . htmlspecialchars($siteKey, ENT_QUOTES, 'UTF-8') . '"></div><script async defer src="https://challenges.cloudflare.com/turnstile/v0/api.js"></script>';
+    }
+    function captcha_is_valid(?string $token, ?string $honeypot): bool
+    {
+        if (trim((string) $honeypot) !== '') return false;
+        $secret = trim((string) (getenv('CAPTCHA_SECRET_KEY') ?: ''));
+        if ($secret === '') return true;
+        $token = trim((string) $token);
+        if ($token === '' || !function_exists('curl_init')) return false;
+        $ch = curl_init('https://challenges.cloudflare.com/turnstile/v0/siteverify');
+        curl_setopt_array($ch, [CURLOPT_POST => true, CURLOPT_POSTFIELDS => http_build_query(['secret' => $secret, 'response' => $token, 'remoteip' => $_SERVER['REMOTE_ADDR'] ?? '']), CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => 5]);
+        $result = json_decode((string) curl_exec($ch), true);
+        curl_close($ch);
+        return !empty($result['success']);
+    }
 }
 
 // The app uses the MYSQLI_ASSOC constant with the PDO compat layer. When the

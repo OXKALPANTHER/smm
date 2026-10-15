@@ -1,6 +1,7 @@
 <?php
 // Performance direction: preserve the payment workflow while serving precompiled styles instead of compiling CSS in the browser.
 require_once 'config.php';
+require_once 'includes/pwa.php';
 
 if (!isset($_SESSION['user_id'])) {
     http_response_code(401);
@@ -392,6 +393,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <?php pwa_head(); ?>
     <title><?php echo APP_NAME; ?> - Malipo</title>
     <link rel="stylesheet" href="assets/topup-tailwind.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -692,6 +694,4 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             hideScreens();
         }
     </script>
-</body>
-
-</html>
+    <?php pwa_foot(); ?>

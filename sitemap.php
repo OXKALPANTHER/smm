@@ -10,4 +10,10 @@ $today = gmdate('Y-m-d');
   <url><loc><?= htmlspecialchars($origin . '/', ENT_XML1, 'UTF-8') ?></loc><lastmod><?= $today ?></lastmod><changefreq>weekly</changefreq><priority>1.0</priority></url>
   <url><loc><?= htmlspecialchars($origin . '/register.php', ENT_XML1, 'UTF-8') ?></loc><lastmod><?= $today ?></lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
   <url><loc><?= htmlspecialchars($origin . '/login.php', ENT_XML1, 'UTF-8') ?></loc><lastmod><?= $today ?></lastmod><changefreq>monthly</changefreq><priority>0.4</priority></url>
+  <url><loc><?= htmlspecialchars($origin . '/services.php', ENT_XML1, 'UTF-8') ?></loc><lastmod><?= $today ?></lastmod><changefreq>daily</changefreq><priority>0.8</priority></url>
+  <url><loc><?= htmlspecialchars($origin . '/pricing.php', ENT_XML1, 'UTF-8') ?></loc><lastmod><?= $today ?></lastmod><changefreq>weekly</changefreq><priority>0.7</priority></url>
+  <url><loc><?= htmlspecialchars($origin . '/api-docs.php', ENT_XML1, 'UTF-8') ?></loc><lastmod><?= $today ?></lastmod><changefreq>monthly</changefreq><priority>0.5</priority></url>
+  <url><loc><?= htmlspecialchars($origin . '/terms.php', ENT_XML1, 'UTF-8') ?></loc><lastmod><?= $today ?></lastmod><changefreq>yearly</changefreq><priority>0.3</priority></url>
+  <url><loc><?= htmlspecialchars($origin . '/privacy.php', ENT_XML1, 'UTF-8') ?></loc><lastmod><?= $today ?></lastmod><changefreq>yearly</changefreq><priority>0.3</priority></url>
+  <url><loc><?= htmlspecialchars($origin . '/refund-refill.php', ENT_XML1, 'UTF-8') ?></loc><lastmod><?= $today ?></lastmod><changefreq>yearly</changefreq><priority>0.3</priority></url>
 </urlset>

@@ -7,6 +7,8 @@ const SHELL_ASSETS = [
   
   './offline.html',
   
+  './manifest.json',
+
   './manifest.webmanifest',
   
   './assets/icon.svg',
@@ -15,6 +17,10 @@ const SHELL_ASSETS = [
   
   './assets/icon-512.png',
   
+  './assets/icon-192-maskable.png',
+
+  './assets/icon-512-maskable.png',
+
   './assets/lazy-topup.js',
   
   './assets/payment-icons.svg'

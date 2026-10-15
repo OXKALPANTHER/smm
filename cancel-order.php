@@ -15,6 +15,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     jsonOut(false, 'Method not allowed.', [], 405);
 }
 requireSameOriginRequest();
+require_csrf();
 
 $input = $_POST;
 if (empty($input)) {
