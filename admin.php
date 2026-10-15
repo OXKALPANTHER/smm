@@ -300,6 +300,9 @@ ui_head(APP_NAME . ' — Admin', 'admin', $extraHead);
     }
 
     .sidebar {
+        left: 0;
+        top: 0;
+        overflow-y: auto;
         width: 250px;
         background: linear-gradient(180deg, #1b1f3b, #141830);
         color: #fff;
@@ -348,10 +351,13 @@ ui_head(APP_NAME . ' — Admin', 'admin', $extraHead);
     .main {
         margin-left: 250px;
         padding: 26px;
+        transition: margin-left .3s ease;
     }
+    body.admin.sidebar-collapsed .sidebar { transform: translateX(-105%); }
+    body.admin.sidebar-collapsed .main { margin-left: 0; }
 
-    .mobile-top {
-        display: none;
+    .admin-topbar {
+        display: flex;
         background: #fff;
         padding: 14px 18px;
         border-radius: 14px;
@@ -522,23 +528,17 @@ ui_head(APP_NAME . ' — Admin', 'admin', $extraHead);
     }
 
     @media(max-width:991px) {
-        .sidebar {
-            transform: translateX(-100%);
-        }
-
-        .sidebar.show {
-            transform: translateX(0);
-        }
-
-        .main {
-            margin-left: 0;
-            padding: 14px;
-        }
-
-        .mobile-top {
-            display: flex;
-        }
+        .sidebar { transform: translateX(-105%); z-index: 1250; }
+        .sidebar.show { transform: translateX(0); }
+        .sidebar-backdrop { position: fixed; inset: 0; z-index: 1200; background: rgba(14,19,45,.48); opacity: 0; visibility: hidden; transition: .25s; }
+        .sidebar-backdrop.open { opacity: 1; visibility: visible; }
+        .main { margin-left: 0; padding: 14px; }
     }
+    @media(min-width:992px) { .sidebar-backdrop { display:none; } }
+    .admin-topbar { background:#fff; padding:14px 18px; border-radius:14px; box-shadow:0 4px 18px rgba(43,54,116,.06); margin-bottom:18px; align-items:center; justify-content:space-between; }
+    .admin-menu-toggle { width:42px;height:42px;border:0;border-radius:13px;background:#f0f2fb;color:var(--ink);display:inline-flex;align-items:center;justify-content:center;font-size:1.2rem;box-shadow:0 4px 14px rgba(43,54,116,.08); }
+    .admin-menu-toggle:hover { background:#e7eaff;color:var(--primary-2); }
+    @media(prefers-reduced-motion:reduce){.sidebar,.main,.sidebar-backdrop{transition:none!important;}}
 </style>
 
 <div class="sidebar" id="sidebar">
@@ -555,11 +555,11 @@ ui_head(APP_NAME . ' — Admin', 'admin', $extraHead);
     <a href="logout.php" class="nav-link"><i class="bi bi-box-arrow-right"></i> Logout</a>
 </div>
 
+<div class="sidebar-backdrop" id="sidebarBackdrop" aria-hidden="true"></div>
 <div class="main">
-    <div class="mobile-top">
-        <h5 class="mb-0 fw-bold"><i class="bi bi-gem text-primary"></i> <?= APP_NAME ?> Admin</h5>
-        <button class="btn btn-light" onclick="document.getElementById('sidebar').classList.toggle('show')"><i
-                class="bi bi-list"></i></button>
+    <div class="admin-topbar">
+        <h5 class="mb-0 fw-bold"><i class="bi bi-gem text-primary"></i> <?= htmlspecialchars(APP_NAME, ENT_QUOTES, 'UTF-8') ?> Admin</h5>
+        <button class="admin-menu-toggle" id="adminMenuToggle" type="button" aria-label="Hide admin menu" aria-controls="sidebar" aria-expanded="true"><i class="bi bi-list"></i></button>
     </div>
 
     <h4 class="fw-bold mb-1" id="overview">Dashboard</h4>
@@ -1005,8 +1005,34 @@ function wireSearch(inputId, tableId){
 wireSearch('userSearch','userTable');
 wireSearch('orderSearch','orderTable');
 
+// Accessible admin menu: collapses beside the content on desktop and overlays it on mobile.
+(function(){
+  const sidebar=document.getElementById('sidebar');
+  const toggle=document.getElementById('adminMenuToggle');
+  const backdrop=document.getElementById('sidebarBackdrop');
+  if(!sidebar||!toggle||!backdrop) return;
+  const mobile=()=>window.matchMedia('(max-width: 991px)').matches;
+  toggle.setAttribute('aria-expanded',String(!mobile()&&!document.body.classList.contains('sidebar-collapsed')));
+  function setOpen(open){
+    if(mobile()){
+      document.body.classList.remove('sidebar-collapsed');
+      sidebar.classList.toggle('show',open);
+      backdrop.classList.toggle('open',open);
+      backdrop.setAttribute('aria-hidden',String(!open));
+    }else{
+      document.body.classList.toggle('sidebar-collapsed',!open);
+    }
+    toggle.setAttribute('aria-expanded',String(open));
+    toggle.setAttribute('aria-label',open?'Hide admin menu':'Show admin menu');
+  }
+  toggle.addEventListener('click',()=>setOpen(mobile()?!sidebar.classList.contains('show'):document.body.classList.contains('sidebar-collapsed')));
+  backdrop.addEventListener('click',()=>setOpen(false));
+  document.addEventListener('keydown',e=>{if(e.key==='Escape')setOpen(false);});
+  window.addEventListener('resize',()=>{sidebar.classList.remove('show');backdrop.classList.remove('open');backdrop.setAttribute('aria-hidden','true');if(!mobile())toggle.setAttribute('aria-expanded',String(!document.body.classList.contains('sidebar-collapsed')));else toggle.setAttribute('aria-expanded','false');});
+  document.querySelectorAll('.sidebar a[href^="#"]').forEach(a=>a.addEventListener('click',()=>{if(mobile())setOpen(false);}));
+})();
 // Sidebar nav active
-document.querySelectorAll('.sidebar a[href^="#"]').forEach(a=>a.addEventListener('click',()=>{
+ document.querySelectorAll('.sidebar a[href^="#"]').forEach(a=>a.addEventListener('click',()=>{
   document.querySelectorAll('.sidebar .nav-link').forEach(x=>x.classList.remove('active'));a.classList.add('active');
 }));
 

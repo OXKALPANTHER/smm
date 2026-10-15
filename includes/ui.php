@@ -106,6 +106,8 @@ function ui_logo($wordmark = true, $size = 46)
 function ui_head($title, $bodyClass = 'app', $extraHead = '')
 {
   $app = APP_NAME;
+  $description = htmlspecialchars(APP_NAME . ' SMM Panel in Tanzania for Instagram, TikTok, YouTube and other social media growth services. Manage orders, mobile-money top-ups and account support.', ENT_QUOTES, 'UTF-8');
+  $canonical = htmlspecialchars(rtrim(APP_URL, '/') . '/' . basename((string) ($_SERVER['SCRIPT_NAME'] ?? 'index.php')), ENT_QUOTES, 'UTF-8');
   echo <<<HTML
 <!DOCTYPE html>
 <html lang="sw">
@@ -113,6 +115,9 @@ function ui_head($title, $bodyClass = 'app', $extraHead = '')
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>{$title}</title>
+<meta name="description" content="{$description}">
+<meta name="robots" content="noindex,follow">
+<link rel="canonical" href="{$canonical}">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>

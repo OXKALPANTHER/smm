@@ -2,18 +2,66 @@
 // Performance direction: keep the dashboard’s familiar server-rendered flow and defer nonessential payment content until requested.
 require_once 'config.php';
 require_once 'includes/ui.php';
+if (!isset($_SESSION['user_id'])) {
+    $publicBrand = htmlspecialchars(APP_NAME, ENT_QUOTES, 'UTF-8');
+    $publicCanonical = htmlspecialchars(rtrim(APP_URL, '/') . '/', ENT_QUOTES, 'UTF-8');
+    $publicDescription = $publicBrand . ' is a Tanzania SMM panel for affordable Instagram, TikTok, YouTube and Facebook growth services, mobile-money top-ups and local support.';
+    $structuredData = json_encode([
+        '@context' => 'https://schema.org',
+        '@type' => 'Organization',
+        'name' => APP_NAME . ' SMM Panel',
+        'url' => rtrim(APP_URL, '/') . '/',
+        'description' => $publicDescription,
+        'areaServed' => ['@type' => 'Country', 'name' => 'Tanzania'],
+        'sameAs' => [WHATSAPP_GROUP_URL, WHATSAPP_CHANNEL_URL],
+    ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
+    ?>
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title><?= $publicBrand ?> SMM Panel Tanzania | Social Media Growth Services</title>
+<meta name="description" content="<?= htmlspecialchars($publicDescription, ENT_QUOTES, 'UTF-8') ?>">
+<meta name="keywords" content="Royal Panel, Royal SMM, Tanzania SMM provider, social media boost Tanzania, Instagram followers, TikTok views, YouTube promotion, T20Classic Tech, Blaze Tech">
+<meta name="robots" content="index,follow,max-image-preview:large">
+<link rel="canonical" href="<?= $publicCanonical ?>">
+<meta property="og:type" content="website"><meta property="og:site_name" content="<?= $publicBrand ?> SMM Panel">
+<meta property="og:title" content="<?= $publicBrand ?> SMM Panel Tanzania | Social Media Growth">
+<meta property="og:description" content="Affordable social media growth services from a Tanzania SMM provider. Explore Instagram, TikTok, YouTube and more.">
+<meta property="og:url" content="<?= $publicCanonical ?>">
+<meta name="twitter:card" content="summary"><meta name="twitter:title" content="<?= $publicBrand ?> SMM Panel Tanzania">
+<meta name="twitter:description" content="Affordable social media growth services from a Tanzania SMM provider.">
+<script type="application/ld+json"><?= $structuredData ?></script>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#192342;--muted:#66708b;--violet:#6046e8;--violet2:#4834d4;--line:#e7eaf4}*{box-sizing:border-box}body{margin:0;background:radial-gradient(850px 480px at 0% 0%,#e7e9ff,transparent 67%),radial-gradient(760px 450px at 100% 5%,#e0fbf6,transparent 62%),#f8f9fd;color:var(--ink);font-family:Manrope,system-ui,sans-serif}.wrap{max-width:1120px;margin:auto;padding:24px}.top{display:flex;align-items:center;justify-content:space-between;gap:20px}.brand{font-size:1.35rem;font-weight:800;letter-spacing:-.04em}.brand span{color:var(--violet)}.actions{display:flex;gap:10px}.btn{display:inline-flex;align-items:center;justify-content:center;text-decoration:none;border-radius:13px;padding:12px 18px;font-weight:800;font-size:.9rem}.btn-light{color:var(--ink);background:#fff;border:1px solid var(--line)}.btn-main{color:#fff;background:linear-gradient(135deg,var(--violet),var(--violet2));box-shadow:0 10px 24px #6046e833}.hero{padding:72px 0 54px;max-width:820px}.eyebrow{color:var(--violet2);font-size:.76rem;font-weight:800;text-transform:uppercase;letter-spacing:.12em}.hero h1{font-size:clamp(2.35rem,6vw,4.4rem);line-height:1.08;letter-spacing:-.06em;margin:18px 0}.hero p{max-width:680px;color:var(--muted);font-size:1.12rem;line-height:1.8}.hero-actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:26px}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin:10px 0 42px}.card{background:#fff;border:1px solid #edf0f8;border-radius:22px;padding:23px;box-shadow:0 14px 38px #2532670a}.card .ico{width:44px;height:44px;display:grid;place-items:center;background:#f0edff;color:var(--violet2);border-radius:14px;font-size:1.2rem;font-weight:900}.card h2{font-size:1.04rem;margin:16px 0 8px}.card p,.seo-copy{color:var(--muted);line-height:1.75;font-size:.92rem}.seo-copy{padding:26px;background:#fff;border:1px solid #edf0f8;border-radius:20px;margin-bottom:28px}.footer{padding:25px 0;color:var(--muted);font-size:.82rem}@media(max-width:700px){.wrap{padding:18px}.hero{padding:54px 0 35px}.grid{grid-template-columns:1fr}.actions .btn{padding:10px 12px;font-size:.82rem}}
+</style>
+</head>
+<body><main class="wrap">
+<header class="top"><a class="brand" href="/" aria-label="<?= $publicBrand ?> home"><?= $publicBrand ?> <span>SMM</span></a><nav class="actions"><a class="btn btn-light" href="login.php">Log in</a><a class="btn btn-main" href="register.php">Create account</a></nav></header>
+<section class="hero"><div class="eyebrow">Tanzania social media growth</div><h1>Grow your social presence with <?= $publicBrand ?>.</h1><p><?= $publicBrand ?> is a Tanzania SMM provider with a simple panel for discovering and ordering social media boost services. Explore options for Instagram, TikTok, YouTube, Facebook and more, with clear account pricing and local support.</p><div class="hero-actions"><a class="btn btn-main" href="register.php">Get started</a><a class="btn btn-light" href="login.php">Log in to your panel</a></div></section>
+<section class="grid" aria-label="Panel features"><article class="card"><div class="ico">◎</div><h2>Services across platforms</h2><p>Find social media promotion services for Instagram, TikTok, YouTube, Facebook, Telegram and other popular networks.</p></article><article class="card"><div class="ico">↗</div><h2>Simple ordering dashboard</h2><p>Browse services, submit an order, check progress and manage your account from one mobile-friendly SMM panel.</p></article><article class="card"><div class="ico">TZ</div><h2>Made for Tanzania</h2><p>Use Tanzanian shillings, familiar mobile-money top-ups and direct support when you need help with your account.</p></article></section>
+<section class="seo-copy"><strong>Looking for Royal Panel, T20Classic Tech, Blaze Tech or a Tanzania SMM provider?</strong> Royal SMM gives creators, businesses and resellers a convenient place to explore social media boost services. Compare available services and pricing inside the panel; actual availability and delivery times are shown with each service. Royal SMM is an independent service and is not affiliated with other providers mentioned in searches.</section>
+<footer class="footer">© <?= date('Y') ?> <?= $publicBrand ?> SMM Panel · <a href="login.php">Log in</a> · <a href="register.php">Create an account</a></footer>
+</main></body></html>
+<?php
+    exit;
+}
 requireLogin();
-
 $user_id = $_SESSION['user_id'];
 
 // Current user + balance
-$stmt = $conn->prepare("SELECT username, balance, is_verified FROM users WHERE id = ?");
+$stmt = $conn->prepare("SELECT username, email, phone, balance, is_verified FROM users WHERE id = ?");
 $stmt->bind_param("i", $user_id);
 $stmt->execute();
 $user = $stmt->get_result()->fetch_assoc();
 $tzsBalance = (float)($user['balance'] ?? 0);
 $username   = $user['username'] ?? 'Mteja';
 $isVerified = (int) ($user['is_verified'] ?? 0) === 1;
+$_SESSION['verification_csrf'] = $_SESSION['verification_csrf'] ?? bin2hex(random_bytes(32));
+$verificationToken = (string) $_SESSION['verification_csrf'];
+$manualVerificationMessage = 'Hello Royal Admin, I would like to request manual account verification. Account ID: ' . $user_id . '; Username: ' . ($user['username'] ?? '') . '; Email: ' . ($user['email'] ?? '') . '; Phone: ' . ($user['phone'] ?? 'Not added') . '. Please review my account and let me know if you need anything else.';
 $requestedServiceId = trim((string) ($_GET['service_id'] ?? ''));
 $reorderQuantity = 100;
 $reorderLink = '';
@@ -104,7 +152,9 @@ function statusBadge($status) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title><?= APP_NAME ?> — Weka Order</title>
+    <title><?= htmlspecialchars(APP_NAME, ENT_QUOTES, 'UTF-8') ?> SMM Panel Tanzania | Social Media Dashboard</title>
+    <meta name="description" content="Royal SMM is a Tanzania SMM panel for affordable Instagram, TikTok, YouTube, Facebook and social media boost services. Fast ordering, clear pricing and local support.">
+    <meta name="robots" content="noindex,follow">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -137,6 +187,15 @@ function statusBadge($status) {
             margin: 0 0 30px;
         }
         .container { max-width: 540px; }
+        @media (min-width: 768px) { .container { max-width: 900px; } }
+        @media (min-width: 1100px) { .container { max-width: 1120px; } .dashboard-content { display:grid; grid-template-columns:minmax(0,1.3fr) minmax(320px,.7fr); align-items:start; gap:1rem; } .dashboard-content>.card-soft { margin-top:0!important; } }
+        .verify-nudge{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:.95rem 1.1rem;margin-top:.85rem;border:1px solid #dedaff;border-radius:18px;background:linear-gradient(110deg,#fff,#f5f3ff);box-shadow:0 8px 22px rgba(72,52,212,.06)}
+        .verify-nudge .vico{width:42px;height:42px;flex:0 0 auto;display:grid;place-items:center;border-radius:14px;background:#eeebff;color:var(--primary-2);font-size:1.2rem}
+        .verify-nudge p{margin:0;color:var(--muted);font-size:.76rem}
+        .verify-option{border:1px solid #e9edf7;border-radius:17px;padding:1rem;background:#fbfcff;height:100%}
+        .verify-option h6{font-weight:800;color:var(--ink)}.verify-option p{font-size:.78rem;color:var(--muted);line-height:1.6}
+        .verify-benefits{display:grid;grid-template-columns:1fr 1fr;gap:.5rem}.verify-benefit{font-size:.75rem;color:#4e5977;display:flex;gap:.45rem;align-items:flex-start}.verify-benefit i{color:#00a879;margin-top:2px}
+        @media(max-width:575px){.verify-nudge{align-items:flex-start;flex-wrap:wrap}.verify-nudge .btn{width:100%}.verify-benefits{grid-template-columns:1fr}}
 
         /* Top bar */
         .topbar { padding: 1.1rem 0 0.5rem; display:flex; align-items:center; justify-content:space-between; gap:1rem; position:static; }
@@ -400,7 +459,11 @@ function statusBadge($status) {
         </div>
     </div>
 
+    <?php if (!$isVerified): ?>
+    <div class="verify-nudge" id="verificationNudge"><div class="d-flex align-items-center gap-3"><div class="vico"><i class="bi bi-patch-check-fill"></i></div><div><strong class="d-block" style="font-size:.88rem;">Unlock lower verified-account prices</strong><p>Verify once to access the lower verified pricing tier and a verified account badge.</p></div></div><button type="button" class="btn btn-primary btn-sm rounded-pill px-3 fw-semibold" data-bs-toggle="modal" data-bs-target="#verificationModal">Explore benefits</button></div>
+    <?php endif; ?>
     <!-- Order card -->
+    <div class="dashboard-content">
     <div class="card-soft reveal-3">
         <div class="section-title mb-3">
             <div class="section-ico"><i class="bi bi-cart-plus"></i></div>
@@ -507,12 +570,23 @@ function statusBadge($status) {
             <?php endforeach; ?>
         <?php endif; ?>
     </div>
-
+    </div>
 </div>
-
 <!-- Top-right hamburger + slide drawer -->
 <?php ui_nav('home', ['balance' => $tzsBalance]); ?>
-
+<?php if (!$isVerified): ?>
+<div class="modal fade" id="verificationModal" tabindex="-1" aria-labelledby="verificationTitle" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg modal-fullscreen-sm-down"><div class="modal-content border-0 rounded-4 overflow-hidden">
+    <div class="modal-header border-0 px-4 pt-4 pb-2"><div><span class="badge rounded-pill text-bg-primary mb-2"><i class="bi bi-patch-check-fill me-1"></i>Verified pricing</span><h5 class="modal-title fw-bold" id="verificationTitle">Get lower prices with a verified account</h5><p class="text-muted small mb-0 mt-1">Choose the verification method that works best for you.</p></div><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+    <div class="modal-body px-4 pt-3"><div class="verify-benefits mb-3"><div class="verify-benefit"><i class="bi bi-check-circle-fill"></i><span>Access lower prices available to verified accounts.</span></div><div class="verify-benefit"><i class="bi bi-check-circle-fill"></i><span>Show a verified badge on your account.</span></div></div>
+      <div id="verificationAlert" class="alert d-none rounded-3 small" role="status"></div>
+      <div class="row g-3"><div class="col-md-6"><section class="verify-option"><h6><i class="bi bi-wallet2 text-primary me-1"></i>Pay from your wallet</h6><p>One-time verification fee: <strong>5,000 TZS</strong>. Your balance is <?= number_format($tzsBalance) ?> TZS.</p><?php if ($tzsBalance >= 5000): ?><button class="btn btn-primary w-100 rounded-3 fw-bold" id="verifyWalletBtn" type="button">Confirm wallet payment · 5,000 TZS</button><small class="d-block text-muted mt-2">The fee is deducted only after you confirm.</small><?php else: ?><div class="alert alert-warning py-2 px-3 small mb-2">You need at least 5,000 TZS in your wallet. Top up to continue.</div><button type="button" class="btn btn-outline-primary w-100 rounded-3 fw-bold" id="verificationTopUpBtn" data-bs-dismiss="modal" data-bs-toggle="modal" data-bs-target="#topUpModal">Top up my wallet</button><?php endif; ?></section></div>
+      <div class="col-md-6"><section class="verify-option"><h6><i class="bi bi-phone text-success me-1"></i>Pay by mobile money</h6><p>Pay the same 5,000 TZS fee using the mobile-money provider used for top-ups. Verification completes after the payment is confirmed.</p><label class="form-label" for="verificationPhone">Tanzania mobile-money number</label><input type="tel" id="verificationPhone" class="form-control mb-2" placeholder="07XXXXXXXX" value="<?= htmlspecialchars((string) ($user['phone'] ?? ''), ENT_QUOTES, 'UTF-8') ?>"><button class="btn btn-success w-100 rounded-3 fw-bold" id="verifyMobileBtn" type="button">Pay 5,000 TZS by mobile money</button><small class="d-block text-muted mt-2">Approve the payment prompt on your phone. We do not verify until payment succeeds.</small></section></div></div>
+      <section class="verify-option mt-3"><h6><i class="bi bi-whatsapp text-success me-1"></i>Request manual verification</h6><p class="mb-2">Contact the admin with your account details and ask for a manual review.</p><a class="btn btn-outline-success rounded-3 fw-bold" href="https://wa.me/<?= rawurlencode(WHATSAPP_SUPPORT_PHONE) ?>?text=<?= rawurlencode($manualVerificationMessage) ?>" target="_blank" rel="noopener"><i class="bi bi-whatsapp me-1"></i>Contact admin on WhatsApp</a></section>
+    </div><div class="modal-footer border-0 pt-0 px-4 pb-4"><button type="button" class="btn btn-light rounded-3" data-bs-dismiss="modal">Maybe later</button></div>
+  </div></div>
+</div>
+<?php endif; ?>
 <!-- Top-Up Modal -->
 <div class="modal fade" id="topUpModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-fullscreen-sm-down">
@@ -532,7 +606,87 @@ function statusBadge($status) {
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script src="assets/lazy-topup.js"></script>
-
+<script>
+// Refresh the parent dashboard after a successful embedded top-up. If this top-up
+// was requested from verification, reopen the dialog with the updated balance.
+window.addEventListener('message',event=>{
+  if(event.origin!==window.location.origin || event.data?.type!=='royal-topup-complete') return;
+  try{
+    const returnToVerification=sessionStorage.getItem('royalReturnToVerification')==='1';
+    sessionStorage.removeItem('royalReturnToVerification');
+    if(returnToVerification) sessionStorage.removeItem('royalVerificationPromptSeen');
+  }catch(e){}
+  window.location.reload();
+});
+</script>
+<script>
+(function(){
+  const modalEl=document.getElementById('verificationModal');
+  if(!modalEl) return;
+  const csrf=<?= json_encode($verificationToken) ?>;
+  const alertBox=document.getElementById('verificationAlert');
+  const verificationTopUpBtn=document.getElementById('verificationTopUpBtn');
+  if(verificationTopUpBtn) verificationTopUpBtn.addEventListener('click',()=>{try{sessionStorage.setItem('royalReturnToVerification','1');}catch(e){}});
+  const walletBtn=document.getElementById('verifyWalletBtn');
+  const mobileBtn=document.getElementById('verifyMobileBtn');
+  function showMessage(message,type='info'){
+    alertBox.className='alert alert-'+type+' rounded-3 small';
+    alertBox.textContent=message;
+    alertBox.classList.remove('d-none');
+  }
+  async function post(data){
+    const response=await fetch('topup.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...data,_token:csrf})});
+    return response.json();
+  }
+  function finish(){
+    showMessage('Payment confirmed. Your account is now verified and lower verified-account prices are available. Refreshing…','success');
+    setTimeout(()=>window.location.reload(),1400);
+  }
+  async function poll(orderId){
+    let attempts=0;
+    while(attempts<40){
+      await new Promise(resolve=>setTimeout(resolve,3000));
+      attempts++;
+      try{
+        const result=await post({action:'check_verification_status',order_id:orderId});
+        if(result.status==='COMPLETED'||result.verified){finish();return;}
+        if(result.status==='FAILED'){showMessage('The mobile-money payment did not complete. You can try again or contact the admin.','danger');return;}
+        if(attempts%5===0) showMessage('Waiting for payment confirmation on your phone…','info');
+      }catch(e){if(attempts%5===0) showMessage('Still checking payment status. Please keep this window open.','warning');}
+    }
+    showMessage('We have not received confirmation yet. Check your phone and reopen verification to check again.','warning');
+  }
+  if(walletBtn) walletBtn.addEventListener('click',async()=>{
+    if(!window.confirm('Confirm that you want to pay the one-time 5,000 TZS verification fee from your wallet? The amount will be deducted only after this confirmation.')) return;
+    walletBtn.disabled=true;
+    try{
+      const result=await post({action:'pay_verification_wallet',confirmed:true});
+      if(result.success&&result.verified){finish();return;}
+      if(result.insufficient_balance){showMessage('Your wallet needs at least 5,000 TZS. Top up your balance, then return here to continue.','warning');return;}
+      showMessage(result.message||'Wallet payment could not be completed.','danger');
+    }catch(e){showMessage('Network error. No payment was made. Please try again.','danger');}
+    finally{walletBtn.disabled=false;}
+  });
+  if(mobileBtn) mobileBtn.addEventListener('click',async()=>{
+    const phone=document.getElementById('verificationPhone').value.trim();
+    if(!phone){showMessage('Enter the mobile-money number to receive the payment prompt.','warning');return;}
+    if(!window.confirm('Continue to pay 5,000 TZS by mobile money? Your account will be verified automatically only after the provider confirms payment.')) return;
+    mobileBtn.disabled=true;mobileBtn.innerHTML='<span class="spinner-border spinner-border-sm me-2"></span>Sending payment request…';
+    try{
+      const result=await post({action:'initiate_verification_payment',phone,confirmed:true});
+      if(result.success&&result.order_id){showMessage('Payment request sent. Approve it on your phone; keep this dialog open while we verify the payment.','info');poll(result.order_id);return;}
+      showMessage(result.message||'Could not start the mobile-money request.','danger');
+    }catch(e){showMessage('Network error. Please try again.','danger');}
+    finally{mobileBtn.disabled=false;mobileBtn.innerHTML='Pay 5,000 TZS by mobile money';}
+  });
+  try{
+    if(!sessionStorage.getItem('royalVerificationPromptSeen')){
+      sessionStorage.setItem('royalVerificationPromptSeen','1');
+      setTimeout(()=>bootstrap.Modal.getOrCreateInstance(modalEl).show(),850);
+    }
+  }catch(e){setTimeout(()=>bootstrap.Modal.getOrCreateInstance(modalEl).show(),850);}
+})();
+</script>
 <script>
 let userBalance = <?= json_encode($tzsBalance) ?>;
 let currentService = null;

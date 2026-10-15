@@ -8,10 +8,12 @@ if (!isset($_SESSION['user_id'])) {
     exit;
 }
 
-define('API_TOKEN', 'E6NERlSG1Q0d8IFAILb1PoawHpCliX5fQKonfcxNtqExtpr8Mo7GzwsrE6q5');
-define('USER_ID', '498');
-define('BASE_URL', 'https://palmpesa.drmlelwa.co.tz/api');
-
+define('API_TOKEN', MPESA_API_TOKEN);
+define('USER_ID', MPESA_USER_ID);
+define('BASE_URL', MPESA_BASE_URL);
+const VERIFICATION_FEE_TZS = 5000;
+const VERIFICATION_PAYMENT_DESCRIPTION = 'Account verification fee via PalmPesa';
+const VERIFICATION_WALLET_DESCRIPTION = 'Account verification fee paid from wallet';
 function callAPI($method, $url, $data = false)
 {
     $curl = curl_init();
@@ -20,123 +22,298 @@ function callAPI($method, $url, $data = false)
         'Content-Type: application/json',
         'Accept: application/json'
     ];
-    curl_setopt($curl, CURLOPT_URL, $url);
-    curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
-    curl_setopt($curl, CURLOPT_HTTPHEADER, $headers);
-    if ($method === "POST") {
-        curl_setopt($curl, CURLOPT_POST, 1);
-        if ($data)
-            curl_setopt($curl, CURLOPT_POSTFIELDS, json_encode($data));
+    curl_setopt_array($curl, [
+        CURLOPT_URL => $url,
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_HTTPHEADER => $headers,
+        CURLOPT_CONNECTTIMEOUT => 10,
+        CURLOPT_TIMEOUT => MPESA_TIMEOUT,
+    ]);
+    if ($method === 'POST') {
+        curl_setopt($curl, CURLOPT_POST, true);
+        if ($data) curl_setopt($curl, CURLOPT_POSTFIELDS, json_encode($data));
     }
     $result = curl_exec($curl);
+    if ($result === false) error_log('PalmPesa request failed: ' . curl_error($curl));
     curl_close($curl);
-    return json_decode($result, true);
+    $decoded = json_decode((string) $result, true);
+    return is_array($decoded) ? $decoded : [];
 }
-
 function formatPhoneNumber($phone)
 {
-    $phone = preg_replace('/[^0-9]/', '', $phone);
-    if (strpos($phone, '0') === 0) {
-        return '255' . substr($phone, 1);
-    }
-    if (strpos($phone, '255') === 0) {
-        return $phone;
-    }
-    return false;
+    $phone = preg_replace('/[^0-9]/', '', (string) $phone);
+    if (strpos($phone, '0') === 0) $phone = '255' . substr($phone, 1);
+    if (!preg_match('/^255[67][0-9]{8}$/', $phone)) return false;
+    return $phone;
 }
-
+function verificationReply($success, $message, $extra = [])
+{
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode(array_merge(['success' => $success, 'message' => $message], $extra));
+    exit;
+}
+function requireVerificationToken($input)
+{
+    $provided = (string) ($input['_token'] ?? '');
+    $expected = (string) ($_SESSION['verification_csrf'] ?? '');
+    if ($provided === '' || $expected === '' || !hash_equals($expected, $provided)) {
+        http_response_code(403);
+        verificationReply(false, 'Session expired. Refresh the page and try again.');
+    }
+}
+function completeVerificationPayment($externalRef, $userId)
+{
+    global $conn;
+    $externalRef = trim((string) $externalRef);
+    $userId = (int) $userId;
+    if ($externalRef === '' || $userId <= 0) throw new RuntimeException('Missing payment reference.');
+    $conn->begin_transaction();
+    try {
+        $lock = (defined('DB_DRIVER') && in_array(DB_DRIVER, ['mysql', 'pgsql'], true)) ? ' FOR UPDATE' : '';
+        $stmt = $conn->prepare("SELECT id, amount, status FROM transactions WHERE external_ref = ? AND user_id = ? AND description = ? LIMIT 1{$lock}");
+        $description = VERIFICATION_PAYMENT_DESCRIPTION;
+        $stmt->bind_param('sis', $externalRef, $userId, $description);
+        $stmt->execute();
+        $transaction = $stmt->get_result()->fetch_assoc();
+        if (!$transaction || (int) round((float) $transaction['amount']) !== VERIFICATION_FEE_TZS) {
+            throw new RuntimeException('Verification payment was not found or has an invalid amount.');
+        }
+        if (strtolower((string) $transaction['status']) === 'failed') {
+            throw new RuntimeException('This verification payment failed. Please start a new request.');
+        }
+        $wasPending = strtolower((string) $transaction['status']) === 'pending';
+        if ($wasPending) {
+            $status = 'completed';
+            $stmt = $conn->prepare("UPDATE transactions SET status = ?, completed_at = CURRENT_TIMESTAMP WHERE id = ? AND status = 'pending'");
+            $stmt->bind_param('si', $status, $transaction['id']);
+            if (!$stmt->execute()) throw new RuntimeException('Could not record the confirmed payment.');
+        }
+        $stmt = $conn->prepare('UPDATE users SET is_verified = 1 WHERE id = ?');
+        $stmt->bind_param('i', $userId);
+        if (!$stmt->execute()) throw new RuntimeException('Could not update account verification.');
+        $conn->commit();
+        if ($wasPending) {
+            try {
+                createNotification($userId, 'Akaunti imethibitishwa', 'Malipo ya uthibitisho yamekamilika. Sasa unaweza kutumia bei za chini za akaunti zilizothibitishwa.', 'success', 'user', ['source' => 'verification']);
+                logActivity($userId, 'verification_payment_completed', 'Account verified after confirmed PalmPesa fee of 5000 TZS');
+            } catch (Throwable $noticeError) {
+                error_log('Verification notification failed: ' . $noticeError->getMessage());
+            }
+        }
+        return ['verified' => true, 'already_verified' => !$wasPending];
+    } catch (Throwable $e) {
+        try { $conn->rollback(); } catch (Throwable $ignored) {}
+        throw $e;
+    }
+}
 // Handle AJAX requests
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $input = json_decode(file_get_contents('php://input'), true);
-    $action = $input['action'] ?? '';
+    if (!is_array($input)) $input = [];
+    $action = (string) ($input['action'] ?? '');
+    $currentUserId = (int) $_SESSION['user_id'];
+
+    if (in_array($action, ['pay_verification_wallet', 'initiate_verification_payment', 'check_verification_status'], true)) {
+        requireVerificationToken($input);
+        $stmt = $conn->prepare('SELECT id, username, email, phone, balance, is_verified FROM users WHERE id = ? LIMIT 1');
+        $stmt->bind_param('i', $currentUserId);
+        $stmt->execute();
+        $account = $stmt->get_result()->fetch_assoc();
+        if (!$account) verificationReply(false, 'Account not found.');
+        if ((int) ($account['is_verified'] ?? 0) === 1) verificationReply(true, 'Your account is already verified.', ['verified' => true, 'already_verified' => true]);
+
+        if ($action === 'pay_verification_wallet') {
+            if (empty($input['confirmed'])) verificationReply(false, 'Please confirm the 5,000 TZS wallet payment before continuing.');
+            $conn->begin_transaction();
+            try {
+                $lock = (defined('DB_DRIVER') && in_array(DB_DRIVER, ['mysql', 'pgsql'], true)) ? ' FOR UPDATE' : '';
+                $stmt = $conn->prepare("SELECT balance, is_verified FROM users WHERE id = ?{$lock}");
+                $stmt->bind_param('i', $currentUserId);
+                $stmt->execute();
+                $lockedUser = $stmt->get_result()->fetch_assoc();
+                if (!$lockedUser) throw new RuntimeException('Account not found.');
+                if ((int) ($lockedUser['is_verified'] ?? 0) === 1) {
+                    $conn->commit();
+                    verificationReply(true, 'Your account is already verified.', ['verified' => true, 'already_verified' => true]);
+                }
+                $balance = (float) ($lockedUser['balance'] ?? 0);
+                if ($balance < VERIFICATION_FEE_TZS) {
+                    $conn->rollback();
+                    verificationReply(false, 'Your wallet balance is not enough. Top up at least 5,000 TZS to continue.', ['insufficient_balance' => true, 'balance' => $balance, 'required' => VERIFICATION_FEE_TZS]);
+                }
+                $stmt = $conn->prepare('UPDATE users SET balance = balance - ?, is_verified = 1 WHERE id = ? AND balance >= ? AND is_verified = 0');
+                $amount = VERIFICATION_FEE_TZS;
+                $stmt->bind_param('dii', $amount, $currentUserId, $amount);
+                if (!$stmt->execute()) throw new RuntimeException('Wallet debit failed.');
+                $stmt = $conn->prepare('SELECT balance, is_verified FROM users WHERE id = ?');
+                $stmt->bind_param('i', $currentUserId);
+                $stmt->execute();
+                $afterDebit = $stmt->get_result()->fetch_assoc();
+                if (!$afterDebit || abs((float) $afterDebit['balance'] - ($balance - VERIFICATION_FEE_TZS)) > 0.01 || (int) $afterDebit['is_verified'] !== 1) {
+                    throw new RuntimeException('Wallet balance changed before verification could complete.');
+                }
+                $description = VERIFICATION_WALLET_DESCRIPTION;
+                $gateway = 'internal';
+                $method = 'wallet';
+                $externalRef = 'VERIFY-WALLET-' . $currentUserId . '-' . bin2hex(random_bytes(8));
+                $status = 'completed';
+                $stmt = $conn->prepare('INSERT INTO transactions (user_id, amount, type, payment_method, gateway, description, external_ref, status, completed_at) VALUES (?, ?, \'debit\', ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)');
+                $stmt->bind_param('idsssss', $currentUserId, $amount, $method, $gateway, $description, $externalRef, $status);
+                if (!$stmt->execute()) throw new RuntimeException('Could not record the wallet payment.');
+                $stmt = $conn->prepare('SELECT balance FROM users WHERE id = ?');
+                $stmt->bind_param('i', $currentUserId);
+                $stmt->execute();
+                $newBalance = (float) ($stmt->get_result()->fetch_assoc()['balance'] ?? 0);
+                $conn->commit();
+                try {
+                    createNotification($currentUserId, 'Akaunti imethibitishwa', 'Uthibitisho umekamilika. Sasa unaweza kutumia bei za chini za akaunti zilizothibitishwa.', 'success', 'user', ['source' => 'verification']);
+                    logActivity($currentUserId, 'verification_wallet_payment_completed', 'Account verified after confirmed wallet debit of 5000 TZS');
+                } catch (Throwable $noticeError) {
+                    error_log('Verification notification failed: ' . $noticeError->getMessage());
+                }
+                verificationReply(true, 'Payment received. Your account is now verified.', ['verified' => true, 'balance' => $newBalance]);
+            } catch (Throwable $e) {
+                try { $conn->rollback(); } catch (Throwable $ignored) {}
+                error_log('Wallet verification failed for user ' . $currentUserId . ': ' . $e->getMessage());
+                verificationReply(false, 'The wallet payment could not be completed. No payment was recorded. Please try again.');
+            }
+        }
+
+        if ($action === 'initiate_verification_payment') {
+            if (empty($input['confirmed'])) verificationReply(false, 'Please confirm the 5,000 TZS mobile-money payment before continuing.');
+            $phone = formatPhoneNumber($input['phone'] ?? $account['phone'] ?? '');
+            if (!$phone) verificationReply(false, 'Enter a valid Tanzania mobile-money number.');
+            $reference = 'RVF' . $currentUserId . strtoupper(bin2hex(random_bytes(6)));
+            $name = trim((string) $account['username']);
+            $email = trim((string) $account['email']);
+            if ($email === '') verificationReply(false, 'Add an email address to your account before paying.');
+            $payload = [
+                'user_id' => USER_ID,
+                'name' => $name,
+                'email' => $email,
+                'phone' => $phone,
+                'amount' => VERIFICATION_FEE_TZS,
+                'transaction_id' => $reference,
+                'address' => 'Royal HQ',
+                'postcode' => '00000',
+                'buyer_uuid' => random_int(100000, 999999),
+            ];
+            $response = callAPI('POST', BASE_URL . '/pay-via-mobile', $payload);
+            $providerOrderId = trim((string) ($response['order_id'] ?? ''));
+            if ($providerOrderId === '') {
+                verificationReply(false, 'Could not start the mobile-money request. Check the phone number and try again.');
+            }
+            $description = VERIFICATION_PAYMENT_DESCRIPTION;
+            $amount = VERIFICATION_FEE_TZS;
+            $method = 'mobile_money';
+            $gateway = 'palmpesa';
+            $status = 'pending';
+            $stmt = $conn->prepare('INSERT INTO transactions (user_id, amount, type, payment_method, gateway, description, external_ref, status) VALUES (?, ?, \'debit\', ?, ?, ?, ?, ?)');
+            $stmt->bind_param('idsssss', $currentUserId, $amount, $method, $gateway, $description, $providerOrderId, $status);
+            if (!$stmt->execute()) {
+                error_log('Could not save PalmPesa verification transaction for user ' . $currentUserId);
+                verificationReply(false, 'Payment was started but could not be recorded. Contact support before trying again.');
+            }
+            verificationReply(true, 'Payment prompt sent. Approve it on your phone to verify your account.', ['order_id' => $providerOrderId, 'status' => 'PENDING']);
+        }
+
+        if ($action === 'check_verification_status') {
+            $orderId = trim((string) ($input['order_id'] ?? ''));
+            if ($orderId === '' || strlen($orderId) > 100) verificationReply(false, 'Invalid payment reference.');
+            $description = VERIFICATION_PAYMENT_DESCRIPTION;
+            $stmt = $conn->prepare('SELECT id, amount, status FROM transactions WHERE external_ref = ? AND user_id = ? AND description = ? LIMIT 1');
+            $stmt->bind_param('sis', $orderId, $currentUserId, $description);
+            $stmt->execute();
+            $transaction = $stmt->get_result()->fetch_assoc();
+            if (!$transaction || (int) round((float) $transaction['amount']) !== VERIFICATION_FEE_TZS) verificationReply(false, 'Verification payment was not found.');
+            if (strtolower((string) $transaction['status']) === 'completed') verificationReply(true, 'Your account is verified.', ['status' => 'COMPLETED', 'verified' => true]);
+            if (strtolower((string) $transaction['status']) === 'failed') verificationReply(true, 'Payment failed.', ['status' => 'FAILED']);
+            $response = callAPI('POST', BASE_URL . '/order-status', ['order_id' => $orderId]);
+            $record = $response['data'][0] ?? $response['data'] ?? $response;
+            $rawStatus = is_array($record) ? ($record['payment_status'] ?? $record['status'] ?? $response['payment_status'] ?? null) : null;
+            $status = normalizePaymentStatus($rawStatus);
+            if ($status === 'COMPLETED') {
+                try {
+                    completeVerificationPayment($orderId, $currentUserId);
+                    verificationReply(true, 'Payment received. Your account is now verified.', ['status' => 'COMPLETED', 'verified' => true]);
+                } catch (Throwable $e) {
+                    error_log('PalmPesa verification completion failed for ' . $orderId . ': ' . $e->getMessage());
+                    verificationReply(false, 'Payment was confirmed but verification did not finish. Contact support with your payment reference.');
+                }
+            }
+            if ($status === 'FAILED') {
+                $failed = 'failed';
+                $stmt = $conn->prepare("UPDATE transactions SET status = ? WHERE id = ? AND status = 'pending'");
+                $stmt->bind_param('si', $failed, $transaction['id']);
+                $stmt->execute();
+            }
+            verificationReply(true, 'Payment status checked.', ['status' => $status]);
+        }
+    }
 
     if ($action === 'initiate_payment') {
-        $phone = formatPhoneNumber($input['phone']);
-        $amount = $input['amount'];
-        $email = $input['email'];
-        $name = $input['name'];
-
-        if (!$phone || !$amount || !$email || !$name) {
-            echo json_encode(['success' => false, 'message' => 'Tafadhali jaza taarifa zote kwa usahihi.']);
-            exit;
+        $phone = formatPhoneNumber($input['phone'] ?? '');
+        $amount = filter_var($input['amount'] ?? null, FILTER_VALIDATE_INT);
+        $email = filter_var(trim((string) ($input['email'] ?? '')), FILTER_VALIDATE_EMAIL);
+        $name = trim((string) ($input['name'] ?? ''));
+        if (!$phone || !$amount || $amount < MINIMUM_TOPUP || $amount > MAXIMUM_TOPUP || !$email || $name === '') {
+            verificationReply(false, 'Please provide a valid amount (minimum 1,000 TZS) and complete payment details.');
         }
-
-        $transaction_id = "TXN" . time() . rand(1000, 9999);
-
+        $transactionId = 'TXN' . time() . random_int(1000, 9999);
         $payload = [
-            "user_id" => USER_ID,
-            "name" => $name,
-            "email" => $email,
-            "phone" => $phone,
-            "amount" => (int) $amount,
-            "transaction_id" => $transaction_id,
-            "address" => "Royal HQ",
-            "postcode" => "00000",
-            "buyer_uuid" => rand(100000, 999999)
+            'user_id' => USER_ID,
+            'name' => $name,
+            'email' => $email,
+            'phone' => $phone,
+            'amount' => (int) $amount,
+            'transaction_id' => $transactionId,
+            'address' => 'Royal HQ',
+            'postcode' => '00000',
+            'buyer_uuid' => random_int(100000, 999999),
         ];
-
         $response = callAPI('POST', BASE_URL . '/pay-via-mobile', $payload);
-
-        if (isset($response['order_id'])) {
-            // Insert pending transaction
-            $stmt = $conn->prepare("INSERT INTO transactions (user_id, amount, type, description, external_ref, status) VALUES (?, ?, 'credit', ?, ?, 'pending')");
-            $desc = "Top-up via PalmPesa";
-            $stmt->bind_param("idss", $_SESSION['user_id'], $amount, $desc, $response['order_id']);
-            $stmt->execute();
-
-            echo json_encode([
-                'success' => true,
-                'order_id' => $response['order_id'],
-                'message' => 'Ombi la malipo limetumwa kwenye simu yako.'
-            ]);
-        } else {
-            echo json_encode([
-                'success' => false,
-                'message' => 'Hitilafu imetokea wakati wa kuanzisha malipo.',
-                'debug' => $response
-            ]);
+        $orderId = trim((string) ($response['order_id'] ?? ''));
+        if ($orderId !== '') {
+            $stmt = $conn->prepare("INSERT INTO transactions (user_id, amount, type, payment_method, gateway, description, external_ref, status) VALUES (?, ?, 'credit', 'mobile_money', 'palmpesa', ?, ?, 'pending')");
+            $description = 'Top-up via PalmPesa';
+            $stmt->bind_param('idss', $currentUserId, $amount, $description, $orderId);
+            if (!$stmt->execute()) verificationReply(false, 'Payment was started but could not be recorded. Contact support before trying again.');
+            verificationReply(true, 'Payment prompt sent to your phone.', ['order_id' => $orderId, 'message' => 'Ombi la malipo limetumwa kwenye simu yako.']);
         }
-        exit;
+        verificationReply(false, 'Could not start the mobile-money payment. Please try again.');
+    }
 
-    } elseif ($action === 'check_status') {
-        $order_id = $input['order_id'];
-
-        if (!$order_id) {
-            echo json_encode(['success' => false, 'status' => 'ERROR']);
-            exit;
-        }
-
-        $payload = ["order_id" => $order_id];
-        $response = callAPI('POST', BASE_URL . '/order-status', $payload);
-
+    if ($action === 'check_status') {
+        $orderId = trim((string) ($input['order_id'] ?? ''));
+        if ($orderId === '' || strlen($orderId) > 100) verificationReply(false, 'Invalid payment reference.');
+        $stmt = $conn->prepare("SELECT id FROM transactions WHERE external_ref = ? AND user_id = ? AND type = 'credit' LIMIT 1");
+        $stmt->bind_param('si', $orderId, $currentUserId);
+        $stmt->execute();
+        if (!$stmt->get_result()->fetch_assoc()) verificationReply(false, 'Top-up payment was not found for this account.');
+        $response = callAPI('POST', BASE_URL . '/order-status', ['order_id' => $orderId]);
         $record = $response['data'][0] ?? $response['data'] ?? $response;
         if (is_array($record)) {
             $rawStatus = $record['payment_status'] ?? $record['status'] ?? $response['payment_status'] ?? null;
             $status = normalizePaymentStatus($rawStatus);
-
             if ($status === 'COMPLETED') {
                 try {
-                    $credit = completeTopupTransaction($order_id);
-                    echo json_encode(['success' => true, 'status' => 'COMPLETED', 'credited' => $credit['credited'], 'balance' => $credit['balance']]);
+                    $credit = completeTopupTransaction($orderId);
+                    verificationReply(true, 'Payment completed.', ['status' => 'COMPLETED', 'credited' => $credit['credited'], 'balance' => $credit['balance']]);
                 } catch (Throwable $e) {
-                    error_log('Top-up completion failed for ' . $order_id . ': ' . $e->getMessage());
-                    echo json_encode(['success' => false, 'status' => 'ERROR', 'message' => 'Malipo yamekamilika lakini salio halijasasishwa.']);
+                    error_log('Top-up completion failed for ' . $orderId . ': ' . $e->getMessage());
+                    verificationReply(false, 'Payment was confirmed but the balance could not be updated yet.');
                 }
-                exit;
-            } elseif ($status === 'FAILED') {
-                $stmt = $conn->prepare("UPDATE transactions SET status = 'failed' WHERE external_ref = ? AND status = 'pending'");
-                $stmt->bind_param("s", $order_id);
+            }
+            if ($status === 'FAILED') {
+                $stmt = $conn->prepare("UPDATE transactions SET status = 'failed' WHERE external_ref = ? AND user_id = ? AND type = 'credit' AND status = 'pending'");
+                $stmt->bind_param('si', $orderId, $currentUserId);
                 $stmt->execute();
             }
-
-            echo json_encode(['success' => true, 'status' => $status]);
-        } else {
-            echo json_encode(['success' => true, 'status' => 'PENDING']);
+            verificationReply(true, 'Payment status checked.', ['status' => $status]);
         }
-        exit;
+        verificationReply(true, 'Payment is still processing.', ['status' => 'PENDING']);
     }
 }
-
 // If not a POST request, show the HTML form
 ?>
 <!DOCTYPE html>
@@ -154,6 +331,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             font-family: 'Poppins', sans-serif;
             background-color: #f3f4f6;
         }
+        body.min-h-screen { min-height: 100vh; background: radial-gradient(900px 500px at 8% -5%, #dceafe 0, transparent 55%), radial-gradient(760px 500px at 100% 100%, #e3e7ff 0, transparent 55%), #f4f6fb; }
+        #paymentForm { max-width: 470px; border: 1px solid rgba(108,92,231,.12); border-radius: 28px; padding: 2rem; box-shadow: 0 24px 70px rgba(43,54,116,.14); }
+        #paymentForm input { min-height: 50px; border-color: #e4e8f2; border-radius: 14px; }
+        #paymentForm input:focus { box-shadow: 0 0 0 4px rgba(59,130,246,.12); }
+        #submitBtn { border-radius: 15px; min-height: 54px; letter-spacing: .01em; }
+        .payment-note { border: 1px solid #e7eaff; background: linear-gradient(135deg,#f7f8ff,#f2fbff); border-radius: 16px; padding: .8rem .9rem; color: #526174; font-size: .76rem; line-height: 1.55; }
+        @media(max-width:480px) { #paymentForm { padding: 1.45rem 1.2rem; border-radius: 23px; } }
 
         .glass-card {
             background: rgba(255, 255, 255, 0.95);
@@ -217,16 +401,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <i class="fas fa-wallet text-2xl"></i>
             </div>
             <h1 class="text-2xl font-bold text-gray-800 tracking-tight"><?php echo APP_NAME; ?></h1>
-            <p class="text-gray-500 text-sm">Fanya malipo kwa usalama</p>
+            <p class="text-gray-500 text-sm">Salama, rahisi na ya haraka kwa simu yako</p>
         </div>
 
+        <div class="payment-note mb-5"><i class="fas fa-shield-alt text-blue-600 mr-1"></i> Lipa kupitia mobile money. Hakikisha namba yako inapokea ombi la malipo kabla ya kuendelea.</div>
         <form id="payForm" onsubmit="handlePayment(event)" class="space-y-5">
 
             <div>
                 <label class="block text-xs font-semibold text-gray-500 uppercase mb-1">Kiasi (TZS)</label>
                 <div class="relative">
                     <span class="absolute left-4 top-3.5 text-gray-400 font-bold">TSh</span>
-                    <input type="number" id="amount" name="amount" required placeholder="1000" min="1000"
+                    <input type="number" id="amount" name="amount" required placeholder="1000" min="<?= (int) MINIMUM_TOPUP ?>" max="<?= (int) MAXIMUM_TOPUP ?>"
                         class="w-full pl-14 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all font-bold text-gray-700 text-lg">
                 </div>
             </div>
@@ -407,6 +592,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         function showSuccess() {
             document.getElementById('processingScreen').classList.add('hidden');
             document.getElementById('successScreen').classList.remove('hidden');
+            if (window.parent !== window) {
+                window.parent.postMessage({ type: 'royal-topup-complete' }, window.location.origin);
+            }
         }
 
         function showError(msg) {
