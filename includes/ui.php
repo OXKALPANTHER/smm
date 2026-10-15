@@ -106,18 +106,29 @@ function ui_logo($wordmark = true, $size = 46)
 function ui_head($title, $bodyClass = 'app', $extraHead = '')
 {
   $app = APP_NAME;
-  $description = htmlspecialchars(APP_NAME . ' SMM Panel in Tanzania for Instagram, TikTok, YouTube and other social media growth services. Manage orders, mobile-money top-ups and account support.', ENT_QUOTES, 'UTF-8');
-  $canonical = htmlspecialchars(rtrim(APP_URL, '/') . '/' . basename((string) ($_SERVER['SCRIPT_NAME'] ?? 'index.php')), ENT_QUOTES, 'UTF-8');
+  $page = basename((string) ($_SERVER['SCRIPT_NAME'] ?? 'index.php'));
+  $pageDescriptions = [
+    'pricing.php' => APP_NAME . ' public catalogue rates: compare starting prices, service limits, and refill availability before signing in.',
+    'services.php' => APP_NAME . ' public read-only catalogue of current platform starting prices. Sign in to browse the full catalogue and place orders.',
+    'api.php' => APP_NAME . ' reseller API information, access details, and support for integrating catalogue and order workflows.',
+    'terms.php' => APP_NAME . ' Terms of Service for account use, orders, delivery, and customer support.',
+    'privacy.php' => APP_NAME . ' Privacy Policy describing account, order, payment, and support information.',
+    'refund-refill.php' => APP_NAME . ' Refund and Refill Policy explaining eligible service requests and support steps.',
+  ];
+  $description = htmlspecialchars($pageDescriptions[$page] ?? (APP_NAME . ' provides global social media services, order management and support. TZS mobile-money top-ups are available for Tanzanian customers.'), ENT_QUOTES, 'UTF-8');
+  $canonical = htmlspecialchars(rtrim(APP_URL, '/') . '/' . $page, ENT_QUOTES, 'UTF-8');
   $csrf = htmlspecialchars(csrf_token(), ENT_QUOTES, 'UTF-8');
+  $publicIndexable = in_array($page, ['pricing.php','services.php','api.php','terms.php','privacy.php','refund-refill.php'], true);
+  $robots = $publicIndexable ? 'index,follow' : 'noindex,follow';
   echo <<<HTML
 <!DOCTYPE html>
 <html lang="sw">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>{$title}</title>
 <meta name="description" content="{$description}">
-<meta name="robots" content="noindex,follow">
+<meta name="robots" content="{$robots}">
 <meta name="csrf-token" content="{$csrf}">
 <link rel="canonical" href="{$canonical}">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -138,6 +149,7 @@ html,body{max-width:100%;overflow-x:hidden;}
 body{font-family:'Poppins',sans-serif;color:var(--ink);margin:0;}
 a{text-decoration:none;}
 button,a,input,select,textarea{font-size:16px;}
+:focus-visible{outline:3px solid #00a879!important;outline-offset:3px!important;}
 button,a{min-height:44px;}
 
 /* ---- app (mobile) pages ---- */

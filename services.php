@@ -1,6 +1,18 @@
 <?php
 require_once 'config.php';
 require_once 'includes/ui.php';
+if (!isLoggedIn()) {
+    require_once 'includes/public-price-table.php';
+    ui_head('Public Services — ' . APP_NAME, 'app');
+    ?>
+    <main class="container py-4">
+      <header class="d-flex align-items-center justify-content-between gap-2 mb-3"><a href="/" aria-label="Royal home"><?= ui_logo(true, 38) ?></a><nav class="d-flex gap-2"><a class="btn btn-outline-primary rounded-pill" href="login.php">Log in</a><a class="btn btn-primary rounded-pill" href="register.php">Create account</a></nav></header>
+      <section class="hero mb-3"><span class="badge bg-light text-primary rounded-pill mb-2">Public, read-only catalogue</span><h1 class="h3 fw-bold mb-2">Services and starting prices</h1><p class="mb-0 opacity-75">Search and filter available platform starting rates. Sign in to browse the full catalogue and place orders.</p></section>
+      <section class="card-soft" aria-label="Public catalogue prices"><?php renderPublicPriceTable(); ?></section>
+      <p class="text-center mt-3"><a class="btn btn-grad" href="login.php">Sign in to place an order</a></p>
+    </main>
+    <?php ui_foot(); exit;
+}
 requireLogin();
 
 $userId = (int) $_SESSION['user_id'];

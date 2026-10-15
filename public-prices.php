@@ -17,7 +17,7 @@ try {
         }
         $price = (float) ($service['price_per_1000'] ?? 0);
         if ($price <= 0 || isset($chosen[$platform]) && $chosen[$platform]['price'] <= $price) continue;
-        $chosen[$platform] = ['platform' => $platform, 'price' => round($price), 'currency' => 'TZS', 'service_id' => (int) ($service['id'] ?? 0)];
+        $chosen[$platform] = ['platform' => $platform, 'name' => $name, 'price' => round($price), 'currency' => 'TZS', 'service_id' => (int) ($service['id'] ?? 0), 'min' => (int) ($service['min'] ?? 0), 'max' => (int) ($service['max'] ?? 0), 'refill' => !empty($service['refill'])];
     }
     usort($chosen, fn($a, $b) => $a['price'] <=> $b['price']);
     echo json_encode(['success' => true, 'data' => array_slice(array_values($chosen), 0, 6)], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
