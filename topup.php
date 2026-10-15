@@ -465,6 +465,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 opacity: 1;
             }
         }
+        @media (prefers-color-scheme: dark) {
+            html { color-scheme: dark; }
+            body { background: #0e1430 !important; color: #edf0ff !important; }
+            #paymentForm.glass-card { background: #182044 !important; color: #edf0ff; border: 1px solid #303b64; }
+            #paymentForm h1, #paymentForm h2, #paymentForm strong, #paymentForm label { color: #edf0ff !important; }
+            #paymentForm .text-gray-800, #paymentForm .text-gray-700 { color: #e6ecff !important; }
+            #paymentForm .text-gray-500, #paymentForm .text-gray-400 { color: #b9c4de !important; }
+            #paymentForm .bg-gray-50, #paymentForm input, #paymentForm select { background: #141c38 !important; color: #f1f4ff !important; border-color: #35416c !important; }
+            #paymentForm input::placeholder { color: #b3bfd9 !important; opacity: 1; }
+            #paymentForm .payment-note { background: #172443; color: #d8e5ff; border-color: #35416c; }
+        }
     </style>
 </head>
 

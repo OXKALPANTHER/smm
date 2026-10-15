@@ -303,6 +303,26 @@ body.drawer-open .hamburger span:nth-child(3){transform:translateY(-6.4px) rotat
 .skeleton{background:linear-gradient(90deg,#eef1f8 25%,#f7f9ff 50%,#eef1f8 75%);background-size:200% 100%;animation:sk 1.2s infinite;border-radius:10px;height:14px;}
 @keyframes sk{0%{background-position:200% 0}100%{background-position:-200% 0}}
 @keyframes spin{to{transform:rotate(360deg);}}
+
+@media (prefers-color-scheme: dark){
+  html{color-scheme:dark}
+  body.app{color:#edf0ff;background:#0e1430}
+  .card-soft,.glass-card,.drawer,.mobile-tabbar,.nav-bell,.hamburger,.catalogue-card,.catalogue-empty{background:#182044!important;color:#edf0ff!important;border-color:#303b64!important}
+  .drawer-link{color:#edf0ff!important}.drawer-link:hover{background:#222d54!important}.drawer-link .di{background:#253052;color:#c8c0ff}
+  .form-control,.form-select,.input-group-text,.input-group-text.bg-white,.bg-white,.btn-light{background:#141c38!important;color:#f1f4ff!important;border-color:#35416c!important}
+  .form-control::placeholder{color:#b3bfd9!important;opacity:1}
+  .text-muted,.text-secondary,.result-count,.catalogue-meta,.public-price-note,.public-price-empty{color:#b9c4de!important}
+  .catalogue-tab,.category-tab{background:#1b2545;color:#d4dcf0;border-color:#35416c}
+  .catalogue-tab.active,.category-tab.active{color:#fff}
+  .table,.table td,.table th{--bs-table-color:#eaf0ff;--bs-table-bg:transparent;--bs-table-border-color:#303b64;color:#eaf0ff}
+  .table-hover>tbody>tr:hover>*{--bs-table-color-state:#fff;--bs-table-bg-state:#222d54}
+  .badge-success{background:#10392f;color:#9aebd5}.badge-warning{background:#42351d;color:#ffe09a}.badge-danger{background:#442922;color:#ffb9a8}.badge-secondary{background:#29334f;color:#d2dcf1}
+  #globalLoader{background:rgba(8,12,28,.88)}#globalLoader .loader-card{background:#182044;color:#edf0ff;border-color:#303b64}#globalLoader .loader-text{color:#edf0ff}
+  .public-price-wrap{background:#111832;border-color:#35416c;color:#edf0ff}
+  .public-price-table th,.public-price-table td{color:#e7edff;border-color:#303b64}
+  .public-price-table th{background:#202a4b;color:#d6def3}
+  .public-price-empty{color:#b9c4de}
+}
 </style>
 {$extraHead}
 HTML;

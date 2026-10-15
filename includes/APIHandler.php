@@ -172,12 +172,12 @@ class APIHandler
     {
         // Cache key is per-provider so legacy Boost and FastWay catalogues never
         // overwrite each other's cache file; isolate each account markup tier.
-        // v9 adds per-user markup pricing and continues hiding supplier metadata.
+        // v10 aligns displayed per-1K totals with the order calculator and keeps markup tiers isolated.
         $markup_percent = $markup_percent === null
             ? (defined('UNVERIFIED_PRICE_MARKUP_PERCENT') ? (float) UNVERIFIED_PRICE_MARKUP_PERCENT : 100.0)
             : max(0.0, (float) $markup_percent);
         $cache_markup = rtrim(rtrim(number_format($markup_percent, 4, '.', ''), '0'), '.');
-        $cache_key = "services_all_v9_{$this->service}_markup_{$cache_markup}";
+        $cache_key = "services_all_v10_{$this->service}_markup_{$cache_markup}";
 
         if ($use_cache) {
             $cached = $this->getCache($cache_key);
@@ -287,7 +287,7 @@ class APIHandler
                 'min' => (int) ($service['min'] ?? $service['min_quantity'] ?? $service['minimum'] ?? 10),
                 'max' => (int) ($service['max'] ?? $service['max_quantity'] ?? $service['maximum'] ?? 10000),
                 'rate' => round($customer_rate, 5),               // per-unit customer price in TZS
-                'price_per_1000' => round($customer_price_per_k), // TZS per 1000 units after markup
+                'price_per_1000' => (int) ceil(round($customer_rate, 5) * 1000), // matches the order calculator at quantity 1,000
                 // Supplier price, USD rate, and markup are intentionally not
                 // returned to browser consumers. Only the customer TZS price
                 // is public; raw values remain internal to this adapter.
