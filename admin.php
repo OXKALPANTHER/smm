@@ -43,7 +43,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             case 'set_role':
                 $uid = (int) ($in['user_id'] ?? 0);
                 $role = in_array($in['role'] ?? '', ['user', 'admin', 'moderator']) ? $in['role'] : 'user';
-                $stmt = $conn->prepare("UPDATE users SET role = ? WHERE id = ?");
+                if ($role === 'admin') {
+                    $stmt = $conn->prepare("UPDATE users SET role = ?, is_verified = TRUE WHERE id = ?");
+                } else {
+                    $stmt = $conn->prepare("UPDATE users SET role = ? WHERE id = ?");
+                }
                 $stmt->bind_param("si", $role, $uid);
                 $stmt->execute();
                 logActivity($admin_id, 'admin_set_role', "User #{$uid} -> {$role}");
@@ -66,11 +70,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $reply(false, 'Mtumiaji hajachaguliwa.');
                 }
                 $isVerified = !empty($in['is_verified']) ? 1 : 0;
-                $stmt = $conn->prepare('SELECT username, email, is_verified FROM users WHERE id = ? LIMIT 1');
+                $stmt = $conn->prepare('SELECT username, email, role, is_verified FROM users WHERE id = ? LIMIT 1');
                 $stmt->bind_param('i', $uid);
                 $stmt->execute();
                 $verificationUser = $stmt->get_result()->fetch_assoc();
                 if (!$verificationUser) $reply(false, 'Mtumiaji hajapatikana.');
+                if (($verificationUser['role'] ?? '') === 'admin' && $isVerified !== 1) {
+                    $reply(false, 'Administrator accounts must remain verified.');
+                }
                 $becameVerified = $isVerified === 1 && (int) ($verificationUser['is_verified'] ?? 0) !== 1;
                 $stmt = $conn->prepare("UPDATE users SET is_verified = ? WHERE id = ?");
                 $stmt->bind_param('ii', $isVerified, $uid);

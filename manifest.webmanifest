@@ -1,10 +1,10 @@
 {
   "name": "Royal SMM Panel",
   "short_name": "Royal SMM",
-  "description": "Weka order za Instagram, TikTok, YouTube na zaidi — haraka na salama.",
-  "lang": "sw",
+  "description": "Explore social media services and manage your growth from the Royal SMM panel.",
+  "lang": "en",
   "dir": "ltr",
-  "start_url": ".",
+  "start_url": "login.php?source=app",
   "scope": ".",
   "display": "standalone",
   "orientation": "portrait",

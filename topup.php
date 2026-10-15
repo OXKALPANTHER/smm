@@ -8,9 +8,9 @@ if (!isset($_SESSION['user_id'])) {
     exit;
 }
 
-define('API_TOKEN', MPESA_API_TOKEN);
-define('USER_ID', MPESA_USER_ID);
-define('BASE_URL', MPESA_BASE_URL);
+define('PALMPESA_TOKEN', PALMPESA_API_TOKEN);
+define('PALMPESA_ACCOUNT_ID', PALMPESA_USER_ID);
+define('PALMPESA_API_URL', PALMPESA_BASE_URL);
 const VERIFICATION_FEE_TZS = 5000;
 const VERIFICATION_PAYMENT_DESCRIPTION = 'Account verification fee via PalmPesa';
 const VERIFICATION_WALLET_DESCRIPTION = 'Account verification fee paid from wallet';
@@ -18,7 +18,7 @@ function callAPI($method, $url, $data = false)
 {
     $curl = curl_init();
     $headers = [
-        'Authorization: Bearer ' . API_TOKEN,
+        'Authorization: Bearer ' . PALMPESA_TOKEN,
         'Content-Type: application/json',
         'Accept: application/json'
     ];
@@ -27,17 +27,77 @@ function callAPI($method, $url, $data = false)
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_HTTPHEADER => $headers,
         CURLOPT_CONNECTTIMEOUT => 10,
-        CURLOPT_TIMEOUT => MPESA_TIMEOUT,
+        CURLOPT_TIMEOUT => PALMPESA_TIMEOUT,
     ]);
     if ($method === 'POST') {
         curl_setopt($curl, CURLOPT_POST, true);
         if ($data) curl_setopt($curl, CURLOPT_POSTFIELDS, json_encode($data));
     }
+    curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, true);
+    curl_setopt($curl, CURLOPT_SSL_VERIFYHOST, 2);
     $result = curl_exec($curl);
-    if ($result === false) error_log('PalmPesa request failed: ' . curl_error($curl));
+    $curlError = $result === false ? curl_error($curl) : '';
+    $httpStatus = (int) curl_getinfo($curl, CURLINFO_HTTP_CODE);
     curl_close($curl);
     $decoded = json_decode((string) $result, true);
-    return is_array($decoded) ? $decoded : [];
+    if (!is_array($decoded)) $decoded = [];
+    $decoded['_http_status'] = $httpStatus;
+    if ($curlError !== '') {
+        $decoded['_transport_error'] = $curlError;
+        error_log('PalmPesa transport failure (HTTP ' . $httpStatus . '): ' . $curlError);
+    } elseif ($httpStatus < 200 || $httpStatus >= 300) {
+        error_log('PalmPesa rejected request (HTTP ' . $httpStatus . '): ' . palmPesaProviderMessage($decoded));
+    }
+    return $decoded;
+}
+function palmPesaPayload($response)
+{
+    if (!is_array($response)) return [];
+    $data = $response['data'] ?? null;
+    if (is_array($data) && array_is_list($data)) $data = $data[0] ?? [];
+    if (!is_array($data)) $data = [];
+    $result = $response['result'] ?? [];
+    if (!is_array($result)) $result = [];
+    return array_merge($response, $result, $data);
+}
+function palmPesaOrderId($response)
+{
+    $payload = palmPesaPayload($response);
+    foreach (['order_id', 'transaction_id', 'reference', 'id'] as $key) {
+        if (isset($payload[$key]) && is_scalar($payload[$key]) && trim((string) $payload[$key]) !== '') {
+            return trim((string) $payload[$key]);
+        }
+    }
+    return '';
+}
+function palmPesaProviderMessage($response)
+{
+    $payload = palmPesaPayload($response);
+    foreach (['message', 'error_description', 'error', 'detail', 'description'] as $key) {
+        if (!isset($payload[$key]) || !is_scalar($payload[$key])) continue;
+        $message = trim(strip_tags((string) $payload[$key]));
+        $message = preg_replace('/\s+/', ' ', $message);
+        if ($message !== '') return substr($message, 0, 220);
+    }
+    if (!empty($response['_transport_error'])) return 'Could not connect to PalmPesa. Please check your connection and try again.';
+    $code = (int) ($response['_http_status'] ?? 0);
+    return $code >= 400 ? 'PalmPesa rejected the request (HTTP ' . $code . '). Please check payment configuration and try again.' : '';
+}
+function palmPesaPaymentStatus($response)
+{
+    $payload = palmPesaPayload($response);
+    return normalizePaymentStatus($payload['payment_status'] ?? $payload['status'] ?? $payload['state'] ?? '');
+}
+function palmPesaRequestFailed($response)
+{
+    $code = (int) ($response['_http_status'] ?? 0);
+    $payload = palmPesaPayload($response);
+    $hasProviderBody = count(array_diff_key($response, ['_http_status' => true, '_transport_error' => true])) > 0;
+    return !empty($response['_transport_error'])
+        || ($code > 0 && ($code < 200 || $code >= 300))
+        || !$hasProviderBody
+        || (array_key_exists('success', $payload) && $payload['success'] === false)
+        || !empty($payload['error']);
 }
 function formatPhoneNumber($phone)
 {
@@ -193,12 +253,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (empty($input['confirmed'])) verificationReply(false, 'Please confirm the 5,000 TZS mobile-money payment before continuing.');
             $phone = formatPhoneNumber($input['phone'] ?? $account['phone'] ?? '');
             if (!$phone) verificationReply(false, 'Enter a valid Tanzania mobile-money number.');
-            $reference = 'RVF' . $currentUserId . strtoupper(bin2hex(random_bytes(6)));
-            $name = trim((string) $account['username']);
+            $reference = 'TXN' . time() . random_int(1000, 9999);
+            $name = trim((string) ($input['name'] ?? $account['username']));
+            if (strlen($name) < 2 || strlen($name) > 120) verificationReply(false, 'Enter the payer name used for the mobile-money payment.');
             $email = trim((string) $account['email']);
-            if ($email === '') verificationReply(false, 'Add an email address to your account before paying.');
+            if (!filter_var($email, FILTER_VALIDATE_EMAIL)) verificationReply(false, 'Add a valid email address to your account before paying.');
             $payload = [
-                'user_id' => USER_ID,
+                'user_id' => PALMPESA_ACCOUNT_ID,
                 'name' => $name,
                 'email' => $email,
                 'phone' => $phone,
@@ -208,10 +269,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'postcode' => '00000',
                 'buyer_uuid' => random_int(100000, 999999),
             ];
-            $response = callAPI('POST', BASE_URL . '/pay-via-mobile', $payload);
-            $providerOrderId = trim((string) ($response['order_id'] ?? ''));
+            $response = callAPI('POST', PALMPESA_API_URL . '/pay-via-mobile', $payload);
+            $providerOrderId = palmPesaOrderId($response);
             if ($providerOrderId === '') {
-                verificationReply(false, 'Could not start the mobile-money request. Check the phone number and try again.');
+                verificationReply(false, palmPesaProviderMessage($response) ?: 'PalmPesa did not return a payment reference. Check the number and try again.', ['provider_status' => (int) ($response['_http_status'] ?? 0)]);
             }
             $description = VERIFICATION_PAYMENT_DESCRIPTION;
             $amount = VERIFICATION_FEE_TZS;
@@ -238,10 +299,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!$transaction || (int) round((float) $transaction['amount']) !== VERIFICATION_FEE_TZS) verificationReply(false, 'Verification payment was not found.');
             if (strtolower((string) $transaction['status']) === 'completed') verificationReply(true, 'Your account is verified.', ['status' => 'COMPLETED', 'verified' => true]);
             if (strtolower((string) $transaction['status']) === 'failed') verificationReply(true, 'Payment failed.', ['status' => 'FAILED']);
-            $response = callAPI('POST', BASE_URL . '/order-status', ['order_id' => $orderId]);
-            $record = $response['data'][0] ?? $response['data'] ?? $response;
-            $rawStatus = is_array($record) ? ($record['payment_status'] ?? $record['status'] ?? $response['payment_status'] ?? null) : null;
-            $status = normalizePaymentStatus($rawStatus);
+            $response = callAPI('POST', PALMPESA_API_URL . '/order-status', ['order_id' => $orderId]);
+            if (palmPesaRequestFailed($response)) {
+                verificationReply(false, palmPesaProviderMessage($response) ?: 'Could not check the PalmPesa payment yet. Your payment remains pending; try checking again shortly.', ['status' => 'ERROR', 'retryable' => true]);
+            }
+            $status = palmPesaPaymentStatus($response);
             if ($status === 'COMPLETED') {
                 try {
                     completeVerificationPayment($orderId, $currentUserId);
@@ -271,7 +333,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         $transactionId = 'TXN' . time() . random_int(1000, 9999);
         $payload = [
-            'user_id' => USER_ID,
+            'user_id' => PALMPESA_ACCOUNT_ID,
             'name' => $name,
             'email' => $email,
             'phone' => $phone,
@@ -281,8 +343,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'postcode' => '00000',
             'buyer_uuid' => random_int(100000, 999999),
         ];
-        $response = callAPI('POST', BASE_URL . '/pay-via-mobile', $payload);
-        $orderId = trim((string) ($response['order_id'] ?? ''));
+        $response = callAPI('POST', PALMPESA_API_URL . '/pay-via-mobile', $payload);
+        $orderId = palmPesaOrderId($response);
         if ($orderId !== '') {
             $stmt = $conn->prepare("INSERT INTO transactions (user_id, amount, type, payment_method, gateway, description, external_ref, status) VALUES (?, ?, 'credit', 'mobile_money', 'palmpesa', ?, ?, 'pending')");
             $description = 'Top-up via PalmPesa';
@@ -290,7 +352,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!$stmt->execute()) verificationReply(false, 'Payment was started but could not be recorded. Contact support before trying again.');
             verificationReply(true, 'Payment prompt sent to your phone.', ['order_id' => $orderId, 'message' => 'Ombi la malipo limetumwa kwenye simu yako.']);
         }
-        verificationReply(false, 'Could not start the mobile-money payment. Please try again.');
+        verificationReply(false, palmPesaProviderMessage($response) ?: 'PalmPesa did not return a payment reference. Please try again.', ['provider_status' => (int) ($response['_http_status'] ?? 0)]);
     }
 
     if ($action === 'check_status') {
@@ -300,28 +362,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt->bind_param('si', $orderId, $currentUserId);
         $stmt->execute();
         if (!$stmt->get_result()->fetch_assoc()) verificationReply(false, 'Top-up payment was not found for this account.');
-        $response = callAPI('POST', BASE_URL . '/order-status', ['order_id' => $orderId]);
-        $record = $response['data'][0] ?? $response['data'] ?? $response;
-        if (is_array($record)) {
-            $rawStatus = $record['payment_status'] ?? $record['status'] ?? $response['payment_status'] ?? null;
-            $status = normalizePaymentStatus($rawStatus);
-            if ($status === 'COMPLETED') {
-                try {
-                    $credit = completeTopupTransaction($orderId);
-                    verificationReply(true, 'Payment completed.', ['status' => 'COMPLETED', 'credited' => $credit['credited'], 'balance' => $credit['balance']]);
-                } catch (Throwable $e) {
-                    error_log('Top-up completion failed for ' . $orderId . ': ' . $e->getMessage());
-                    verificationReply(false, 'Payment was confirmed but the balance could not be updated yet.');
-                }
-            }
-            if ($status === 'FAILED') {
-                $stmt = $conn->prepare("UPDATE transactions SET status = 'failed' WHERE external_ref = ? AND user_id = ? AND type = 'credit' AND status = 'pending'");
-                $stmt->bind_param('si', $orderId, $currentUserId);
-                $stmt->execute();
-            }
-            verificationReply(true, 'Payment status checked.', ['status' => $status]);
+        $response = callAPI('POST', PALMPESA_API_URL . '/order-status', ['order_id' => $orderId]);
+        if (palmPesaRequestFailed($response)) {
+            verificationReply(false, palmPesaProviderMessage($response) ?: 'Could not check the PalmPesa payment yet. Your top-up remains pending; check again shortly.', ['status' => 'ERROR', 'retryable' => true]);
         }
-        verificationReply(true, 'Payment is still processing.', ['status' => 'PENDING']);
+        $status = palmPesaPaymentStatus($response);
+        if ($status === 'COMPLETED') {
+            try {
+                $credit = completeTopupTransaction($orderId);
+                verificationReply(true, 'Payment completed.', ['status' => 'COMPLETED', 'credited' => $credit['credited'], 'balance' => $credit['balance']]);
+            } catch (Throwable $e) {
+                error_log('Top-up completion failed for ' . $orderId . ': ' . $e->getMessage());
+                verificationReply(false, 'Payment was confirmed but the balance could not be updated yet.');
+            }
+        }
+        if ($status === 'FAILED') {
+            $stmt = $conn->prepare("UPDATE transactions SET status = 'failed' WHERE external_ref = ? AND user_id = ? AND type = 'credit' AND status = 'pending'");
+            $stmt->bind_param('si', $orderId, $currentUserId);
+            $stmt->execute();
+        }
+        verificationReply(true, 'Payment status checked.', ['status' => $status]);
     }
 }
 // If not a POST request, show the HTML form
@@ -446,7 +506,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             <div>
                 <label class="block text-xs font-semibold text-gray-500 uppercase mb-1">Namba ya Simu
-                    (M-Pesa/Tigo/Airtel)</label>
+                    (PalmPesa mobile money)</label>
                 <div class="relative">
                     <span class="absolute left-4 top-3.5 text-gray-400"><i class="fas fa-mobile-alt"></i></span>
                     <input type="tel" id="phone" name="phone" required placeholder="0744000000"
@@ -579,6 +639,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             stopPolling();
                             showError('Malipo yamesitishwa au yameshindikana.');
                         }
+                    } else if (result.status === 'ERROR') {
+                        stopPolling();
+                        showError(result.message || 'PalmPesa status could not be checked. Your payment may still be pending.');
                     }
 
                     if (pollAttempts >= MAX_ATTEMPTS) {

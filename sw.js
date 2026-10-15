@@ -1,5 +1,5 @@
 /* Royal SMM — service worker (offline support + installable PWA) */
-const VERSION   = 'royal-v4';
+const VERSION   = 'royal-v5';
 const SHELL     = 'royal-shell-' + VERSION;
 const RUNTIME   = 'royal-runtime-' + VERSION;
 // Minimal app shell precached on install.

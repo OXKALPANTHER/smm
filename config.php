@@ -189,6 +189,18 @@ try {
     // Wrap PDO with MySQLi compatibility layer
     $conn = new MySQLiCompatibility($pdo);
 
+    // Administrators are trusted staff accounts and always qualify as verified.
+    // This also repairs existing admin rows after an upgrade or role promotion.
+    try {
+        if (DB_DRIVER === 'pgsql') {
+            $pdo->exec("UPDATE users SET is_verified = TRUE WHERE role = 'admin' AND is_verified IS DISTINCT FROM TRUE");
+        } else {
+            $pdo->exec("UPDATE users SET is_verified = 1 WHERE role = 'admin' AND (is_verified IS NULL OR is_verified <> 1)");
+        }
+    } catch (Throwable $adminVerificationError) {
+        error_log('Could not reconcile administrator verification status: ' . $adminVerificationError->getMessage());
+    }
+
     if (ENVIRONMENT === 'development') {
         $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     }
@@ -671,11 +683,16 @@ define('SMMDADDY_API_TIMEOUT', 30);
 // ============================================
 
 // MPESA / PalmPesa (Tanzania Mobile Money) — https://palmpesa.drmlelwa.co.tz/
-define('MPESA_API_TOKEN', getenv('PALMPESA_API_TOKEN') ?: 'E6NERlSG1Q0d8IFAILb1PoawHpCliX5fQKonfcxNtqExtpr8Mo7GzwsrE6q5');
-define('MPESA_USER_ID', getenv('PALMPESA_USER_ID') ?: '498');
-define('MPESA_BASE_URL', 'https://palmpesa.drmlelwa.co.tz/api');
-define('MPESA_CALLBACK_URL', 'https://yourdomain.com/webhooks/mpesa.php');
-define('MPESA_TIMEOUT', 30);
+define('PALMPESA_API_TOKEN', getenv('PALMPESA_API_TOKEN') ?: 'E6NERlSG1Q0d8IFAILb1PoawHpCliX5fQKonfcxNtqExtpr8Mo7GzwsrE6q5');
+define('PALMPESA_USER_ID', getenv('PALMPESA_USER_ID') ?: '498');
+define('PALMPESA_BASE_URL', rtrim(getenv('PALMPESA_BASE_URL') ?: 'https://palmpesa.drmlelwa.co.tz/api', '/'));
+define('PALMPESA_TIMEOUT', max(5, min(60, (int) (getenv('PALMPESA_TIMEOUT') ?: 30))));
+// Backward-compatible aliases for existing legacy code paths.
+define('MPESA_API_TOKEN', PALMPESA_API_TOKEN);
+define('MPESA_USER_ID', PALMPESA_USER_ID);
+define('MPESA_BASE_URL', PALMPESA_BASE_URL);
+define('MPESA_CALLBACK_URL', getenv('PALMPESA_CALLBACK_URL') ?: '');
+define('MPESA_TIMEOUT', PALMPESA_TIMEOUT);
 
 // Stripe (International Payments)
 define('STRIPE_PUBLIC_KEY', 'pk_test_your_stripe_key');
@@ -1367,12 +1384,12 @@ function getUserPriceMarkupPercent($user_id)
     $verified = false;
     $userId = (int) $user_id;
     if ($userId > 0) {
-        $stmt = $conn->prepare('SELECT is_verified FROM users WHERE id = ? LIMIT 1');
+        $stmt = $conn->prepare('SELECT role, is_verified FROM users WHERE id = ? LIMIT 1');
         if ($stmt) {
             $stmt->bind_param('i', $userId);
             if ($stmt->execute()) {
                 $row = $stmt->get_result()->fetch_assoc();
-                $verified = (int) ($row['is_verified'] ?? 0) === 1;
+                $verified = ($row['role'] ?? '') === 'admin' || (int) ($row['is_verified'] ?? 0) === 1;
             }
         }
     }
