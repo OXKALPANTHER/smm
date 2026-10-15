@@ -107,30 +107,74 @@ function ui_head($title, $bodyClass = 'app', $extraHead = '')
 {
   $app = APP_NAME;
   $page = basename((string) ($_SERVER['SCRIPT_NAME'] ?? 'index.php'));
-  $pageDescriptions = [
-    'pricing.php' => APP_NAME . ' public catalogue rates: compare starting prices, service limits, and refill availability before signing in.',
-    'services.php' => APP_NAME . ' public read-only catalogue of current platform starting prices. Sign in to browse the full catalogue and place orders.',
-    'api.php' => APP_NAME . ' reseller API information, access details, and support for integrating catalogue and order workflows.',
-    'terms.php' => APP_NAME . ' Terms of Service for account use, orders, delivery, and customer support.',
-    'privacy.php' => APP_NAME . ' Privacy Policy describing account, order, payment, and support information.',
-    'refund-refill.php' => APP_NAME . ' Refund and Refill Policy explaining eligible service requests and support steps.',
+  $pageTitles = [
+    'services.php' => 'SMM Services & Rates | Royal SMM Panel',
+    'pricing.php' => 'SMM Panel Prices per 1000 | Royal SMM',
+    'api.php' => 'SMM Reseller API | Royal SMM Panel',
+    'refund-refill.php' => 'Refund & Refill Policy | Royal SMM Panel',
+    'terms.php' => 'Terms of Service | Royal SMM Panel',
+    'privacy.php' => 'Privacy Policy | Royal SMM Panel',
+    'login.php' => 'Log In | Royal SMM Panel',
+    'register.php' => 'Create Account | Royal SMM Panel',
+    'api-center.php' => 'API Center | Royal SMM Panel',
+    'api-docs.php' => 'API Documentation | Royal SMM Panel',
   ];
-  $description = htmlspecialchars($pageDescriptions[$page] ?? (APP_NAME . ' provides global social media services, order management and support. TZS mobile-money top-ups are available for Tanzanian customers.'), ENT_QUOTES, 'UTF-8');
-  $canonical = htmlspecialchars(rtrim(APP_URL, '/') . '/' . $page, ENT_QUOTES, 'UTF-8');
+  $pageDescriptions = [
+    'services.php' => 'Browse Instagram, TikTok, YouTube, Facebook and Telegram services with live rates, min/max limits and refill info. Compare and order in minutes.',
+    'pricing.php' => 'See Royal SMM rates per 1,000 for followers, likes and views. Pay in TZS with mobile money and review the exact price before every order.',
+    'api.php' => "Connect your store to Royal SMM's reseller API for live services, order placement and status tracking. Read the docs and request an API key.",
+    'refund-refill.php' => 'How refunds, cancellations and refills work at Royal SMM. Learn eligibility, refill windows and how to contact support with your order ID.',
+    'terms.php' => 'Read the Royal SMM terms for accounts, orders, delivery and acceptable use before you place your first order.',
+    'privacy.php' => 'How Royal SMM collects, uses and protects your account and payment information, and how to request deletion.',
+    'login.php' => 'Sign in to your Royal SMM Panel account to manage balances, orders, services and support.',
+    'register.php' => 'Create a Royal SMM Panel account to browse social media services, compare rates and manage orders.',
+    'api-center.php' => 'Manage reseller API access and keys for your Royal SMM Panel account.',
+    'api-docs.php' => 'Read Royal SMM reseller API documentation for service listings, order placement, authentication and status tracking.',
+  ];
+  $metaTitle = $pageTitles[$page] ?? trim(strip_tags((string) $title));
+  $metaDescription = $pageDescriptions[$page] ?? ($metaTitle . ' on Royal SMM Panel. Manage social media services, order tracking and account support.');
+  $metaTitleHtml = htmlspecialchars($metaTitle, ENT_QUOTES, 'UTF-8');
+  $description = htmlspecialchars($metaDescription, ENT_QUOTES, 'UTF-8');
+  $canonicalUrl = rtrim(APP_URL, '/') . '/' . $page;
+  $canonical = htmlspecialchars($canonicalUrl, ENT_QUOTES, 'UTF-8');
+  $ogImage = htmlspecialchars(rtrim(APP_URL, '/') . '/assets/og-image.png', ENT_QUOTES, 'UTF-8');
   $csrf = htmlspecialchars(csrf_token(), ENT_QUOTES, 'UTF-8');
-  $publicIndexable = in_array($page, ['pricing.php','services.php','api.php','terms.php','privacy.php','refund-refill.php'], true);
+  $publicIndexable = in_array($page, ['services.php','pricing.php','api.php','terms.php','privacy.php','refund-refill.php'], true) && !isLoggedIn();
   $robots = $publicIndexable ? 'index,follow' : 'noindex,follow';
+  $htmlLang = $page === 'register.php' ? 'sw' : 'en';
+  $breadcrumbScript = '';
+  if ($publicIndexable) {
+    $breadcrumbJson = json_encode([
+      '@context' => 'https://schema.org',
+      '@type' => 'BreadcrumbList',
+      'itemListElement' => [
+        ['@type' => 'ListItem', 'position' => 1, 'name' => 'Home', 'item' => rtrim(APP_URL, '/') . '/'],
+        ['@type' => 'ListItem', 'position' => 2, 'name' => $metaTitle, 'item' => $canonicalUrl],
+      ],
+    ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
+    $breadcrumbScript = '<script type="application/ld+json">' . $breadcrumbJson . '</script>';
+  }
   echo <<<HTML
 <!DOCTYPE html>
-<html lang="sw">
+<html lang="{$htmlLang}">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>{$title}</title>
+<title>{$metaTitleHtml}</title>
 <meta name="description" content="{$description}">
+<meta property="og:type" content="website">
+<meta property="og:title" content="{$metaTitleHtml}">
+<meta property="og:description" content="{$description}">
+<meta property="og:url" content="{$canonical}">
+<meta property="og:image" content="{$ogImage}">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="{$metaTitleHtml}">
+<meta name="twitter:description" content="{$description}">
+<meta name="twitter:image" content="{$ogImage}">
 <meta name="robots" content="{$robots}">
 <meta name="csrf-token" content="{$csrf}">
 <link rel="canonical" href="{$canonical}">
+{$breadcrumbScript}
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>

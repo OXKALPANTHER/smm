@@ -11,6 +11,14 @@ Options -Indexes
 
 <IfModule mod_rewrite.c>
     RewriteEngine On
+    # Canonical public origin. Respect reverse-proxy TLS termination (e.g. Cloudflare/Render).
+    RewriteCond %{HTTP_HOST} !^(localhost|127\.0\.0\.1)(:[0-9]+)?$ [NC]
+    RewriteCond %{HTTP_HOST} !^royal\.t20tech\.site$ [NC]
+    RewriteRule ^ https://royal.t20tech.site%{REQUEST_URI} [R=301,L,NE]
+    RewriteCond %{HTTP_HOST} !^(localhost|127\.0\.0\.1)(:[0-9]+)?$ [NC]
+    RewriteCond %{HTTPS} !=on
+    RewriteCond %{HTTP:X-Forwarded-Proto} !https [NC]
+    RewriteRule ^ https://royal.t20tech.site%{REQUEST_URI} [R=301,L,NE]
     RewriteRule ^robots\.txt$ robots.php [L]
     RewriteRule ^sitemap\.xml$ sitemap.php [L]
 </IfModule>

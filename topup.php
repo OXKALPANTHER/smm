@@ -393,8 +393,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="robots" content="noindex,follow">
+    <link rel="canonical" href="<?= htmlspecialchars(rtrim(APP_URL, '/') . '/topup.php', ENT_QUOTES, 'UTF-8') ?>">
+    <meta name="description" content="Top up your Royal SMM Panel balance using the payment options available to your account. Tanzanian customers can use TZS mobile money.">
+    <meta property="og:title" content="Account Top-Up | Royal SMM Panel"><meta property="og:description" content="Top up your Royal SMM Panel balance using the payment options available to your account. Tanzanian customers can use TZS mobile money."><meta property="og:url" content="<?= htmlspecialchars(rtrim(APP_URL, '/') . '/topup.php', ENT_QUOTES, 'UTF-8') ?>"><meta property="og:image" content="<?= htmlspecialchars(rtrim(APP_URL, '/') . '/assets/og-image.png', ENT_QUOTES, 'UTF-8') ?>">
+    <meta name="twitter:title" content="Account Top-Up | Royal SMM Panel"><meta name="twitter:description" content="Top up your Royal SMM Panel balance using the payment options available to your account. Tanzanian customers can use TZS mobile money."><meta name="twitter:image" content="<?= htmlspecialchars(rtrim(APP_URL, '/') . '/assets/og-image.png', ENT_QUOTES, 'UTF-8') ?>">
     <?php pwa_head(); ?>
-    <title><?php echo APP_NAME; ?> - Malipo</title>
+    <title>Account Top-Up | Royal SMM Panel</title>
     <link rel="stylesheet" href="assets/topup-tailwind.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">

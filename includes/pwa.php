@@ -24,8 +24,10 @@ if (!function_exists('pwa_head')) {
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="{$app}">
-<link rel="apple-touch-icon" href="assets/icon-192.png">
+<link rel="apple-touch-icon" sizes="180x180" href="assets/apple-touch-icon.png">
 <link rel="icon" type="image/svg+xml" href="assets/icon.svg">
+<link rel="icon" type="image/png" sizes="192x192" href="assets/icon-192.png">
+<link rel="icon" type="image/x-icon" href="assets/favicon.ico">
 HTML;
     }
 }
@@ -51,7 +53,7 @@ if (!function_exists('pwa_foot')) {
          font-size:.82rem;color:#2b3674;align-items:center;gap:.6rem;">
   <span style="font-size:1.4rem;">📲</span>
   <span style="flex:1;line-height:1.3;">Pakua app: bofya <b>Share</b> kisha <b>"Add to Home Screen"</b>.</span>
-  <button type="button" onclick="this.parentElement.style.display='none'"
+  <button type="button" aria-label="Close install instructions" onclick="this.parentElement.style.display='none'"
           style="border:none;background:#f0f2fb;border-radius:10px;width:30px;height:30px;color:#2b3674;cursor:pointer;">&times;</button>
 </div>
 <style>
