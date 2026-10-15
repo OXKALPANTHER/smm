@@ -928,6 +928,32 @@ if (!function_exists('sendTopupSuccessEmail')) {
     }
 }
 
+if (!function_exists('sendVerificationSuccessEmail')) {
+    /** Send a one-time confirmation after a user's account becomes verified. */
+    function sendVerificationSuccessEmail($email, $username, $method = '')
+    {
+        $methods = [
+            'wallet' => 'Wallet payment',
+            'mobile_money' => 'Mobile-money payment',
+            'manual' => 'Manual account review',
+        ];
+        $methodLabel = $methods[(string) $method] ?? 'Account review';
+        $content = '<div style="margin-top:22px;padding:16px 18px;background:#f3f1ff;border-left:4px solid #6c5ce7;border-radius:8px;color:#526174;">'
+            . '<strong style="color:#4834d4;">What this means</strong><br>'
+            . 'Your account is now verified. You can access the lower prices available to verified accounts and your account displays a verified badge.'
+            . '</div><p style="margin:20px 0 0;color:#526174;">Verification method: <strong>' . emailSafe($methodLabel) . '</strong>.</p>';
+        $body = renderRoyalEmail(
+            'Account verified',
+            'Your account is verified',
+            'Hello ' . (string) $username . ', your Royal SMM account verification is complete.',
+            $content,
+            'Open your account',
+            emailUrl('index.php')
+        );
+        return sendHtmlEmail($email, APP_NAME . ' account verified', $body);
+    }
+}
+
 if (!function_exists('sendWelcomeEmail')) {
     function sendWelcomeEmail($email, $username)
     {
@@ -1192,11 +1218,11 @@ if (!function_exists('completeTopupTransaction')) {
 
         $conn->begin_transaction();
         try {
-            $lockClause = (defined('DB_DRIVER') && DB_DRIVER === 'mysql') ? ' FOR UPDATE' : '';
+            $lockClause = (defined('DB_DRIVER') && in_array(DB_DRIVER, ['mysql', 'pgsql'], true)) ? ' FOR UPDATE' : '';
             $stmt = $conn->prepare(
                 "SELECT t.id, t.user_id, t.amount, t.status, u.email, u.username
                  FROM transactions t JOIN users u ON u.id = t.user_id
-                 WHERE t.external_ref = ? LIMIT 1{$lockClause}"
+                 WHERE t.external_ref = ? AND t.type = 'credit' LIMIT 1{$lockClause}"
             );
             if (!$stmt) throw new RuntimeException('Could not find the payment transaction.');
             $stmt->bind_param('s', $externalRef);
@@ -1213,13 +1239,17 @@ if (!function_exists('completeTopupTransaction')) {
             $before = $stmt->get_result()->fetch_assoc();
             if (!$before) throw new RuntimeException('Payment user was not found.');
 
-            $credited = strtolower((string) $row['status']) !== 'completed';
+            $paymentStatus = strtolower(trim((string) $row['status']));
+            if (!in_array($paymentStatus, ['pending', 'completed'], true)) {
+                throw new RuntimeException('Payment transaction is not pending or completed.');
+            }
+            $credited = $paymentStatus === 'pending';
             if ($credited) {
                 $status = 'completed';
-                $stmt = $conn->prepare('UPDATE transactions SET status = ?, completed_at = CURRENT_TIMESTAMP WHERE id = ? AND status = \'pending\'');
+                $stmt = $conn->prepare("UPDATE transactions SET status = ?, completed_at = CURRENT_TIMESTAMP WHERE id = ? AND status = 'pending'");
                 $stmt->bind_param('si', $status, $row['id']);
-                if (!$stmt->execute()) {
-                    throw new RuntimeException('Payment status update failed.');
+                if (!$stmt->execute() || $stmt->num_rows() !== 1) {
+                    throw new RuntimeException('Payment status could not be safely completed.');
                 }
                 if ($credited) {
                     $stmt = $conn->prepare('UPDATE users SET balance = balance + ? WHERE id = ?');
@@ -1240,9 +1270,13 @@ if (!function_exists('completeTopupTransaction')) {
                 try {
                     createNotification((int) $row['user_id'], 'Top-up imekamilika', 'Malipo yako yamekamilika na salio lako limeongezwa kwa mafanikio.', 'success', 'user', ['source' => 'topup']);
                     logActivity((int) $row['user_id'], 'payment_completed', "Top-up {$externalRef} credited {$amount} TZS", 'success');
-                    sendTopupSuccessEmail($row['email'], $row['username'], $amount, $after['balance'], $externalRef);
                 } catch (Throwable $notificationError) {
                     error_log('Top-up post-credit notification failed: ' . $notificationError->getMessage());
+                }
+                try {
+                    sendTopupSuccessEmail($row['email'], $row['username'], $amount, $after['balance'], $externalRef);
+                } catch (Throwable $emailError) {
+                    error_log('Top-up email failed for user ' . (int) $row['user_id'] . ': ' . $emailError->getMessage());
                 }
             }
             return ['credited' => $credited, 'user_id' => (int) $row['user_id'], 'amount' => $amount, 'balance' => (float) $after['balance'], 'reference' => $externalRef];

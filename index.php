@@ -611,12 +611,16 @@ function statusBadge($status) {
 // was requested from verification, reopen the dialog with the updated balance.
 window.addEventListener('message',event=>{
   if(event.origin!==window.location.origin || event.data?.type!=='royal-topup-complete') return;
+  if(typeof event.data.balance==='number' && Number.isFinite(event.data.balance)){
+    const balanceText=document.getElementById('balanceText');
+    if(balanceText) balanceText.textContent=event.data.balance.toLocaleString('en-US');
+  }
   try{
     const returnToVerification=sessionStorage.getItem('royalReturnToVerification')==='1';
     sessionStorage.removeItem('royalReturnToVerification');
     if(returnToVerification) sessionStorage.removeItem('royalVerificationPromptSeen');
   }catch(e){}
-  window.location.reload();
+  window.setTimeout(()=>window.location.reload(),500);
 });
 </script>
 <script>

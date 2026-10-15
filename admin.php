@@ -66,12 +66,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $reply(false, 'Mtumiaji hajachaguliwa.');
                 }
                 $isVerified = !empty($in['is_verified']) ? 1 : 0;
+                $stmt = $conn->prepare('SELECT username, email, is_verified FROM users WHERE id = ? LIMIT 1');
+                $stmt->bind_param('i', $uid);
+                $stmt->execute();
+                $verificationUser = $stmt->get_result()->fetch_assoc();
+                if (!$verificationUser) $reply(false, 'Mtumiaji hajapatikana.');
+                $becameVerified = $isVerified === 1 && (int) ($verificationUser['is_verified'] ?? 0) !== 1;
                 $stmt = $conn->prepare("UPDATE users SET is_verified = ? WHERE id = ?");
                 $stmt->bind_param('ii', $isVerified, $uid);
                 if (!$stmt->execute()) {
                     $reply(false, 'Imeshindikana kubadilisha uthibitisho.');
                 }
                 logActivity($admin_id, 'admin_set_verification', "User #{$uid} -> " . ($isVerified ? 'verified' : 'unverified'));
+                if ($becameVerified) {
+                    try {
+                        sendVerificationSuccessEmail($verificationUser['email'], $verificationUser['username'], 'manual');
+                    } catch (Throwable $emailError) {
+                        error_log('Manual verification email failed for user ' . $uid . ': ' . $emailError->getMessage());
+                    }
+                }
                 $reply(true, $isVerified ? 'Akaunti imethibitishwa.' : 'Uthibitisho wa akaunti umeondolewa.');
                 break;
 

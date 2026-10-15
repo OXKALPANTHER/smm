@@ -70,7 +70,7 @@ function completeVerificationPayment($externalRef, $userId)
     $conn->begin_transaction();
     try {
         $lock = (defined('DB_DRIVER') && in_array(DB_DRIVER, ['mysql', 'pgsql'], true)) ? ' FOR UPDATE' : '';
-        $stmt = $conn->prepare("SELECT id, amount, status FROM transactions WHERE external_ref = ? AND user_id = ? AND description = ? LIMIT 1{$lock}");
+        $stmt = $conn->prepare("SELECT t.id, t.amount, t.status, u.email, u.username FROM transactions t JOIN users u ON u.id = t.user_id WHERE t.external_ref = ? AND t.user_id = ? AND t.description = ? LIMIT 1{$lock}");
         $description = VERIFICATION_PAYMENT_DESCRIPTION;
         $stmt->bind_param('sis', $externalRef, $userId, $description);
         $stmt->execute();
@@ -98,6 +98,11 @@ function completeVerificationPayment($externalRef, $userId)
                 logActivity($userId, 'verification_payment_completed', 'Account verified after confirmed PalmPesa fee of 5000 TZS');
             } catch (Throwable $noticeError) {
                 error_log('Verification notification failed: ' . $noticeError->getMessage());
+            }
+            try {
+                sendVerificationSuccessEmail($transaction['email'], $transaction['username'], 'mobile_money');
+            } catch (Throwable $emailError) {
+                error_log('Verification email failed for user ' . $userId . ': ' . $emailError->getMessage());
             }
         }
         return ['verified' => true, 'already_verified' => !$wasPending];
@@ -170,6 +175,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     logActivity($currentUserId, 'verification_wallet_payment_completed', 'Account verified after confirmed wallet debit of 5000 TZS');
                 } catch (Throwable $noticeError) {
                     error_log('Verification notification failed: ' . $noticeError->getMessage());
+                }
+                try {
+                    sendVerificationSuccessEmail($account['email'], $account['username'], 'wallet');
+                } catch (Throwable $emailError) {
+                    error_log('Verification email failed for user ' . $currentUserId . ': ' . $emailError->getMessage());
                 }
                 verificationReply(true, 'Payment received. Your account is now verified.', ['verified' => true, 'balance' => $newBalance]);
             } catch (Throwable $e) {
@@ -478,7 +488,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <i class="fas fa-check-circle success-checkmark"></i>
             </div>
             <h2 class="text-2xl font-bold text-gray-800 mb-2">Malipo Yamekamilika!</h2>
-            <p class="text-gray-600 mb-6">Asante kwa kutumia <?php echo APP_NAME; ?>. Muamala wako umefanikiwa.</p>
+            <p class="text-gray-600 mb-2">Asante kwa kutumia <?php echo APP_NAME; ?>. Muamala wako umefanikiwa.</p>
+            <p id="successBalance" class="text-indigo-700 font-bold mb-6" aria-live="polite"></p>
             <button onclick="resetForm()"
                 class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 rounded-xl shadow transition-all">
                 Fanya Malipo Mengine
@@ -563,7 +574,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     if (result.success) {
                         if (result.status === 'COMPLETED') {
                             stopPolling();
-                            showSuccess();
+                            showSuccess(result.balance);
                         } else if (result.status === 'FAILED' || result.status === 'CANCELLED') {
                             stopPolling();
                             showError('Malipo yamesitishwa au yameshindikana.');
@@ -589,11 +600,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             document.getElementById('processingScreen').classList.remove('hidden');
         }
 
-        function showSuccess() {
+        function showSuccess(balance) {
             document.getElementById('processingScreen').classList.add('hidden');
             document.getElementById('successScreen').classList.remove('hidden');
+            if (typeof balance === 'number' && Number.isFinite(balance)) {
+                document.getElementById('successBalance').textContent = 'New wallet balance: TSh ' + balance.toLocaleString('en-US');
+            }
             if (window.parent !== window) {
-                window.parent.postMessage({ type: 'royal-topup-complete' }, window.location.origin);
+                window.parent.postMessage({ type: 'royal-topup-complete', balance: balance }, window.location.origin);
             }
         }
 
