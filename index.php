@@ -629,6 +629,7 @@ function statusBadge($status) {
         </div>
 
         <form id="orderForm" autocomplete="off">
+            <input type="hidden" id="orderCsrfToken" value="<?= htmlspecialchars(csrf_token(), ENT_QUOTES, 'UTF-8') ?>">
             <!-- Platforms + global search -->
             <label class="form-label"><span data-i18n="order.platform">1. Tafuta au Chagua Platform</span></label>
             <div class="svc-search">
@@ -1348,7 +1349,7 @@ document.getElementById('orderForm').addEventListener('submit', async function (
     try {
         const r = await fetch('place-order.php', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': document.querySelector('meta[name=csrf-token]')?.content || '' },
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': document.querySelector('meta[name=csrf-token]')?.content || document.getElementById('orderCsrfToken')?.value || '' },
             body: JSON.stringify({
                 service_id: currentService.id,
                 quantity: qty,
