@@ -453,6 +453,17 @@ function statusBadge($status) {
         /* Select2 tweaks */
         .select2-container--bootstrap-5 .select2-selection { border-radius: 15px !important; border: 1.5px solid #e9edf7 !important; min-height: 48px; padding: .35rem .6rem; background:#fafbff; }
         .select2-results__option { font-size: .85rem; }
+        .service-results { margin-top: .85rem; border: 1px solid #e9edf7; border-radius: 18px; background: #fbfcff; padding: .75rem; }
+        .service-results[hidden] { display: none; }
+        .service-results-head { display:flex; align-items:center; justify-content:space-between; gap:.75rem; margin-bottom:.6rem; color:var(--muted); font-size:.72rem; font-weight:700; text-transform:uppercase; letter-spacing:.35px; }
+        .service-results-list { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.55rem; max-height:520px; overflow:auto; padding:.1rem; }
+        .service-option { width:100%; border:1px solid #e6eaf5; border-radius:14px; background:#fff; padding:.75rem .8rem; color:var(--ink); text-align:left; cursor:pointer; transition:border-color .15s, box-shadow .15s, transform .15s; }
+        .service-option:hover,.service-option:focus-visible { border-color:var(--primary); box-shadow:0 8px 18px rgba(108,92,231,.13); transform:translateY(-1px); outline:none; }
+        .service-option.active { border:2px solid var(--primary); background:#f7f5ff; padding:calc(.75rem - 1px) calc(.8rem - 1px); }
+        .service-option-name { display:block; font-size:.82rem; font-weight:700; line-height:1.35; }
+        .service-option-meta { display:flex; flex-wrap:wrap; gap:.35rem .7rem; margin-top:.35rem; color:var(--muted); font-size:.68rem; }
+        .service-option-price { color:var(--primary-2); font-weight:800; }
+        @media(max-width:575px){ .service-results-list{grid-template-columns:1fr;max-height:480px;} .service-option{padding:.8rem;} }
 
         .skeleton { background: linear-gradient(90deg,#eef1f8 25%,#f7f9ff 50%,#eef1f8 75%); background-size: 200% 100%; animation: sk 1.2s infinite; border-radius: 10px; height: 14px; }
         @keyframes sk { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
@@ -646,7 +657,11 @@ function statusBadge($status) {
             <!-- Service -->
             <div class="mt-3">
                 <label class="form-label"><span data-i18n="order.service">2. Chagua Huduma</span></label>
-                <select class="form-select" id="serviceSelect" name="service_id" style="width:100%" disabled>
+                <div id="serviceResults" class="service-results" hidden aria-live="polite">
+                    <div class="service-results-head"><span>Huduma za platform hii</span><span id="serviceResultsCount"></span></div>
+                    <div id="serviceResultsList" class="service-results-list" role="listbox" aria-label="Available services"></div>
+                </div>
+                <select class="form-select d-none" id="serviceSelect" name="service_id" disabled>
                     <option value="" data-i18n="order.choosePlatformFirst">Chagua platform kwanza...</option>
                 </select>
                 <!-- DETAILS card -->
@@ -856,8 +871,9 @@ const submitBtn = document.getElementById('submitBtn');
 const balanceWarning = document.getElementById('balanceWarning');
 const svcDetail = document.getElementById('svcDetail');
 const qtyRange = document.getElementById('qtyRange');
-
-$service.select2({ theme: 'bootstrap-5', placeholder: 'Tafuta huduma...', width: '100%' });
+const serviceResults = document.getElementById('serviceResults');
+const serviceResultsList = document.getElementById('serviceResultsList');
+const serviceResultsCount = document.getElementById('serviceResultsCount');
 
 function toast(msg, type = 'primary') {
     const el = document.createElement('div');
@@ -894,7 +910,52 @@ function clearServiceResults(message = 'Chagua platform kwanza...') {
     currentService = null;
     resetServiceUI();
     recalc();
+    if (serviceResultsList) serviceResultsList.replaceChildren();
+    if (serviceResultsCount) serviceResultsCount.textContent = '';
+    if (serviceResults) serviceResults.hidden = true;
     $service.empty().append(new Option(message, '', true, true)).prop('disabled', true).trigger('change');
+}
+
+function renderServiceResults(services) {
+    if (!serviceResults || !serviceResultsList) return;
+    serviceResultsList.replaceChildren();
+    if (serviceResultsCount) serviceResultsCount.textContent = `${fmt(services.length)} huduma`;
+    const fragment = document.createDocumentFragment();
+    services.forEach(s => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'service-option';
+        button.dataset.serviceId = String(s.id);
+        button.setAttribute('role', 'option');
+        button.setAttribute('aria-selected', 'false');
+
+        const name = document.createElement('span');
+        name.className = 'service-option-name';
+        name.textContent = s.name || 'Catalogue service';
+        const meta = document.createElement('span');
+        meta.className = 'service-option-meta';
+        const price = document.createElement('strong');
+        price.className = 'service-option-price';
+        price.textContent = `${fmt(s.price_per_1000)} TZS / 1K`;
+        const limits = document.createElement('span');
+        limits.textContent = `Min ${fmt(s.min)} · Max ${fmt(s.max)}`;
+        const extras = document.createElement('span');
+        extras.textContent = `${s.refill ? 'Refill' : 'No refill'}${s.cancel ? ' · Cancel' : ''}`;
+        meta.append(price, limits, extras);
+        button.append(name, meta);
+        button.addEventListener('click', () => {
+            $service.val(String(s.id)).trigger('change');
+            serviceResultsList.querySelectorAll('.service-option').forEach(option => {
+                const active = option === button;
+                option.classList.toggle('active', active);
+                option.setAttribute('aria-selected', active ? 'true' : 'false');
+            });
+            document.getElementById('linkInput')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        });
+        fragment.appendChild(button);
+    });
+    serviceResultsList.appendChild(fragment);
+    serviceResults.hidden = false;
 }
 
 // ---- Shared service loader (used by platform chips AND global search) ----
@@ -919,6 +980,7 @@ async function loadServices(url, opts = {}) {
                 $service.append(opt);
             });
             $service.prop('disabled', false).trigger('change');
+            renderServiceResults(j.data);
             let msg = `${j.data.length} huduma zimepatikana`;
             if (j.truncated) msg = `Zinaonyeshwa ${fmt(j.data.length)} kati ya ${fmt(j.total)}+ — andika zaidi kupunguza`;
             toast(msg, 'success');
@@ -927,18 +989,21 @@ async function loadServices(url, opts = {}) {
                 const match = Array.from($service[0].options).find(o => String(o.value) === wanted);
                 if (match) {
                     $service.val(wanted).trigger('change');
+                    serviceResultsList?.querySelector(`[data-service-id="${CSS.escape(wanted)}"]`)?.click();
                     setTimeout(() => document.getElementById('orderForm')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80);
                 } else {
                     toast('Huduma uliyochagua haipatikani kwa sasa.', 'warning');
                 }
             }
-            if (opts.openDropdown) { try { $service.select2('open'); } catch (e) {} }
+            if (opts.openDropdown) serviceResults?.scrollIntoView({ behavior: 'smooth', block: 'center' });
         } else {
+            if (serviceResults) serviceResults.hidden = true;
             $service.empty().append('<option value="">Hakuna huduma</option>').prop('disabled', true).trigger('change');
             toast(opts.emptyMsg || 'Hakuna huduma iliyopatikana', 'warning');
         }
     } catch (e) {
         if (e.name === 'AbortError' || requestVersion !== serviceLoadVersion) return;
+        if (serviceResults) serviceResults.hidden = true;
         $service.empty().append('<option value="">Kosa la mtandao</option>').prop('disabled', true).trigger('change');
         toast('Imeshindwa kupakua huduma. Jaribu tena.', 'danger');
     } finally {
