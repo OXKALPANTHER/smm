@@ -11,7 +11,8 @@ $publicPaths = [
     '/privacy.php' => ['yearly', '0.3'],
     '/refund-refill.php' => ['yearly', '0.3'],
 ];
-?><?xml version="1.0" encoding="UTF-8"?>
+echo '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
+?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 <?php foreach ($publicPaths as $path => [$frequency, $priority]): ?>
   <url><loc><?= htmlspecialchars($origin . $path, ENT_XML1, 'UTF-8') ?></loc><lastmod><?= $today ?></lastmod><changefreq><?= $frequency ?></changefreq><priority><?= $priority ?></priority></url>

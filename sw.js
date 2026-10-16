@@ -1,9 +1,10 @@
 /* Royal SMM — service worker (offline support + installable PWA) */
-const VERSION   = 'royal-v6';
+const VERSION   = 'royal-v7';
 const SHELL     = 'royal-shell-' + VERSION;
 const RUNTIME   = 'royal-runtime-' + VERSION;
 // Minimal app shell precached on install.
 const SHELL_ASSETS = [
+  './favicon.ico',
   
   './offline.html',
   './assets/style.css',
