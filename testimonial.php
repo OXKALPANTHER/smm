@@ -39,7 +39,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $platform = trim(strip_tags((string) ($_POST['platform'] ?? '')));
     $orderId = filter_var($_POST['order_id'] ?? 0, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]) ?: 0;
     $consent = isset($_POST['consent_to_publish']) && (string) $_POST['consent_to_publish'] === '1';
-    $validPublicName = (bool) preg_match('/^\p{L}[\p{L}\p{M} .\x27-]*\s+\p{L}\.?$/u', $name);
+    $validPublicName = (bool) preg_match('/^\p{L}[\p{L}\p{M}\x27.-]*(?:\s+\p{L}[\p{L}\p{M}\x27.-]*)+$/u', $name);
 
     if (!$validPublicName || testimonialLength($name) < 3 || testimonialLength($name) > 100 || !$rating || testimonialLength($message) < 20 || testimonialLength($message) > 300 || $platform === '' || testimonialHasLink($messageRaw) || !$consent) {
         testimonialRedirect('danger', 'Use your first name and last initial, choose a rating and platform, write 20–300 characters without links, and confirm publication permission.');

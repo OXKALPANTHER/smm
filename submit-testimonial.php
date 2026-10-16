@@ -51,7 +51,7 @@ if (testimonialTextLength($message) < 20 || testimonialTextLength($message) > 30
 }
 $displayName = trim(preg_replace('/\s+/u', ' ', strip_tags($rawName)) ?? '');
 $nameLength = testimonialTextLength($displayName);
-if ($nameLength < 3 || $nameLength > 60 || !preg_match('/^\p{L}[\p{L}\p{M} .\'-]*\s+\p{L}\.?$/u', $displayName)) {
+if ($nameLength < 3 || $nameLength > 60 || !preg_match('/^\p{L}[\p{L}\p{M}\' .\-]*(?:\s+\p{L}[\p{L}\p{M}\' .\-]*)+$/u', $displayName)) {
     testimonialRedirect('danger', 'Enter your first name and last initial for the public display name.');
 }
 
