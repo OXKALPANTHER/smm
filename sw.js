@@ -1,11 +1,12 @@
 /* Royal SMM — service worker (offline support + installable PWA) */
-const VERSION   = 'royal-v5';
+const VERSION   = 'royal-v6';
 const SHELL     = 'royal-shell-' + VERSION;
 const RUNTIME   = 'royal-runtime-' + VERSION;
 // Minimal app shell precached on install.
 const SHELL_ASSETS = [
   
   './offline.html',
+  './assets/style.css',
   
   './manifest.json',
 
@@ -27,7 +28,7 @@ const SHELL_ASSETS = [
   
 ];
 // Never let the SW touch these (auth / live order / keep-alive / dynamic JSON).
-const BYPASS = ['ping.php', 'place-order.php', 'api-services.php', 'logout.php', 'login.php', 'register.php', 'webhooks/'];
+const BYPASS = ['ping.php', 'place-order.php', 'api-services.php', 'public-prices.php', 'logout.php', 'login.php', 'register.php', 'webhooks/'];
 self.addEventListener('install', (event) => {
   
   event.waitUntil(
@@ -74,13 +75,11 @@ self.addEventListener('fetch', (event) => {
       fetch(req)
       
         .then((res) => {
-          
-          const copy = res.clone();
-          
-          caches.open(RUNTIME).then((c) => c.put(req, copy)).catch(() => {});
-          
+          if (res && res.ok) {
+            const copy = res.clone();
+            caches.open(RUNTIME).then((c) => c.put(req, copy)).catch(() => {});
+          }
           return res;
-          
         })
       
         .catch(() => caches.match(req).then((hit) => hit || caches.match('./offline.html')))
@@ -92,7 +91,24 @@ self.addEventListener('fetch', (event) => {
   }
   
   
-  // Static assets (css/js/fonts/images, incl. CDN): cache-first, then network.
+  // CSS is network-first. Versioned URLs prevent obsolete deployed styles from winning.
+  if (url.pathname.toLowerCase().endsWith('.css')) {
+    event.respondWith(
+      fetch(req).then((res) => {
+        if (res && res.ok) {
+          const copy = res.clone();
+          caches.open(RUNTIME).then((cache) => cache.put(req, copy)).catch(() => {});
+        }
+        return res;
+      }).catch(() => caches.match(req).then((hit) => hit || new Response('/* stylesheet unavailable */', {
+        status: 503,
+        headers: { 'Content-Type': 'text/css; charset=utf-8', 'Cache-Control': 'no-store' }
+      })))
+    );
+    return;
+  }
+
+  // Other static assets (js/fonts/images, incl. CDN): cache-first, then network.
   
   event.respondWith(
     

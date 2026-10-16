@@ -253,6 +253,7 @@ try {
 
     define('DB_DRIVER', $effectiveDbDriver);
     ensureFavoriteOrdersTable($pdo);
+    ensureTestimonialsTable($pdo);
 
     // Wrap PDO with MySQLi compatibility layer
     $conn = new MySQLiCompatibility($pdo);
@@ -1697,4 +1698,62 @@ function callApiWithFallback($method, ...$args)
     return APIHandler::withFallback($method, ...$args);
 }
 
+
+/** Create the moderated, consent-aware customer testimonial table. */
+function ensureTestimonialsTable($pdo)
+{
+    try {
+        if (DB_DRIVER === 'pgsql') {
+            $pdo->exec("CREATE TABLE IF NOT EXISTS testimonials (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER NULL REFERENCES users(id) ON DELETE SET NULL,
+                order_id INTEGER NULL UNIQUE REFERENCES orders(id) ON DELETE SET NULL,
+                display_name VARCHAR(100) NOT NULL,
+                rating SMALLINT NOT NULL CHECK (rating BETWEEN 1 AND 5),
+                message TEXT NOT NULL,
+                platform VARCHAR(80) NOT NULL,
+                status VARCHAR(20) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','approved','rejected')),
+                consent_to_publish BOOLEAN NOT NULL DEFAULT FALSE,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                approved_at TIMESTAMPTZ NULL
+            )");
+            $pdo->exec('CREATE INDEX IF NOT EXISTS idx_testimonials_public ON testimonials(status, consent_to_publish)');
+        } elseif (DB_DRIVER === 'mysql') {
+            $pdo->exec("CREATE TABLE IF NOT EXISTS testimonials (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT NULL,
+                order_id INT NULL,
+                display_name VARCHAR(100) NOT NULL,
+                rating TINYINT NOT NULL,
+                message TEXT NOT NULL,
+                platform VARCHAR(80) NOT NULL,
+                status VARCHAR(20) NOT NULL DEFAULT 'pending',
+                consent_to_publish TINYINT(1) NOT NULL DEFAULT 0,
+                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                approved_at DATETIME NULL,
+                UNIQUE KEY uq_testimonials_order_id (order_id),
+                INDEX idx_testimonials_public (status, consent_to_publish),
+                CONSTRAINT fk_testimonials_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
+                CONSTRAINT fk_testimonials_order FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE SET NULL
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+        } else {
+            $pdo->exec("CREATE TABLE IF NOT EXISTS testimonials (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NULL REFERENCES users(id) ON DELETE SET NULL,
+                order_id INTEGER NULL UNIQUE REFERENCES orders(id) ON DELETE SET NULL,
+                display_name TEXT NOT NULL,
+                rating INTEGER NOT NULL CHECK (rating BETWEEN 1 AND 5),
+                message TEXT NOT NULL,
+                platform TEXT NOT NULL,
+                status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','approved','rejected')),
+                consent_to_publish INTEGER NOT NULL DEFAULT 0,
+                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                approved_at DATETIME NULL
+            )");
+            $pdo->exec('CREATE INDEX IF NOT EXISTS idx_testimonials_public ON testimonials(status, consent_to_publish)');
+        }
+    } catch (Throwable $e) {
+        error_log('ensureTestimonialsTable: ' . $e->getMessage());
+    }
+}
 ?>

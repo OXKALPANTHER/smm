@@ -341,15 +341,30 @@ ui_head('Profile — ' . APP_NAME, 'app');
             <?php endforeach; ?>
         <?php endif; ?>
     </div>
+
+    <section id="help-legal" class="card-soft mb-3 help-legal-card" aria-labelledby="helpLegalTitle">
+        <div class="section-title mb-2"><div class="section-ico"><i class="bi bi-life-preserver"></i></div><span id="helpLegalTitle" data-i18n="nav.helpLegal">Help &amp; legal</span></div>
+        <p class="text-muted small mb-3" data-i18n="account.helpLegalIntro">Quick links for services, account guidance, and site policies.</p>
+        <div class="help-legal-grid">
+            <a class="help-legal-link" href="services.php"><i class="bi bi-grid-3x3-gap-fill"></i><span data-i18n="account.services">Services</span></a>
+            <a class="help-legal-link" href="pricing.php"><i class="bi bi-tags-fill"></i><span data-i18n="account.pricing">Pricing</span></a>
+            <a class="help-legal-link" href="api.php"><i class="bi bi-code-slash"></i><span data-i18n="account.resellerApi">Reseller API</span></a>
+            <a class="help-legal-link" href="terms.php"><i class="bi bi-file-text"></i><span data-i18n="account.terms">Terms</span></a>
+            <a class="help-legal-link" href="privacy.php"><i class="bi bi-shield-lock"></i><span data-i18n="account.privacy">Privacy</span></a>
+            <a class="help-legal-link" href="refund-refill.php"><i class="bi bi-arrow-repeat"></i><span data-i18n="account.refundRefill">Refund / Refill</span></a>
+        </div>
+    </section>
 </div>
 
 <?php
 ui_nav('profile', ['balance' => $user['balance']]);
 ui_topup_modal();
-ui_foot(<<<'JS'
+$notificationJson = json_encode($orderNotifications, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP);
+if (!is_string($notificationJson)) $notificationJson = '[]';
+ui_foot(<<<JS
 <script>
 (function(){
-  const notes = <?= json_encode($orderNotifications, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>;
+  const notes = {$notificationJson};
   if(Array.isArray(notes)){
     notes.forEach(n=>{ if(n && n.message){ toast(n.message, n.type || 'primary'); } });
   }

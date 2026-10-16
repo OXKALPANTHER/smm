@@ -34,6 +34,15 @@ $stmt = $conn->prepare(
 $stmt->bind_param("i", $user_id);
 $stmt->execute();
 $orders = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+$reviewedOrders = [];
+$reviewStmt = $conn->prepare('SELECT order_id FROM testimonials WHERE user_id = ? AND order_id IS NOT NULL');
+$reviewStmt->bind_param('i', $user_id);
+$reviewStmt->execute();
+foreach ($reviewStmt->get_result()->fetch_all(MYSQLI_ASSOC) as $reviewRow) {
+    $reviewedOrders[(int) $reviewRow['order_id']] = true;
+}
+$reviewFlash = $_SESSION['testimonial_flash'] ?? null;
+unset($_SESSION['testimonial_flash']);
 $favoriteIds = [];
 $favoriteStmt = $conn->prepare('SELECT order_id FROM favorite_orders WHERE user_id = ?');
 $favoriteStmt->bind_param('i', $user_id);
@@ -134,9 +143,9 @@ foreach ($orders as $o) {
 
 $tabs = [
     'all' => ['Zote', 'bi-collection'],
-    'active' => ['Pending / Zinaendelea', 'bi-hourglass-split'],
-    'completed' => ['Completed / Zimekamilika', 'bi-check2-circle'],
-    'canceled' => ['Cancelled / Zilizoghairiwa', 'bi-x-circle'],
+    'active' => ['Inasubiri / Inaendelea', 'bi-hourglass-split'],
+    'completed' => ['Imekamilika', 'bi-check2-circle'],
+    'canceled' => ['Imeghairiwa', 'bi-x-circle'],
 ];
 
 $gateways = [
@@ -146,406 +155,7 @@ $gateways = [
 
 ui_head('Orders Zangu — ' . APP_NAME, 'app');
 ?>
-<style>
-    .orders-hero {
-        background: linear-gradient(135deg, var(--primary), var(--primary-2));
-        border-radius: 0 0 30px 30px;
-        padding: 1.7rem 1.3rem 2.4rem;
-        color: #fff;
-        box-shadow: 0 12px 30px rgba(72, 52, 212, .3);
-    }
 
-    .search-box {
-        display: flex;
-        gap: .6rem;
-        margin-bottom: 1.2rem;
-        background: #fff;
-        border-radius: 20px;
-        padding: .6rem .8rem;
-        box-shadow: 0 6px 16px rgba(43, 54, 116, .06);
-    }
-
-    .search-box input {
-        border: none;
-        outline: none;
-        flex: 1;
-        font-size: .85rem;
-        background: none;
-    }
-
-    .search-box input::placeholder {
-        color: var(--muted);
-    }
-
-    .search-box .btn-clear {
-        background: none;
-        border: none;
-        color: var(--muted);
-        cursor: pointer;
-        font-size: .9rem;
-        padding: 0;
-    }
-
-    .gwrapper {
-        margin-bottom: 2.5rem;
-    }
-
-    .ghead {
-        display: flex;
-        align-items: center;
-        gap: .8rem;
-        padding: 1rem 0 .8rem;
-        border-bottom: 2px solid #f0f2f8;
-    }
-
-    .ghead i {
-        font-size: 1.3rem;
-    }
-
-    .ghead h5 {
-        margin: 0;
-        font-weight: 700;
-        font-size: 1.05rem;
-    }
-
-    .gcount {
-        font-size: .75rem;
-        color: var(--muted);
-        margin-left: auto;
-        background: #f5f7fc;
-        padding: .3rem .8rem;
-        border-radius: 20px;
-    }
-
-    .otabs {
-        display: flex;
-        gap: .5rem;
-        overflow-x: auto;
-        padding: .2rem 0 .5rem;
-        scrollbar-width: none;
-        margin-bottom: .8rem;
-    }
-
-    .otabs::-webkit-scrollbar {
-        display: none;
-    }
-
-    .otab {
-        flex: 0 0 auto;
-        border: none;
-        background: #fff;
-        color: var(--muted);
-        border-radius: 30px;
-        padding: .5rem .95rem;
-        font-size: .78rem;
-        font-weight: 600;
-        box-shadow: 0 6px 16px rgba(43, 54, 116, .06);
-        display: inline-flex;
-        align-items: center;
-        gap: .4rem;
-        transition: .18s;
-        cursor: pointer;
-    }
-
-    .otab .cnt {
-        background: #eef1f8;
-        color: #5a6a85;
-        border-radius: 20px;
-        font-size: .66rem;
-        font-weight: 700;
-        padding: .05rem .45rem;
-        min-width: 20px;
-        text-align: center;
-    }
-
-    .otab.active {
-        background: linear-gradient(135deg, var(--primary), var(--primary-2));
-        color: #fff;
-        box-shadow: 0 10px 22px rgba(72, 52, 212, .32);
-    }
-
-    .otab.active .cnt {
-        background: rgba(255, 255, 255, .25);
-        color: #fff;
-    }
-
-    .ocard {
-        background: #fff;
-        border-radius: 20px;
-        padding: .95rem 1rem;
-        box-shadow: 0 10px 26px rgba(43, 54, 116, .06);
-        margin-bottom: .7rem;
-        display: flex;
-        gap: .85rem;
-        align-items: flex-start;
-    }
-
-    .ocard .oico {
-        width: 44px;
-        height: 44px;
-        border-radius: 14px;
-        background: linear-gradient(135deg, #eef0ff, #e7fbf8);
-        color: var(--primary);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1.2rem;
-        flex: 0 0 auto;
-    }
-
-    .ocard .oname {
-        font-weight: 600;
-        font-size: .86rem;
-        line-height: 1.25;
-    }
-
-    .ocard .ometa {
-        color: var(--muted);
-        font-size: .7rem;
-        margin-top: .15rem;
-    }
-
-    .ocard .olink {
-        color: var(--muted);
-        font-size: .68rem;
-        margin-top: .1rem;
-        word-break: break-all;
-    }
-
-    .refill-btn {
-        background: #e4faf3;
-        color: #00876a;
-        border: none;
-        border-radius: 20px;
-        font-size: .68rem;
-        font-weight: 600;
-        padding: .25rem .75rem;
-    }
-
-    .cancel-btn {
-        background: #fff5f5;
-        color: #c2410c;
-        border: 1px solid #fed7aa;
-        border-radius: 20px;
-        font-size: .68rem;
-        font-weight: 600;
-        padding: .25rem .75rem;
-    }
-
-    .cancel-btn:hover {
-        background: #ffedd5;
-        color: #9a2c00;
-    }
-
-    .favorite-btn { background:#fff3fb; color:#b83280; border:1px solid #f4c7e6; border-radius:20px; font-size:.68rem; font-weight:600; padding:.25rem .75rem; transition:transform .18s, background .18s; }
-    .favorite-btn:hover { background:#ffe5f5; transform:translateY(-1px); }
-    .favorite-btn.is-favorite { background:#ffe5f5; color:#a61e69; }
-    .favorite-btn.is-favorite i { animation:heartPop .35s ease-out; }
-    @keyframes heartPop { 0%{transform:scale(.7)} 60%{transform:scale(1.25)} 100%{transform:scale(1)} }
-
-    /* === Order Progress Bar === */
-    .order-progress {
-        padding: .8rem 0;
-        margin: .8rem 0;
-    }
-
-    .progress-track {
-        position: relative;
-        height: 6px;
-        background: #e8eaf6;
-        border-radius: 8px;
-        overflow: hidden;
-        box-shadow: inset 0 1px 2px rgba(0, 0, 0, .05);
-    }
-
-    .progress-fill {
-        height: 100%;
-        border-radius: 8px;
-        transition: width .4s cubic-bezier(.4, 0, .2, 1);
-        background: linear-gradient(90deg, #667eea, #764ba2);
-    }
-
-    .progress-info {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-top: .5rem;
-        font-size: .75rem;
-    }
-
-    .progress-label {
-        font-weight: 600;
-        color: #667eea;
-    }
-
-    .progress-percent {
-        font-weight: 700;
-        color: #667eea;
-    }
-
-    .progress-stages {
-        display: flex;
-        justify-content: space-around;
-        gap: .5rem;
-        margin-top: .4rem;
-        font-size: .65rem;
-    }
-
-    .pstage {
-        display: flex;
-        align-items: center;
-        gap: .3rem;
-        font-weight: 600;
-        color: #9ca3af;
-    }
-
-    /* === Place Order Form Section === */
-    .place-order-section {
-        background: linear-gradient(135deg, #f8f9ff, #fff);
-        border-radius: 20px;
-        padding: 1.2rem;
-        box-shadow: 0 8px 20px rgba(72, 52, 212, .08);
-        border: 1px solid rgba(72, 52, 212, .1);
-    }
-
-    .place-order-card {
-        background: #fff;
-        border-radius: 18px;
-        padding: 1.5rem;
-        box-shadow: 0 4px 12px rgba(72, 52, 212, .06);
-    }
-
-    .place-order-header {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        margin-bottom: 1.5rem;
-        flex-wrap: wrap;
-        gap: 1rem;
-    }
-
-    .place-order-title {
-        display: flex;
-        align-items: center;
-        gap: .8rem;
-    }
-
-    .place-order-title h5 {
-        margin: 0;
-        font-size: 1.05rem;
-        font-weight: 700;
-    }
-
-    .place-order-title p {
-        margin: 0;
-        font-size: .75rem;
-        color: #6b7280;
-    }
-
-    .balance-pill {
-        background: linear-gradient(135deg, #fef3c7, #fde68a);
-        color: #78350f;
-        font-size: .8rem;
-        font-weight: 600;
-        padding: .4rem .9rem;
-        border-radius: 30px;
-        white-space: nowrap;
-    }
-
-    .place-order-form {
-        border-top: 1px solid #e5e7eb;
-        padding-top: 1.2rem;
-    }
-
-    .form-row {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 1rem;
-    }
-
-    .form-group {
-        display: flex;
-        flex-direction: column;
-    }
-
-    .form-group label {
-        font-size: .8rem;
-        font-weight: 600;
-        color: #374151;
-        margin-bottom: .4rem;
-        text-transform: uppercase;
-        letter-spacing: .5px;
-    }
-
-    .form-control {
-        background: #f9fafb;
-        border: 1px solid #e5e7eb;
-        border-radius: 10px;
-        padding: .65rem .8rem;
-        font-size: .85rem;
-        font-family: inherit;
-        transition: .2s;
-    }
-
-    .form-control:focus {
-        outline: none;
-        border-color: #667eea;
-        box-shadow: 0 0 0 3px rgba(102, 126, 234, .1);
-    }
-
-    .form-control::placeholder {
-        color: #9ca3af;
-    }
-
-    .form-text {
-        display: block;
-        font-size: .7rem;
-        color: #6b7280;
-        margin-top: .3rem;
-    }
-
-    .btn-place-order {
-        width: 100%;
-        background: linear-gradient(135deg, #667eea, #764ba2);
-        color: #fff;
-        border: none;
-        border-radius: 10px;
-        padding: .75rem 1.2rem;
-        font-size: .9rem;
-        font-weight: 600;
-        cursor: pointer;
-        transition: .3s;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: .5rem;
-        margin-top: .5rem;
-    }
-
-    .btn-place-order:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 12px 24px rgba(102, 126, 234, .3);
-    }
-
-    .btn-place-order:active {
-        transform: translateY(0);
-    }
-
-    @media (max-width:768px) {
-        .place-order-header {
-            flex-direction: column;
-            align-items: flex-start;
-        }
-
-        .balance-pill {
-            align-self: flex-start;
-        }
-
-        .form-row {
-            grid-template-columns: 1fr;
-        }
-    }
-</style>
 
 <div class="orders-hero">
     <div class="d-flex align-items-center justify-content-between">
@@ -563,6 +173,7 @@ ui_head('Orders Zangu — ' . APP_NAME, 'app');
 </div>
 
 <div class="container px-3" style="margin-top:-1.5rem;">
+    <?php if ($reviewFlash): ?><div class="alert alert-<?= htmlspecialchars((string) $reviewFlash['type'], ENT_QUOTES, 'UTF-8') ?> rounded-4" role="status"><?= htmlspecialchars((string) $reviewFlash['message'], ENT_QUOTES, 'UTF-8') ?></div><?php endif; ?>
 
     <!-- Search Box -->
     <div class="search-box">
@@ -602,6 +213,7 @@ ui_head('Orders Zangu — ' . APP_NAME, 'app');
                     $statusLabel = normalizeOrderStatus($o['status']);
                     $isCompleted = $statusLabel === 'Completed';
                     $isCanceled = $statusLabel === 'Canceled';
+                    $canReview = strtolower(trim((string) $o['status'])) === 'completed' && empty($reviewedOrders[(int) $o['id']]);
                     $canRefill = !empty($o['refill_available']) && empty($o['refill_requested']) && $isCompleted;
                     $showCancel = !$isCompleted && !$isCanceled && serviceSupportsCancellation($o);
                     ?>
@@ -634,6 +246,9 @@ ui_head('Orders Zangu — ' . APP_NAME, 'app');
                             <?php endif; ?>
 
                             <div class="mt-2 d-flex align-items-center gap-2 flex-wrap">
+                                <?php if ($canReview): ?>
+                                    <button class="btn btn-sm rate-order-btn" type="button" data-order-id="<?= (int) $o['id'] ?>" data-bs-toggle="modal" data-bs-target="#rateOrderModal"><i class="bi bi-star-fill"></i> <span data-i18n="orders.rate">Rate this order</span></button>
+                                <?php endif; ?>
                                 <span
                                     class="badge-soft <?= obadge($o['status']) ?>"><?= htmlspecialchars($statusLabel) ?></span>
                                 <button class="btn btn-sm favorite-btn <?= !empty($favoriteIds[(int) $o['id']]) ? 'is-favorite' : '' ?>" data-id="<?= (int) $o['id'] ?>" data-favorite="<?= !empty($favoriteIds[(int) $o['id']]) ? '1' : '0' ?>"><i class="bi <?= !empty($favoriteIds[(int) $o['id']]) ? 'bi-heart-fill' : 'bi-heart' ?>"></i> <span><?= !empty($favoriteIds[(int) $o['id']]) ? 'Saved' : 'Favorite' ?></span></button>
@@ -692,6 +307,7 @@ ui_head('Orders Zangu — ' . APP_NAME, 'app');
                     $statusLabel = normalizeOrderStatus($o['status']);
                     $isCompleted = $statusLabel === 'Completed';
                     $isCanceled = $statusLabel === 'Canceled';
+                    $canReview = strtolower(trim((string) $o['status'])) === 'completed' && empty($reviewedOrders[(int) $o['id']]);
                     $canRefill = !empty($o['refill_available']) && empty($o['refill_requested']) && $isCompleted;
                     $showCancel = !$isCompleted && !$isCanceled && serviceSupportsCancellation($o);
                     ?>
@@ -724,6 +340,9 @@ ui_head('Orders Zangu — ' . APP_NAME, 'app');
                             <?php endif; ?>
 
                             <div class="mt-2 d-flex align-items-center gap-2 flex-wrap">
+                                <?php if ($canReview): ?>
+                                    <button class="btn btn-sm rate-order-btn" type="button" data-order-id="<?= (int) $o['id'] ?>" data-bs-toggle="modal" data-bs-target="#rateOrderModal"><i class="bi bi-star-fill"></i> <span data-i18n="orders.rate">Rate this order</span></button>
+                                <?php endif; ?>
                                 <span
                                     class="badge-soft <?= obadge($o['status']) ?>"><?= htmlspecialchars($statusLabel) ?></span>
                                 <button class="btn btn-sm favorite-btn <?= !empty($favoriteIds[(int) $o['id']]) ? 'is-favorite' : '' ?>" data-id="<?= (int) $o['id'] ?>" data-favorite="<?= !empty($favoriteIds[(int) $o['id']]) ? '1' : '0' ?>"><i class="bi <?= !empty($favoriteIds[(int) $o['id']]) ? 'bi-heart-fill' : 'bi-heart' ?>"></i> <span><?= !empty($favoriteIds[(int) $o['id']]) ? 'Saved' : 'Favorite' ?></span></button>
@@ -754,13 +373,48 @@ ui_head('Orders Zangu — ' . APP_NAME, 'app');
 
 </div>
 
+<div class="modal fade" id="rateOrderModal" tabindex="-1" aria-labelledby="rateOrderTitle" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-fullscreen-sm-down"><div class="modal-content rounded-4 border-0">
+    <form method="post" action="submit-testimonial.php" id="orderReviewForm">
+      <div class="modal-header"><div><h2 class="modal-title fs-5 fw-bold" id="rateOrderTitle"><span data-i18n="orders.rateTitle">Rate this order</span></h2><p class="small text-muted mb-0"><span data-i18n="orders.reviewPending">Your review is private until it is approved.</span></p></div><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+      <div class="modal-body">
+        <?= csrf_field() ?><input type="hidden" name="order_id" id="reviewOrderId" value="">
+        <label class="form-label d-block" data-i18n="orders.rating">Your rating</label>
+        <div class="star-picker" role="radiogroup" aria-label="Rating from one to five stars">
+          <?php for ($star = 1; $star <= 5; $star++): ?><input type="radio" id="orderRating<?= $star ?>" name="rating" value="<?= $star ?>" <?= $star === 5 ? 'checked' : '' ?> required><label data-rating="<?= $star ?>" for="orderRating<?= $star ?>" aria-label="<?= $star ?> stars" title="<?= $star ?> stars">★</label><?php endfor; ?>
+        </div>
+        <label class="form-label mt-3" for="reviewDisplayName" data-i18n="orders.displayName">Public name (first name + last initial)</label>
+        <input class="form-control" id="reviewDisplayName" name="display_name" maxlength="60" autocomplete="name" placeholder="e.g. Amina K." required>
+        <label class="form-label mt-3" for="reviewMessage" data-i18n="orders.reviewText">Comment (20–300 characters; no links)</label>
+        <textarea class="form-control" id="reviewMessage" name="message" minlength="20" maxlength="300" rows="4" required></textarea>
+        <div class="d-flex justify-content-between small text-muted mt-1"><span data-i18n="orders.reviewNoLinks">HTML is removed; links are not allowed.</span><span id="reviewCharCount">0 / 300</span></div>
+        <label class="review-consent mt-3"><input type="checkbox" name="consent_to_publish" value="1" required><span data-i18n="orders.consent">I allow Royal SMM to show this review with my first name and initial.</span></label>
+      </div>
+      <div class="modal-footer"><button type="button" class="btn btn-light" data-bs-dismiss="modal" data-i18n="common.cancel">Cancel</button><button type="submit" class="btn btn-primary" data-i18n="orders.submitReview">Submit review</button></div>
+    </form>
+  </div></div>
+</div>
+
+<script>
+(function(){
+  const idField=document.getElementById('reviewOrderId');
+  document.querySelectorAll('.rate-order-btn').forEach(button=>button.addEventListener('click',()=>{idField.value=button.dataset.orderId||'';}));
+  const message=document.getElementById('reviewMessage'),count=document.getElementById('reviewCharCount');
+  if(message&&count) message.addEventListener('input',()=>{count.textContent=Array.from(message.value).length+' / 300';});
+  const ratingInputs=Array.from(document.querySelectorAll('.star-picker input[name="rating"]'));
+  const paintStars=()=>{const selected=Number(ratingInputs.find(input=>input.checked)?.value||0);document.querySelectorAll('.star-picker label[data-rating]').forEach(label=>label.classList.toggle('selected',Number(label.dataset.rating)<=selected));};
+  ratingInputs.forEach(input=>input.addEventListener('change',paintStars));paintStars();
+})();
+</script>
 <?php
 ui_nav('orders', ['balance' => $user['balance']]);
 ui_topup_modal();
-ui_foot(<<<'JS'
+$notificationJson = json_encode($orderNotifications, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP);
+if (!is_string($notificationJson)) $notificationJson = '[]';
+$ordersFooterScript = <<<'JS'
 <script>
 (function(){
-  const notes = <?= json_encode($orderNotifications, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>;
+  const notes = __ORDER_NOTIFICATION_JSON__;
   if(Array.isArray(notes)){
     notes.forEach(n=>{ if(n && n.message){ toast(n.message, n.type || 'primary'); } });
   }
@@ -862,5 +516,6 @@ document.querySelectorAll('.cancel-btn').forEach(btn => {
   }, {passive:true});
 })();
 </script>
-JS);
+JS;
+ui_foot(str_replace('__ORDER_NOTIFICATION_JSON__', $notificationJson, $ordersFooterScript));
 ?>

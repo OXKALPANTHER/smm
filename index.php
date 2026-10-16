@@ -2,7 +2,20 @@
 // Performance direction: keep the dashboard’s familiar server-rendered flow and defer nonessential payment content until requested.
 require_once 'config.php';
 require_once 'includes/ui.php';
+$siteCssFile = __DIR__ . '/assets/style.css';
+$siteStyleVersion = is_file($siteCssFile) ? substr((string) hash_file('sha256', $siteCssFile), 0, 12) : '1';
 if (!isset($_SESSION['user_id'])) {
+    require_once 'includes/public-prices-cache.php';
+    require_once 'includes/testimonials.php';
+    $homepagePriceData = royalPublicPriceSnapshot();
+    $homepagePriceSingle = count($homepagePriceData) === 1;
+    $homepageTestimonials = royalPublicTestimonials($conn, 6);
+    $homepageTestimonialExcerpt = static function (string $text): string {
+        $text = trim(strip_tags($text));
+        $characters = preg_split('//u', $text, -1, PREG_SPLIT_NO_EMPTY);
+        if (!is_array($characters)) $characters = str_split($text);
+        return implode('', array_slice($characters, 0, 180)) . (count($characters) > 180 ? '…' : '');
+    };
     $publicBrand = htmlspecialchars(APP_NAME, ENT_QUOTES, 'UTF-8');
     $publicCanonical = htmlspecialchars(rtrim(APP_URL, '/') . '/', ENT_QUOTES, 'UTF-8');
     $publicDescription = 'Order Instagram, TikTok, YouTube and Facebook growth services in minutes. Clear prices, order tracking and mobile-money top-ups in TZS.';
@@ -50,15 +63,19 @@ if (!isset($_SESSION['user_id'])) {
 <script type="application/ld+json"><?= $faqStructuredData ?></script>
 <?php pwa_head(); ?>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" href="https://fonts.gstatic.com/s/manrope/v20/xn7_YHE41ni1AdIRqAuZuw1Bx9mbZk79FN_C-bk.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="https://fonts.gstatic.com/s/poppins/v24/pxiEyp8kv8JHgFVrJJfecg.woff2" as="font" type="font/woff2" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+<link rel="stylesheet" href="assets/style.css?v=<?= $siteStyleVersion ?>">
 <style>
 :root{--ink:#141b36;--muted:#737c98;--purple:#6848ed;--purple2:#4726d4;--mint:#32d6b2;--line:#e8eaf3;--bg:#f8f9ff;--white:#fff}*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--ink);font-family:Manrope,system-ui,sans-serif}.shell{max-width:1200px;margin:auto;padding:0 28px}.nav{height:82px;display:flex;align-items:center;justify-content:space-between;gap:20px}.brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--ink);font-weight:800;font-size:1.15rem;letter-spacing:-.04em}.brand-mark{width:39px;height:39px;border-radius:13px;display:grid;place-items:center;background:linear-gradient(145deg,#907dff,#5536df);color:#fff;font-size:1.05rem;box-shadow:0 8px 18px #6445e63a}.brand em{font-style:normal;color:var(--purple)}.navlinks{display:flex;align-items:center;gap:25px}.navlinks a,.footer a{color:#59627c;text-decoration:none;font-size:.87rem;font-weight:700}.navcta{display:flex;gap:10px}.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:12px 18px;border-radius:13px;text-decoration:none;font-size:.88rem;font-weight:800;transition:transform .2s,box-shadow .2s}.btn:hover{transform:translateY(-2px)}.btn-primary{color:white;background:linear-gradient(130deg,var(--purple),var(--purple2));box-shadow:0 12px 26px #5637dc36}.btn-plain{color:var(--ink);background:#fff;border:1px solid var(--line)}.hero{min-height:620px;display:grid;grid-template-columns:1.08fr .92fr;align-items:center;gap:44px;padding:54px 0 76px;position:relative}.hero-copy{position:relative;z-index:2}.eyebrow{display:inline-flex;gap:8px;align-items:center;color:#593adf;background:#efecff;border:1px solid #e2dcff;border-radius:99px;padding:8px 12px;font-size:.73rem;font-weight:800;letter-spacing:.02em}.eyebrow i{width:7px;height:7px;border-radius:50%;background:#4bd2ac;box-shadow:0 0 0 4px #4bd2ac24}.hero h1{font:700 clamp(2.8rem,6vw,5.2rem)/1.02 'Space Grotesk',sans-serif;letter-spacing:-.065em;margin:23px 0 18px;max-width:680px}.gradient-text{background:linear-gradient(100deg,#6445e8,#17b89a);background-clip:text;-webkit-background-clip:text;color:transparent}.hero-copy>p{max-width:600px;color:var(--muted);font-size:1.05rem;line-height:1.8}.hero-acts{display:flex;gap:12px;flex-wrap:wrap;margin-top:26px}.trust{display:flex;align-items:center;gap:10px;margin-top:28px;color:#77809a;font-size:.78rem;font-weight:700}.avatars{display:flex;padding-left:4px}.avatars i{font-style:normal;margin-left:-4px;width:26px;height:26px;border:2px solid white;background:linear-gradient(135deg,#d7cbff,#b9f4e7);border-radius:50%;display:grid;place-items:center;color:#4e35d7;font-size:.61rem}.visual{height:440px;position:relative;display:grid;place-items:center}.orb{position:absolute;width:360px;height:360px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff 0,#eeeaff 38%,#dcd4ff 72%,#c5f7ea 100%);filter:drop-shadow(0 30px 50px #5542b51c);animation:float 6s ease-in-out infinite}.orb:before,.orb:after{content:'';position:absolute;border:1px solid #745de522;border-radius:50%;inset:30px;transform:rotate(-25deg) scaleX(1.45)}.orb:after{inset:65px;transform:rotate(35deg) scaleX(1.55)}.mock{position:relative;width:min(320px,80%);background:#fff;border:1px solid #ffffff;border-radius:24px;padding:19px;box-shadow:0 24px 80px #30246b29;transform:rotate(-3deg);animation:cardFloat 5s ease-in-out infinite}.mock-top{display:flex;align-items:center;justify-content:space-between;font-weight:800;font-size:.82rem}.live{color:#168e73;background:#e6faf3;border-radius:99px;padding:5px 9px;font-size:.62rem}.mock-label{color:#8991a8;font-size:.68rem;margin:24px 0 5px}.mock-num{font:700 2rem 'Space Grotesk';letter-spacing:-.05em}.mock-chart{height:94px;display:flex;align-items:end;gap:8px;margin-top:16px}.mock-chart i{display:block;flex:1;border-radius:8px 8px 3px 3px;background:linear-gradient(180deg,#8972ff,#5b3ce4);animation:bars 2.2s ease-in-out infinite alternate}.mock-chart i:nth-child(1){height:34%}.mock-chart i:nth-child(2){height:49%;animation-delay:.2s}.mock-chart i:nth-child(3){height:42%;animation-delay:.35s}.mock-chart i:nth-child(4){height:66%;animation-delay:.5s}.mock-chart i:nth-child(5){height:59%;animation-delay:.65s}.mock-chart i:nth-child(6){height:82%;animation-delay:.8s}.mock-chart i:nth-child(7){height:100%;animation-delay:1s}.float-tag{position:absolute;z-index:2;padding:12px 15px;background:#fff;border:1px solid #fff;border-radius:15px;box-shadow:0 14px 35px #28204a18;font-size:.76rem;font-weight:800;animation:float 4s ease-in-out infinite}.float-tag b{color:#6546e8}.tag-one{top:52px;right:0}.tag-two{bottom:68px;left:-12px;animation-delay:-1.2s}.tag-three{bottom:4px;right:40px;animation-delay:-2s}.section{padding:78px 0}.section-head{text-align:center;max-width:690px;margin:0 auto 36px}.kicker{color:var(--purple);font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.14em}.section h2{font:700 clamp(2rem,4vw,3rem)/1.13 'Space Grotesk',sans-serif;letter-spacing:-.05em;margin:12px 0}.section-head p,.section-copy{color:var(--muted);line-height:1.8}.platforms{display:grid;grid-template-columns:repeat(6,1fr);gap:12px}.platform{padding:20px 10px;text-align:center;background:white;border:1px solid var(--line);border-radius:18px;font-size:.8rem;font-weight:800;box-shadow:0 8px 24px #1a24410a;transition:.2s}.platform:hover{transform:translateY(-4px);border-color:#cec5ff}.pico{width:38px;height:38px;border-radius:13px;margin:0 auto 10px;display:grid;place-items:center;background:#f0edff;color:#6546e8;font-size:1.05rem}.platform-logo{width:22px;height:22px;fill:currentColor;stroke:currentColor;stroke-width:1.2}.platform-logo circle{fill:none}.features{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}.feature{padding:25px;background:white;border:1px solid var(--line);border-radius:22px;box-shadow:0 12px 30px #20284b08}.feature-icon{width:48px;height:48px;border-radius:16px;display:grid;place-items:center;background:#f1efff;color:#6042e7;font-size:1.2rem}.feature h3{font-size:1rem;margin:18px 0 8px}.feature p{font-size:.86rem;line-height:1.75;color:var(--muted);margin:0}.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:15px;counter-reset:steps}.step{padding:25px;border-radius:20px;background:linear-gradient(145deg,#fff,#f7f6ff);border:1px solid var(--line)}.step-no{font:700 1.7rem 'Space Grotesk';color:#8b78f4}.step h3{font-size:.98rem;margin:14px 0 8px}.step p{font-size:.84rem;color:var(--muted);line-height:1.7;margin:0}.global-note{display:flex;align-items:flex-start;gap:14px;background:#151d3a;color:#fff;border-radius:24px;padding:27px 30px;margin:18px 0}.global-note .pico{margin:0;flex:0 0 auto;background:#ffffff16;color:#72e3c7}.global-note p{color:#c3c9dc;line-height:1.7;margin:6px 0 0;font-size:.84rem}.faq{max-width:800px;margin:auto}.faq details{background:#fff;border:1px solid var(--line);border-radius:16px;padding:18px 20px;margin:10px 0}.faq summary{cursor:pointer;font-weight:800;font-size:.9rem}.faq details p{color:var(--muted);line-height:1.75;font-size:.86rem;margin:12px 0 0}.cta{padding:48px 25px;text-align:center;border-radius:28px;background:radial-gradient(500px 180px at 50% 0,#765ff6,transparent 80%),linear-gradient(135deg,#20194d,#35217f);color:white;position:relative;overflow:hidden}.cta h2{font:700 clamp(2rem,4vw,3.2rem)/1.1 'Space Grotesk';letter-spacing:-.05em;margin:0 0 12px}.cta p{color:#d4d0ed;line-height:1.7;margin:0 auto 22px;max-width:580px}.cta .btn{background:#fff;color:#4932c4}.footer{padding:30px 0 42px;display:flex;justify-content:space-between;gap:20px;color:var(--muted);font-size:.77rem}.footer nav{display:flex;gap:18px}.reveal{animation:rise .7s both}@keyframes rise{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}@keyframes cardFloat{0%,100%{transform:rotate(-3deg) translateY(0)}50%{transform:rotate(-1deg) translateY(-8px)}}@keyframes bars{to{filter:saturate(.7);transform:scaleY(.86);transform-origin:bottom}}@media(max-width:900px){.hero{grid-template-columns:1fr .82fr;gap:12px;min-height:560px}.visual{transform:scale(.9)}.platforms{grid-template-columns:repeat(3,1fr)}}@media(max-width:650px){.shell{padding:0 18px}.nav{height:70px}.navlinks{display:none}.navcta .btn{padding:10px 12px;font-size:.77rem}.brand{font-size:1rem}.brand-mark{width:34px;height:34px}.hero{grid-template-columns:1fr;padding:55px 0 35px;gap:0}.hero h1{font-size:clamp(2.8rem,13vw,4.15rem)}.hero-copy>p{font-size:.95rem}.visual{height:360px;margin-top:5px;transform:none}.orb{width:290px;height:290px}.mock{width:min(290px,78%)}.tag-one{right:1px;top:20px}.tag-two{left:0;bottom:40px}.tag-three{right:5px}.section{padding:54px 0}.features,.steps{grid-template-columns:1fr}.platforms{grid-template-columns:repeat(3,1fr);gap:9px}.platform{padding:15px 7px}.global-note{padding:22px}.footer{flex-direction:column;padding-bottom:28px}}@media(prefers-reduced-motion:reduce){*,*:before,*:after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
 .price-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}.price-card{display:flex;flex-direction:column;gap:8px;padding:20px;border:1px solid var(--line);border-radius:18px;background:#fff;color:var(--ink);box-shadow:0 10px 28px #20284b08}.price-card strong{font-size:1rem}.price-card span{color:var(--muted);font-size:.82rem}.price-card b{color:var(--purple)}.price-card small{color:var(--purple);font-weight:800;font-size:.72rem}.price-card .service-name{font-size:.76rem;line-height:1.4;overflow-wrap:anywhere}.price-card.empty{grid-column:1/-1;text-align:center;color:var(--muted)}.skeleton{display:block;height:14px;width:75%;border-radius:99px;background:linear-gradient(90deg,#eef0f8 25%,#fafbff 50%,#eef0f8 75%);background-size:200% 100%;animation:sk 1.2s infinite}.skeleton.short{width:48%}.trust-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}.trust-grid article{padding:22px;border:1px solid var(--line);border-radius:20px;background:#fff}.trust-mark{width:42px;height:42px;border-radius:14px;background:#efecff;color:var(--purple);display:grid;place-items:center;font-weight:900;font-size:1.2rem}.trust-grid h3{font-size:1rem;margin:14px 0 7px}.trust-grid p{color:var(--muted);font-size:.84rem;line-height:1.7;margin:0}.payments{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-top:18px;padding:16px 18px;border-radius:16px;background:#151d3a;color:#fff;font-size:.78rem}.payments span{display:inline-flex;align-items:center;gap:6px;color:#d7def3;background:#ffffff12;border-radius:99px;padding:8px 11px}.platform-logo{display:block}@keyframes sk{0%{background-position:200% 0}100%{background-position:-200% 0}}@media(max-width:650px){.price-grid,.trust-grid{grid-template-columns:1fr}.payments{align-items:flex-start;flex-direction:column}}
 
 /* Phone-first refinements: keep the hero legible, visuals contained, and controls easy to tap. */
 html{scroll-padding-top:18px}body{overflow-x:hidden}.btn,.navcta a,.navlinks a{min-height:44px}.btn:focus-visible,a:focus-visible,button:focus-visible,input:focus-visible,summary:focus-visible{outline:3px solid #19a884;outline-offset:3px}.nav{gap:10px}.navcta{flex:0 0 auto}.navlinks a,.footer a{display:inline-flex;align-items:center;min-height:44px}.hero h1{max-width:760px;overflow-wrap:anywhere}.price-card{min-width:0;overflow-wrap:anywhere}.platform-logo{width:23px;height:23px;display:block;fill:currentColor;stroke:currentColor;stroke-width:1.2}.platform-logo rect,.platform-logo circle{fill:none}.footer nav{flex-wrap:wrap}.royal-whatsapp{position:fixed;right:16px;bottom:calc(18px + env(safe-area-inset-bottom));z-index:1199;display:inline-flex;align-items:center;justify-content:center;width:50px;height:50px;border-radius:50%;background:#25d366;color:#073b1d;box-shadow:0 10px 26px #25d36655;text-decoration:none}.royal-whatsapp svg{width:25px;height:25px;fill:currentColor}
-@media(max-width:650px){.shell{padding-left:18px;padding-right:18px}.nav{height:auto;min-height:70px;flex-wrap:wrap;padding-top:10px;padding-bottom:10px}.navcta .btn{padding:8px 10px;font-size:.76rem}.hero{padding-top:38px;padding-bottom:28px}.hero h1{font-size:clamp(2.15rem,10.4vw,3.15rem);line-height:1.06;letter-spacing:-.055em}.hero-copy>p{font-size:.94rem;line-height:1.65}.hero-acts{margin-top:18px}.visual{height:320px;margin-top:12px;overflow:hidden}.orb{width:min(76vw,280px);height:min(76vw,280px)}.mock{width:min(290px,78vw);padding:16px;transform:none;animation:none}.mock-num{font-size:1.7rem}.tag-one{right:2px;top:14px}.tag-two{left:0;bottom:34px}.tag-three{right:2px;bottom:0}.float-tag{font-size:.68rem;padding:9px 11px}.platforms{grid-template-columns:repeat(2,minmax(0,1fr))}.platform{min-height:88px;display:flex;flex-direction:column;justify-content:center}.section{padding:48px 0}.price-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.price-card{padding:14px}.price-card strong{font-size:.9rem}.price-card span{font-size:.75rem}.price-card .service-name{font-size:.72rem}.footer{gap:12px}.footer nav{gap:6px 14px}.royal-whatsapp{right:14px;bottom:calc(18px + env(safe-area-inset-bottom))}}
+@media(max-width:650px){.shell{padding-left:18px;padding-right:18px}.nav{height:auto;min-height:70px;flex-wrap:wrap;padding-top:10px;padding-bottom:10px}.navcta .btn{padding:8px 10px;font-size:.76rem}.hero{padding-top:38px;padding-bottom:28px}.hero h1{font-size:clamp(2.15rem,10.4vw,3.15rem);line-height:1.06;letter-spacing:-.055em}.hero-copy>p{font-size:.94rem;line-height:1.65}.hero-acts{margin-top:18px}.visual{height:320px;margin-top:12px;overflow:hidden}.orb{width:min(76vw,280px);height:min(76vw,280px)}.mock{width:min(290px,78vw);padding:16px;transform:none;animation:none}.mock-num{font-size:1.7rem}.tag-one{right:2px;top:14px}.tag-two{left:0;bottom:34px}.tag-three{right:2px;bottom:0}.float-tag{font-size:.68rem;padding:9px 11px}.platforms{grid-template-columns:repeat(2,minmax(0,1fr))}.platform{min-height:88px;display:flex;flex-direction:column;justify-content:center}.section{padding:48px 0}.price-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.price-card{padding:14px}.price-card strong{font-size:.9rem}.price-card span{font-size:.75rem}.price-card .service-name{font-size:.72rem}.footer{gap:12px}.footer nav{gap:6px 14px}.royal-whatsapp{right:14px;bottom:calc(18px + env(safe-area-inset-bottom));width:48px;height:48px;min-height:48px;padding:0;border-radius:50%;justify-content:center;gap:0}.royal-whatsapp span{display:none}.royal-whatsapp i{font-size:1.2rem}}
 @media(max-width:360px){.navcta .btn{font-size:.7rem;padding:8px}.hero h1{font-size:2.05rem}.price-grid{grid-template-columns:1fr}}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
 
@@ -80,6 +97,8 @@ html{scroll-padding-top:18px}body{overflow-x:hidden}.btn,.navcta a,.navlinks a{m
  .mock-num{color:#f1f4ff}.float-tag b{color:#c8bfff}
  .payments{background:#090f20;color:#f1f4ff}
 }
+
+.shell{padding-left:16px;padding-right:16px}.section .shell{padding-left:16px;padding-right:16px}.price-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.price-details-cta{margin-top:20px!important}.testimonials-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.testimonial-card{min-width:0;overflow-wrap:anywhere}@media(max-width:650px){.price-grid,.testimonials-grid{grid-template-columns:1fr}.shell,.section .shell{padding-left:16px;padding-right:16px}}.royal-whatsapp{z-index:1300;right:16px;bottom:18px}.price-card.empty{grid-column:1/-1}
 </style>
 </head>
 <body>
@@ -95,7 +114,23 @@ html{scroll-padding-top:18px}body{overflow-x:hidden}.btn,.navcta a,.navlinks a{m
 <div class="platform"><div class="pico"><svg class="platform-logo" viewBox="0 0 24 24" aria-hidden="true"><path d="M18.9 2H22l-6.8 7.8L23.2 22h-6.3L12 14.8 5.7 22H2.5l7.3-8.4L1.8 2h6.4l4.5 6.7zM17.8 20h1.7L7.2 3.9H5.4z"/></svg></div>X &amp; more</div></div></div></section>
 <section class="section"><div class="shell"><div class="section-head"><span class="kicker">Designed for momentum</span><h2>Everything you need to stay in control</h2><p>Spend less time jumping between tools and more time choosing the right service for your next campaign.</p></div><div class="features"><article class="feature"><div class="feature-icon">⌕</div><h3>Find services faster</h3><p>Search and filter the live catalogue by platform. Compare descriptions, minimums, maximums, and listed rates before submitting.</p></article><article class="feature"><div class="feature-icon">↗</div><h3>Place orders with clarity</h3><p>Choose a service, provide the public link or username it requires, set a quantity, and review the order amount before confirmation.</p></article><article class="feature"><div class="feature-icon">◷</div><h3>Follow progress</h3><p>Check order status and account activity in one place. Availability and completion times depend on the selected service.</p></article></div></div></section>
 <section class="section" id="how-it-works" style="background:#fff"><div class="shell"><div class="section-head"><span class="kicker">A clear path from sign-up to tracking</span><h2>Get started in three steps</h2><p>Your panel keeps the workflow straightforward, whether you manage one profile or multiple campaigns.</p></div><div class="steps"><article class="step"><div class="step-no">01</div><h3>Create your account</h3><p>Register and open your dashboard to explore the currently available services and account tools.</p></article><article class="step"><div class="step-no">02</div><h3>Choose and submit</h3><p>Review each service's requirements and price, enter the target link and quantity, then confirm your order.</p></article><article class="step"><div class="step-no">03</div><h3>Monitor and manage</h3><p>Return to your dashboard to follow progress, view order history, and manage your account balance.</p></article></div><div class="global-note"><div class="pico">◎</div><div><strong>SMM panel Tanzania, available worldwide</strong><p>Royal SMM is designed for creators, businesses, and resellers in different markets. Service availability can vary. Payment methods and currency are shown in the account checkout; Tanzanian mobile-money payments are available for customers using TZS.</p></div></div></div></section>
-<section class="section" id="live-pricing" style="background:#fff"><div class="shell"><div class="section-head"><span class="kicker">Live catalogue snapshot</span><h2>Starting prices you can verify</h2><p>These are current starting rates from the service catalogue. Open the live panel before ordering because provider availability and rates can change.</p></div><div class="price-grid" id="publicPrices"><div class="price-card"><span class="skeleton"></span><span class="skeleton short"></span></div><div class="price-card"><span class="skeleton"></span><span class="skeleton short"></span></div><div class="price-card"><span class="skeleton"></span><span class="skeleton short"></span></div></div><div class="text-center mt-4"><a class="btn btn-primary" href="pricing.php">See pricing details <span>→</span></a></div></div></section><section class="section trust-section"><div class="shell"><div class="section-head"><span class="kicker">Built for confident growth</span><h2>SMM panel mobile money support for Tanzania</h2><p>Royal SMM keeps the important details visible before you spend.</p></div><div class="trust-grid"><article><div class="trust-mark">✓</div><h3>Live service details</h3><p>Compare service limits, refill terms, and current rates from the catalogue.</p></article><article><div class="trust-mark">₸</div><h3>TZS top-ups</h3><p>Add wallet balance using the payment options available to your account.</p></article><article><div class="trust-mark">↗</div><h3>Order visibility</h3><p>Track progress, status updates, and order history from a mobile-ready dashboard.</p></article></div><div class="payments"><strong>Payment options shown in your account</strong><span><i class="bi bi-phone-fill"></i> Mobile money</span><span><i class="bi bi-wallet2"></i> Wallet balance</span><span><i class="bi bi-shield-check"></i> Secure checkout</span></div></div></section><section class="section"><div class="shell"><div class="section-head"><span class="kicker">Customer outcomes</span><h2>Verified results</h2><p>TODO: add testimonials and aggregate performance figures only after real customer data has been reviewed. No customer results are claimed here.</p></div></div></section><section class="section" id="faq"><div class="shell"><div class="section-head"><span class="kicker">Good to know</span><h2>Frequently asked questions about the SMM reseller API and services</h2></div><div class="faq"><?php foreach ($homepageFaq as $item): ?><details><summary><?= htmlspecialchars($item['q'], ENT_QUOTES, 'UTF-8') ?></summary><p><?= htmlspecialchars($item['a'], ENT_QUOTES, 'UTF-8') ?></p></details><?php endforeach; ?></div></div></section>
+<section class="section" id="live-pricing" style="background:#fff"><div class="shell"><div class="section-head"><span class="kicker">Live catalogue snapshot</span><h2>Starting prices you can verify</h2><p>These are current starting rates from the service catalogue. Open the live panel before ordering because provider availability and rates can change.</p></div><div class="price-grid<?= $homepagePriceSingle ? ' single' : '' ?>" id="publicPrices" aria-live="polite">
+<?php if (!empty($homepagePriceData)): foreach ($homepagePriceData as $price): ?>
+<a class="price-card" href="services.php"><strong><?= htmlspecialchars((string) $price['platform'], ENT_QUOTES, 'UTF-8') ?></strong><span class="service-name"><?= htmlspecialchars((string) ($price['name'] ?: 'Catalogue service'), ENT_QUOTES, 'UTF-8') ?></span><span>From <b><?= number_format((int) $price['price']) ?> <?= htmlspecialchars((string) $price['currency'], ENT_QUOTES, 'UTF-8') ?></b> / 1,000</span><small>View live service details →</small></a>
+<?php endforeach; else: ?>
+<div class="price-card empty"><p>Current pricing is temporarily unavailable.</p><div class="d-flex justify-content-center gap-2 flex-wrap"><button id="retryPublicPrices" class="btn btn-primary" type="button">Retry</button><a class="btn btn-plain" href="pricing.php">See pricing</a></div></div>
+<?php endif; ?>
+</div><div class="text-center price-details-cta"><a class="btn btn-primary" href="pricing.php">See pricing details <span aria-hidden="true">→</span></a></div></div></section>
+<?php if (empty($homepagePriceData)): ?><script>
+(function(){const root=document.getElementById('publicPrices');if(!root)return;function fallback(message){root.classList.remove('single');root.replaceChildren();const box=document.createElement('div');box.className='price-card empty';const p=document.createElement('p');p.textContent=message||'Current pricing is temporarily unavailable.';const actions=document.createElement('div');actions.className='d-flex justify-content-center gap-2 flex-wrap';const retry=document.createElement('button');retry.type='button';retry.className='btn btn-primary';retry.textContent='Retry';const pricing=document.createElement('a');pricing.className='btn btn-plain';pricing.href='pricing.php';pricing.textContent='See pricing';actions.append(retry,pricing);box.append(p,actions);root.append(box);retry.addEventListener('click',load);}function render(rows){root.classList.toggle('single',rows.length===1);root.replaceChildren();rows.forEach(function(item){const card=document.createElement('a');card.className='price-card';card.href='services.php';const title=document.createElement('strong');title.textContent=item.platform||'Social media';const name=document.createElement('span');name.className='service-name';name.textContent=item.name||'Catalogue service';const price=document.createElement('span');price.append('From ');const amount=document.createElement('b');amount.textContent=Number(item.price).toLocaleString()+' '+(item.currency||'TZS');price.append(amount,' / 1,000');const more=document.createElement('small');more.textContent='View live service details →';card.append(title,name,price,more);root.append(card);});}function load(){const retry=root.querySelector('button');if(retry){retry.disabled=true;retry.textContent='Checking…';}const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),4000);fetch('public-prices.php',{headers:{Accept:'application/json'},signal:controller.signal,cache:'no-store'}).then(function(response){if(!response.ok)throw new Error('unavailable');return response.json();}).then(function(payload){if(payload&&payload.success&&Array.isArray(payload.data)&&payload.data.length){render(payload.data);}else{fallback('Current pricing is temporarily unavailable.');}}).catch(function(){fallback('Current pricing is temporarily unavailable.');}).finally(function(){clearTimeout(timer);});}load();})();
+</script><?php endif; ?><section class="section trust-section"><div class="shell"><div class="section-head"><span class="kicker">Built for confident growth</span><h2>SMM panel mobile money support for Tanzania</h2><p>Royal SMM keeps the important details visible before you spend.</p></div><div class="trust-grid"><article><div class="trust-mark">✓</div><h3>Live service details</h3><p>Compare service limits, refill terms, and current rates from the catalogue.</p></article><article><div class="trust-mark">₸</div><h3>TZS top-ups</h3><p>Add wallet balance using the payment options available to your account.</p></article><article><div class="trust-mark">↗</div><h3>Order visibility</h3><p>Track progress, status updates, and order history from a mobile-ready dashboard.</p></article></div><div class="payments"><strong>Payment options shown in your account</strong><span><i class="bi bi-phone-fill"></i> Mobile money</span><span><i class="bi bi-wallet2"></i> Wallet balance</span><span><i class="bi bi-shield-check"></i> Secure checkout</span></div></div></section><?php if (count($homepageTestimonials) >= 3): ?>
+<section class="section" id="verified-results"><div class="shell"><div class="section-head"><span class="kicker">Customer outcomes</span><h2>Verified results</h2><p>Reviews shared with permission from Royal SMM customers.</p></div><div class="testimonials-grid">
+<?php foreach ($homepageTestimonials as $review): $reviewRating = max(1, min(5, (int) $review['rating'])); $reviewName = royalTestimonialPublicName((string) $review['display_name']); $reviewExcerpt = $homepageTestimonialExcerpt((string) $review['message']); ?>
+<article class="testimonial-card"><div class="testimonial-stars" role="img" aria-label="<?= $reviewRating ?> out of 5 stars"><?= str_repeat('★', $reviewRating) . str_repeat('☆', 5 - $reviewRating) ?></div><blockquote>“<?= htmlspecialchars($reviewExcerpt, ENT_QUOTES, 'UTF-8') ?>”</blockquote><div class="testimonial-byline"><span><?= htmlspecialchars($reviewName, ENT_QUOTES, 'UTF-8') ?></span><span>· <?= htmlspecialchars((string) $review['platform'], ENT_QUOTES, 'UTF-8') ?></span><?php if ((int) $review['verified_customer'] === 1): ?><span class="verified-label"><i class="bi bi-patch-check-fill" aria-hidden="true"></i>Verified customer</span><?php endif; ?></div></article>
+<?php endforeach; ?>
+</div></div></section>
+<?php endif; ?>
+<section class="section" id="faq"><div class="shell"><div class="section-head"><span class="kicker">Good to know</span><h2>Frequently asked questions about the SMM reseller API and services</h2></div><div class="faq"><?php foreach ($homepageFaq as $item): ?><details><summary><?= htmlspecialchars($item['q'], ENT_QUOTES, 'UTF-8') ?></summary><p><?= htmlspecialchars($item['a'], ENT_QUOTES, 'UTF-8') ?></p></details><?php endforeach; ?></div></div></section>
 <section class="shell" style="padding-bottom:55px"><div class="cta"><h2>Ready to make your next move?</h2><p>Create your account to explore the live service catalogue and manage your social media orders in one place.</p><a class="btn" href="register.php">Create your free account <span>→</span></a></div></section>
 <footer class="shell footer"><span>© <?= date('Y') ?> <?= $publicBrand ?> SMM Panel · Social growth tools for creators worldwide.<br></span><nav><a href="services.php">Services</a><a href="pricing.php">Pricing</a><a href="api.php">SMM reseller API</a><a href="terms.php">Terms</a><a href="privacy.php">Privacy</a><a href="refund-refill.php">Refund/Refill</a><a href="https://wa.me/<?= rawurlencode(WHATSAPP_SUPPORT_PHONE) ?>">Support</a></nav></footer>
 </main><?php pwa_foot(); ?></body></html>
@@ -216,11 +251,14 @@ function statusBadge($status) {
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+    <link rel="preload" href="https://fonts.gstatic.com/s/poppins/v24/pxiEyp8kv8JHgFVrJJfecg.woff2" as="font" type="font/woff2" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet">
+    <script>(function(){var choice='system';try{choice=localStorage.getItem('royal-theme')||'system'}catch(e){}var dark=!!(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.dataset.theme=choice==='dark'||(choice==='system'&&dark)?'dark':'light'})();</script>
+    <link rel="stylesheet" href="assets/style.css?v=<?= $siteStyleVersion ?>">
 
     <style>
         :root {
@@ -478,10 +516,24 @@ function statusBadge($status) {
             .hero,.belt,.btn-primary-grad::after,.chip{animation:none!important;}
             .belt-track{animation-duration:60s;}
         }
-    </style>
+
+        :root{--z-content:1;--z-header:1000;--z-nav:1200;--z-support:1300;--z-backdrop:1400;--z-drawer:1500;--z-modal:1600;--z-toast:1700;--z-loader:3000}
+        body.app{padding-top:calc(116px + env(safe-area-inset-top));padding-bottom:calc(140px + env(safe-area-inset-bottom));min-height:100dvh}
+        .app-header{position:fixed;inset:0 0 auto;z-index:var(--z-header);display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;padding:calc(9px + env(safe-area-inset-top)) 14px 9px;background:rgba(255,255,255,.96);backdrop-filter:blur(16px);border-bottom:1px solid rgba(108,92,231,.13);box-shadow:0 8px 24px rgba(43,54,116,.08)}
+        .app-header-heading{order:1;flex:1 1 180px;min-width:0}.app-header-title{font-size:.95rem;font-weight:800;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.app-header-subtitle{display:block;margin-top:2px;font-size:.67rem;line-height:1.3;color:#59627c}
+        .app-header-balance{order:4;flex:1 0 100%;width:100%;display:inline-flex;align-items:center;gap:8px;max-width:100%;min-height:38px;padding:5px 12px;border:1px solid #e4e0f6;border-radius:12px;background:#f8f7ff;color:#4932c4;font-size:.76rem;white-space:nowrap}.app-header-controls{display:contents}.nav-bell,.hamburger{width:44px;height:44px;min-height:44px;border-radius:13px;flex:0 0 44px}
+        .mobile-tabbar{display:none}.royal-whatsapp{position:fixed;right:16px;bottom:18px;z-index:var(--z-support);display:inline-flex;align-items:center;gap:.4rem;min-height:48px;padding:.65rem .95rem;border-radius:999px;background:#25d366;color:#073b1d;text-decoration:none}body.app .royal-whatsapp{bottom:calc(76px + env(safe-area-inset-bottom))}
+        @media(max-width:768px){.mobile-tabbar{position:fixed;left:0;right:0;bottom:0;z-index:var(--z-nav);display:grid;grid-template-columns:repeat(5,minmax(0,1fr));padding:4px 4px env(safe-area-inset-bottom);min-height:calc(56px + env(safe-area-inset-bottom));background:rgba(255,255,255,.96);border-top:1px solid #ddd8f4}.mobile-tabbar a{min-height:56px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:11px;white-space:nowrap}.site-footer{padding-bottom:calc(14px + env(safe-area-inset-bottom))}}
+        @media(min-width:600px){body.app{padding-top:calc(84px + env(safe-area-inset-top))}.app-header{grid-template-columns:minmax(0,1fr) auto auto;grid-template-rows:auto}.app-header-heading{order:1;flex:1 1 auto}.app-header-balance{order:2;flex:0 0 auto;width:auto}.app-header .nav-bell{order:3;margin-left:0}.app-header .hamburger{order:4}}
+
+.app-header .nav-bell{order:2;margin-left:auto}.app-header .hamburger{order:3}.btn-primary,.btn-primary-grad,.btn-grad{background:#4834d4;color:#fff}
+@media(min-width:600px){.app-header{flex-wrap:nowrap}.app-header-heading{order:1;flex:1 1 auto}.app-header-balance{order:2;flex:0 0 auto;width:auto}.app-header .nav-bell{order:3;margin-left:0}.app-header .hamburger{order:4}}
+
+.app-header .hamburger{position:static;inset:auto;top:auto;right:auto;z-index:auto}.price-grid.single{grid-template-columns:1fr}
+</style>
     <?php pwa_head(); ?>
 </head>
-<body>
+<body class="app">
 
 <div class="toast-wrap" id="toastWrap"></div>
 
@@ -490,21 +542,21 @@ function statusBadge($status) {
     <!-- Top bar -->
     <div class="topbar">
         <div class="brand"><?= ui_logo(true, 40) ?></div>
-        <div class="text-muted" style="font-size:.74rem;">Habari, <?= htmlspecialchars($username) ?> <?= verifiedBadge($isVerified) ?> 👋<?php if ($isVerified): ?> <span class="badge rounded-pill" style="background:#e8f4ff;color:#1475c7;font-size:.65rem;"><i class="bi bi-patch-check-fill me-1"></i>Verified pricing</span><?php endif; ?></div>
+        <div class="text-muted" style="font-size:.74rem;"><span data-i18n="common.greeting">Habari,</span> <?= htmlspecialchars($username) ?> <?= verifiedBadge($isVerified) ?> 👋<?php if ($isVerified): ?> <span class="badge rounded-pill" style="background:#e8f4ff;color:#1475c7;font-size:.65rem;"><i class="bi bi-patch-check-fill me-1"></i><span data-i18n="verification.pricing">Verified pricing</span></span><?php endif; ?></div>
     </div>
 
     <!-- Balance hero -->
     <div class="hero mt-2">
-        <small><i class="bi bi-wallet2 me-1"></i> Salio Lako</small>
+        <small><i class="bi bi-wallet2 me-1"></i> <span data-i18n="common.yourBalance">Salio Lako</span></small>
         <div class="amount"><span id="balanceText"><?= number_format($tzsBalance, 0) ?></span> <small>TZS</small></div>
-        <a href="#" class="btn-glass" data-bs-toggle="modal" data-bs-target="#topUpModal"><i class="bi bi-plus-circle"></i> Ongeza Salio</a>
+        <a href="#" class="btn-glass" data-bs-toggle="modal" data-bs-target="#topUpModal"><i class="bi bi-plus-circle"></i> <span data-i18n="nav.topup">Ongeza Salio</span></a>
     </div>
 
     <!-- Stats -->
     <div class="row g-2 mt-1 mb-3">
-        <div class="col-4"><div class="stat"><div class="n"><?= $stats['total'] ?></div><div class="l">Orders</div></div></div>
-        <div class="col-4"><div class="stat"><div class="n text-warning"><?= $stats['pending'] ?></div><div class="l">Pending</div></div></div>
-        <div class="col-4"><div class="stat"><div class="n text-success"><?= $stats['completed'] ?></div><div class="l">Done</div></div></div>
+        <div class="col-4"><div class="stat"><div class="n"><?= $stats['total'] ?></div><div class="l" data-i18n="stats.orders">Orders</div></div></div>
+        <div class="col-4"><div class="stat"><div class="n text-warning"><?= $stats['pending'] ?></div><div class="l" data-i18n="stats.pending">Pending</div></div></div>
+        <div class="col-4"><div class="stat"><div class="n text-success"><?= $stats['completed'] ?></div><div class="l" data-i18n="stats.done">Done</div></div></div>
     </div>
 
     <!-- Platform scrolling belt -->
@@ -517,37 +569,37 @@ function statusBadge($status) {
     </div>
 
     <?php if (!$isVerified): ?>
-    <div class="verify-nudge" id="verificationNudge"><div class="d-flex align-items-center gap-3"><div class="vico"><i class="bi bi-patch-check-fill"></i></div><div><strong class="d-block" style="font-size:.88rem;">Unlock lower verified-account prices</strong><p>Verify once to access the lower verified pricing tier and a verified account badge.</p></div></div><button type="button" class="btn btn-primary btn-sm rounded-pill px-3 fw-semibold" data-bs-toggle="modal" data-bs-target="#verificationModal">Explore benefits</button></div>
+    <div class="verify-nudge" id="verificationNudge"><div class="d-flex align-items-center gap-3"><div class="vico"><i class="bi bi-patch-check-fill"></i></div><div><strong class="d-block" style="font-size:.88rem;" data-i18n="verify.nudgeTitle">Unlock lower verified-account prices</strong><p data-i18n="verify.nudgeBody">Verify once to access the lower verified pricing tier and a verified account badge.</p></div></div><button type="button" class="btn btn-primary btn-sm rounded-pill px-3 fw-semibold" data-bs-toggle="modal" data-bs-target="#verificationModal" data-i18n="verify.benefits">Explore benefits</button></div>
     <?php endif; ?>
     <!-- Order card -->
     <div class="dashboard-content">
     <div class="card-soft reveal-3">
-        <div class="section-title mb-3">
+            <div class="section-title mb-3">
             <div class="section-ico"><i class="bi bi-cart-plus"></i></div>
-            Weka Order Mpya
+            <span data-i18n="order.title">Weka Order Mpya</span>
         </div>
 
         <form id="orderForm" autocomplete="off">
             <!-- Platforms + global search -->
-            <label class="form-label">1. Tafuta au Chagua Platform</label>
+            <label class="form-label"><span data-i18n="order.platform">1. Tafuta au Chagua Platform</span></label>
             <div class="svc-search">
                 <i class="bi bi-search"></i>
                 <input type="text" id="svcSearch" autocomplete="off"
-                       placeholder="Tafuta jina, platform au Service ID (mf: 5557)...">
-                <button type="button" class="clr" id="svcSearchClr" aria-label="Futa"><i class="bi bi-x-lg"></i></button>
+                       placeholder="Tafuta jina, platform au Service ID (mf: 5557)..." data-i18n-placeholder="order.searchPlaceholder">
+                <button type="button" class="clr" id="svcSearchClr" aria-label="Futa" data-i18n-aria-label="order.clearSearch"><i class="bi bi-x-lg"></i></button>
             </div>
 
             <!-- Pro / alternative-provider mode banner (shown after a primary failure) -->
             <div id="proBanner" class="pro-banner" style="display:none;">
                 <i class="bi bi-rocket-fill"></i>
                 <div class="flex-grow-1">
-                    <div class="fw-bold">Unatafuta Huduma Pro</div>
-                    <div class="small">Tafuta huduma mbadala hapo juu kisha weka order tena.</div>
+                    <div class="fw-bold" data-i18n="order.proTitle">Unatafuta Huduma Pro</div>
+                    <div class="small" data-i18n="order.proBody">Tafuta huduma mbadala hapo juu kisha weka order tena.</div>
                 </div>
-                <button type="button" class="pro-exit" id="proExit" aria-label="Rudi kawaida"><i class="bi bi-x-lg"></i></button>
+                <button type="button" class="pro-exit" id="proExit" aria-label="Rudi kawaida" data-i18n-aria-label="order.exitPro"><i class="bi bi-x-lg"></i></button>
             </div>
 
-            <div class="or-divider">au chagua platform</div>
+            <div class="or-divider" data-i18n="order.choosePlatform">au chagua platform</div>
             <div class="platform-row" id="platformRow">
                 <?php foreach ($platformsCfg as $key => $p):
                     $ico = $platformIcons[$key] ?? 'bi-globe'; ?>
@@ -560,9 +612,9 @@ function statusBadge($status) {
 
             <!-- Service -->
             <div class="mt-3">
-                <label class="form-label">2. Chagua Huduma</label>
+                <label class="form-label"><span data-i18n="order.service">2. Chagua Huduma</span></label>
                 <select class="form-select" id="serviceSelect" name="service_id" style="width:100%" disabled>
-                    <option value="">Chagua platform kwanza...</option>
+                    <option value="" data-i18n="order.choosePlatformFirst">Chagua platform kwanza...</option>
                 </select>
                 <!-- DETAILS card -->
                 <div class="details-card" id="svcDetail"></div>
@@ -571,15 +623,15 @@ function statusBadge($status) {
             <!-- Link -->
             <div class="mt-3">
                 <label class="form-label" id="linkLabel">3. Link / Username</label>
-                <input type="text" class="form-control" id="linkInput" name="link" value="<?= htmlspecialchars($reorderLink, ENT_QUOTES, 'UTF-8') ?>" placeholder="Chagua huduma kwanza..." required>
-                <div class="link-hint" id="linkHint"><i class="bi bi-info-circle"></i> Chagua huduma ili kuona maelekezo sahihi ya link.</div>
-                <div class="link-preview" id="linkPreview" aria-live="polite"><div class="link-preview-head"><div class="link-preview-icon"><i class="bi bi-link-45deg" id="linkPreviewIcon"></i></div><div><div class="link-preview-title" id="linkPreviewTitle">Link preview</div><div class="link-preview-status" id="linkPreviewStatus"></div></div></div><div class="link-preview-url" id="linkPreviewUrl"></div><a class="link-preview-open" id="linkPreviewOpen" href="#" target="_blank" rel="noopener noreferrer"><i class="bi bi-box-arrow-up-right"></i> Fungua link</a></div>
+                <input type="text" class="form-control" id="linkInput" name="link" value="<?= htmlspecialchars($reorderLink, ENT_QUOTES, 'UTF-8') ?>" placeholder="Chagua huduma kwanza..." data-i18n-placeholder="order.linkPlaceholder" required>
+                <div class="link-hint" id="linkHint"><i class="bi bi-info-circle"></i> <span data-i18n="order.linkHint">Chagua huduma ili kuona maelekezo sahihi ya link.</span></div>
+                <div class="link-preview" id="linkPreview" aria-live="polite"><div class="link-preview-head"><div class="link-preview-icon"><i class="bi bi-link-45deg" id="linkPreviewIcon"></i></div><div><div class="link-preview-title" id="linkPreviewTitle" data-i18n="order.previewTitle">Link preview</div><div class="link-preview-status" id="linkPreviewStatus"></div></div></div><div class="link-preview-url" id="linkPreviewUrl"></div><a class="link-preview-open" id="linkPreviewOpen" href="#" target="_blank" rel="noopener noreferrer"><i class="bi bi-box-arrow-up-right"></i> <span data-i18n="order.openLink">Fungua link</span></a></div>
                 <div class="tips-box" id="igTips"></div>
             </div>
 
             <!-- Quantity -->
             <div class="mt-3">
-                <label class="form-label">4. Idadi <span id="qtyRange" class="text-lowercase"></span></label>
+                <label class="form-label"><span data-i18n="order.quantity">4. Idadi</span> <span id="qtyRange" class="text-lowercase"></span></label>
                 <input type="number" class="form-control" id="quantity" name="quantity" min="1" value="<?= (int) $reorderQuantity ?>" required>
                 <div class="qty-presets" id="qtyPresets">
                     <button type="button" data-q="100">100</button>
@@ -592,22 +644,23 @@ function statusBadge($status) {
 
             <!-- Price -->
             <div class="price-box">
-                <div class="lbl">Jumla ya Malipo</div>
+                <div class="lbl" data-i18n="order.total">Jumla ya Malipo</div>
                 <div class="val" id="totalPrice">0 <small>TZS</small></div>
-                <div class="text-danger small mt-1 d-none" id="balanceWarning"><i class="bi bi-exclamation-triangle-fill"></i> Salio halitoshi</div>
+                <div class="text-danger small mt-1 d-none" id="balanceWarning"><i class="bi bi-exclamation-triangle-fill"></i> <span data-i18n="order.insufficient">Salio halitoshi</span></div>
             </div>
 
             <button type="submit" class="btn-primary-grad" id="submitBtn" disabled>
-                <i class="bi bi-rocket-takeoff"></i> <span id="submitText">THIBITISHA ORDER</span>
+                <i class="bi bi-rocket-takeoff"></i> <span id="submitText" data-i18n="order.submit">THIBITISHA ORDER</span>
             </button>
+            <div id="orderHint" data-i18n="order.hint.select" role="status" aria-live="polite">Chagua huduma na uingize kiasi ili kuona makadirio ya order.</div>
         </form>
     </div>
 
     <!-- Recent orders -->
     <div class="card-soft mt-3">
         <div class="d-flex justify-content-between align-items-center mb-2">
-            <div class="section-title" style="font-size:.98rem;"><div class="section-ico" style="width:34px;height:34px;font-size:1rem;"><i class="bi bi-clock-history"></i></div> Orders za Karibuni</div>
-            <div class="d-flex align-items-center gap-2"><a href="index.php?sync=1" class="text-decoration-none small fw-semibold" style="color:var(--primary)">Refresh</a><a href="orders.php" class="text-decoration-none small fw-semibold" style="color:var(--primary)">Zote</a></div>
+            <div class="section-title" style="font-size:.98rem;"><div class="section-ico" style="width:34px;height:34px;font-size:1rem;"><i class="bi bi-clock-history"></i></div> <span data-i18n="orders.recent">Orders za Karibuni</span></div>
+            <div class="d-flex align-items-center gap-2"><a href="index.php?sync=1" class="text-decoration-none small fw-semibold" style="color:var(--primary)" data-i18n="orders.refresh">Refresh</a><a href="orders.php" class="text-decoration-none small fw-semibold" style="color:var(--primary)" data-i18n="orders.all">Zote</a></div>
         </div>
         <?php if (empty($recentOrders)): ?>
             <div class="text-center text-muted py-4" style="font-size:.85rem;">
@@ -944,6 +997,7 @@ function renderLinkPreview(){
   linkPreview.classList.add('show');linkPreview.classList.remove('invalid');linkPreviewTitle.textContent=platform==='web'?'Link preview':platform.charAt(0).toUpperCase()+platform.slice(1)+' link preview';linkPreviewStatus.textContent='Link iko tayari kutumika';linkPreviewUrl.textContent=parsed.href;linkPreviewIcon.className='bi '+(icons[platform]||icons.web);linkPreviewOpen.href=parsed.href;
 }
 linkInput.addEventListener('input',renderLinkPreview);
+linkInput.addEventListener('input',recalc);
 linkInput.addEventListener('paste',()=>setTimeout(renderLinkPreview,0));
 
 function svcText(s){ return ((s.name||'')+' '+(s.category||'')).toLowerCase(); }
@@ -961,6 +1015,7 @@ function resetServiceUI(){
   igTips.classList.remove('show'); igTips.innerHTML='';
   linkPreview.classList.remove('show','invalid'); linkPreviewOpen.removeAttribute('href');
   linkLabel.textContent='3. Link / Username';
+  linkInput.dataset.i18nPlaceholder='order.linkPlaceholder';
   linkInput.placeholder='Chagua huduma kwanza...';
   linkHint.innerHTML='<i class="bi bi-info-circle"></i> Chagua huduma ili kuona maelekezo sahihi ya link.';
   qtyRange.textContent='';
@@ -992,6 +1047,7 @@ function applyServiceUI(s){
   if(type==='post'){ linkLabel.textContent='3. Weka Link ya Post / Video'; linkHint.innerHTML='<i class="bi bi-link-45deg"></i> Weka link KAMILI ya post / video / reel husika.'; }
   else if(type==='profile'){ linkLabel.textContent='3. Weka Link ya Profile / Username'; linkHint.innerHTML='<i class="bi bi-person"></i> Weka profile/username — akaunti iwe PUBLIC.'; }
   else { linkLabel.textContent='3. Link / Username'; linkHint.innerHTML='<i class="bi bi-info-circle"></i> Weka link sahihi ya huduma uliyochagua.'; }
+  linkInput.removeAttribute('data-i18n-placeholder');
   linkInput.placeholder = ex;
 
   igTips.classList.remove('show'); igTips.innerHTML='';
@@ -1039,9 +1095,12 @@ document.querySelectorAll('#qtyPresets button').forEach(b => {
 
 function recalc() {
     const qty = parseInt(quantityInput.value) || 0;
+    const orderHint = document.getElementById('orderHint');
     if (!currentService || !qty) {
         totalPrice.innerHTML = '0 <small>TZS</small>';
-        submitBtn.disabled = true; balanceWarning.classList.add('d-none'); return;
+        submitBtn.disabled = true; balanceWarning.classList.add('d-none');
+        if (orderHint) { orderHint.dataset.i18n = !currentService ? 'order.hint.select' : 'order.hint.quantity'; if (window.royalSetLanguage) window.royalSetLanguage(document.documentElement.lang); }
+        return;
     }
     const min = currentService.min, max = currentService.max;
     const total = Math.ceil(qty * currentService.rate);
@@ -1051,6 +1110,13 @@ function recalc() {
     const enough = total <= userBalance;
     balanceWarning.classList.toggle('d-none', enough || !validQty);
     submitBtn.disabled = !(validQty && enough && total > 0);
+    if (orderHint) {
+        if (!validQty) orderHint.dataset.i18n = 'order.hint.range';
+        else if (!enough) orderHint.dataset.i18n = 'order.hint.balance';
+        else if (!linkInput.value.trim()) orderHint.dataset.i18n = 'order.hint.link';
+        else orderHint.dataset.i18n = 'order.hint.ready';
+        if (window.royalSetLanguage) window.royalSetLanguage(document.documentElement.lang);
+    }
 }
 
 // Submit -> AJAX live order
@@ -1107,8 +1173,8 @@ document.getElementById('orderForm').addEventListener('submit', async function (
     }
 });
 </script>
-<script>fetch('public-prices.php',{headers:{'Accept':'application/json'}}).then(r=>r.json()).then(j=>{const root=document.getElementById('publicPrices');if(!root)return;if(!j.success||!j.data.length){root.innerHTML='<div class="price-card empty">Open the live catalogue to see current rates.</div>';return;}const esc=v=>{const e=document.createElement('span');e.textContent=String(v??'');return e.innerHTML;};root.innerHTML=j.data.map(x=>`<a class="price-card" href="services.php"><strong>${esc(x.platform)}</strong><span class="service-name">${esc(x.name||'Catalogue service')}</span><span>From <b>${Number(x.price).toLocaleString()} ${esc(x.currency)}</b> / 1,000</span><small>View live service details →</small></a>`).join('')}).catch(()=>{const root=document.getElementById('publicPrices');if(root)root.innerHTML='<div class="price-card empty">Open the live catalogue to see current rates.</div>';});</script>
-<?php renderChatbotWidget(); ?>
+
+
 <?php pwa_foot(); ?>
 </body>
 </html>

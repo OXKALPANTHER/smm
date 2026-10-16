@@ -570,6 +570,7 @@ ui_head(APP_NAME . ' — Admin', 'admin', $extraHead);
         Refills<?= count($refills) ? ' <span class="badge bg-danger rounded-pill ms-1">' . count($refills) . '</span>' : '' ?></a>
     <a href="notifications.php" class="nav-link"><i class="bi bi-bell"></i>
         Notifications<?= $unreadNotifications ? ' <span class="badge bg-danger rounded-pill ms-1">' . number_format($unreadNotifications) . '</span>' : '' ?></a>
+    <a href="admin-testimonials.php" class="nav-link"><i class="bi bi-chat-square-quote"></i> Testimonials</a>
     <a href="api-docs.php" class="nav-link"><i class="bi bi-file-code"></i> API Docs</a>
     <a href="index.php" class="nav-link"><i class="bi bi-box-arrow-up-right"></i> User Site</a>
     <a href="logout.php" class="nav-link"><i class="bi bi-box-arrow-right"></i> Logout</a>

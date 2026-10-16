@@ -106,6 +106,8 @@ function ui_logo($wordmark = true, $size = 46)
 function ui_head($title, $bodyClass = 'app', $extraHead = '')
 {
   $app = APP_NAME;
+  $styleFile = __DIR__ . '/../assets/style.css';
+  $styleVersion = is_file($styleFile) ? substr((string) hash_file('sha256', $styleFile), 0, 12) : '1';
   $page = basename((string) ($_SERVER['SCRIPT_NAME'] ?? 'index.php'));
   $pageTitles = [
     'services.php' => 'SMM Services & Rates | Royal SMM Panel',
@@ -141,7 +143,7 @@ function ui_head($title, $bodyClass = 'app', $extraHead = '')
   $csrf = htmlspecialchars(csrf_token(), ENT_QUOTES, 'UTF-8');
   $publicIndexable = in_array($page, ['services.php','pricing.php','api.php','terms.php','privacy.php','refund-refill.php'], true) && !isLoggedIn();
   $robots = $publicIndexable ? 'index,follow' : 'noindex,follow';
-  $htmlLang = $page === 'register.php' ? 'sw' : 'en';
+  $htmlLang = ($bodyClass === 'app' || $page === 'register.php') ? 'sw' : 'en';
   $breadcrumbScript = '';
   if ($publicIndexable) {
     $breadcrumbJson = json_encode([
@@ -178,159 +180,27 @@ function ui_head($title, $bodyClass = 'app', $extraHead = '')
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="preload" href="https://fonts.gstatic.com/s/poppins/v24/pxiEyp8kv8JHgFVrJJfecg.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="https://fonts.gstatic.com/s/manrope/v20/xn7_YHE41ni1AdIRqAuZuw1Bx9mbZk79FN_C-bk.woff2" as="font" type="font/woff2" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+<script>(function(){var choice='system';try{choice=localStorage.getItem('royal-theme')||'system'}catch(e){}var dark=!!(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.dataset.theme=choice==='dark'||(choice==='system'&&dark)?'dark':'light'})();</script>
+<link rel="stylesheet" href="assets/style.css?v={$styleVersion}">
 <style>
-:root{
-  --primary:#6c5ce7; --primary-2:#4834d4; --accent:#00cec9;
-  --success:#00b894; --warning:#fdcb6e; --danger:#e17055;
-  --ink:#2b3674; --muted:#8a93b2; --card:#ffffff; --bg:#eef1fb; --line:#e9edf7;
-  --bottom-nav-height:74px;
-}
-*{-webkit-tap-highlight-color:transparent;box-sizing:border-box;}
-html,body{max-width:100%;overflow-x:hidden;}
-body{font-family:'Poppins',sans-serif;color:var(--ink);margin:0;}
-a{text-decoration:none;}
-button,a,input,select,textarea{font-size:16px;}
-:focus-visible{outline:3px solid #00a879!important;outline-offset:3px!important;}
-button,a{min-height:44px;}
+html{scroll-padding-top:calc(124px + env(safe-area-inset-top))}
+:root{--primary:#6c5ce7;--primary-2:#4834d4;--accent:#00cec9;--success:#00b894;--warning:#fdcb6e;--danger:#e17055;--ink:#2b3674;--muted:#68718c;--card:#fff;--bg:#eef1fb;--line:#e9edf7;--bottom-nav-height:74px;--z-content:1;--z-header:1000;--z-nav:1200;--z-support:1300;--z-backdrop:1400;--z-drawer:1500;--z-modal:1600;--z-toast:1700;--z-loader:3000}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}html,body{max-width:100%;overflow-x:hidden}body{font-family:Poppins,sans-serif;color:var(--ink);margin:0}a{text-decoration:none}button,a,input,select,textarea{font-size:16px}button,a{min-height:44px}:focus-visible{outline:3px solid #00876a!important;outline-offset:3px!important}
+body.app{background:var(--bg);margin:0;padding-top:calc(116px + env(safe-area-inset-top));padding-bottom:calc(140px + env(safe-area-inset-bottom));min-height:100dvh;display:flex;flex-direction:column}body.app .container{max-width:540px}body.app>.site-footer,body.auth>.site-footer{margin-top:auto}
+.app-header{position:fixed;inset:0 0 auto;z-index:var(--z-header);display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;padding:calc(9px + env(safe-area-inset-top)) 14px 9px;background:rgba(255,255,255,.96);backdrop-filter:blur(16px);border-bottom:1px solid rgba(108,92,231,.13);box-shadow:0 8px 24px rgba(43,54,116,.08)}.app-header-heading{order:1;flex:1 1 180px;min-width:0}.app-header-title{display:block;font-size:.95rem;font-weight:800;line-height:1.25;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.app-header-subtitle{display:block;margin-top:2px;font-size:.67rem;line-height:1.3;color:#66708e}.app-header-balance{order:4;flex:1 0 100%;width:100%;display:inline-flex;align-items:center;gap:8px;max-width:100%;min-height:38px;padding:5px 12px;border:1px solid #e4e0f6;border-radius:12px;background:#f8f7ff;color:#4932c4;font-size:.76rem;white-space:nowrap}.app-header-controls{display:contents}.app-header-balance span{font-weight:600;color:#635b83}.app-header-balance strong{font-weight:800;color:#352292}
+.nav-bell,.hamburger{width:44px;height:44px;min-height:44px;border-radius:13px;flex:0 0 44px}.nav-backdrop{z-index:var(--z-backdrop)}.drawer{z-index:var(--z-drawer)}.site-footer{width:100%;max-width:none!important;margin-top:auto;padding:14px 18px calc(14px + env(safe-area-inset-bottom));display:flex;flex-direction:column;align-items:center;gap:8px;background:#171431;border-top:1px solid rgba(255,255,255,.14);color:#e8e4ff;text-align:center}.site-footer nav{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:8px 14px}.site-footer nav a{color:#a99cff;font-size:.8rem;line-height:1.5;font-weight:600;text-decoration:none}.site-footer .copyright{font-size:.75rem;color:#c5c0dc;line-height:1.4}
+.mobile-tabbar{display:none}.royal-whatsapp{position:fixed;right:16px;bottom:18px;z-index:var(--z-support);display:inline-flex;align-items:center;gap:.4rem;min-height:48px;padding:.65rem .95rem;border-radius:999px;background:#25d366;color:#073b1d;font:700 .82rem Poppins,sans-serif;text-decoration:none;box-shadow:0 12px 26px rgba(37,211,102,.28)}body.app .royal-whatsapp{right:16px;bottom:calc(76px + env(safe-area-inset-bottom))}
+@media(max-width:768px){body.app{padding-top:calc(116px + env(safe-area-inset-top));padding-bottom:calc(140px + env(safe-area-inset-bottom))}.mobile-tabbar{position:fixed;left:0;right:0;bottom:0;z-index:var(--z-nav);display:grid;grid-template-columns:repeat(5,minmax(0,1fr));padding:4px 4px env(safe-area-inset-bottom);min-height:calc(56px + env(safe-area-inset-bottom));background:rgba(255,255,255,.96);backdrop-filter:blur(18px);border-top:1px solid rgba(108,92,231,.14);box-shadow:0 -10px 28px rgba(43,54,116,.12)}.mobile-tabbar a{min-width:0;min-height:56px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:var(--muted);font-size:11px;font-weight:700;border-radius:12px;white-space:nowrap}.mobile-tabbar a i{font-size:1.1rem;line-height:1}.mobile-tabbar a.active{color:#4834d4;background:rgba(108,92,231,.10)}.site-footer{padding-inline:16px}}
+@media(min-width:600px){body.app{padding-top:calc(84px + env(safe-area-inset-top))}.app-header{flex-wrap:nowrap;gap:10px;padding:calc(9px + env(safe-area-inset-top)) 20px 9px}.app-header-heading{order:1;flex:1 1 auto}.app-header-balance{order:2;flex:0 0 auto;width:auto}.app-header .nav-bell{order:3;margin-left:0}.app-header .hamburger{order:4}}
+@media(prefers-color-scheme:dark){:root[data-theme="dark"]{--ink:#edf0ff;--muted:#b9c4de;--card:#182044;--bg:#0e1430;--line:#303b64;color-scheme:dark}:root[data-theme="dark"] body.app{background:#0e1430;color:#edf0ff}:root[data-theme="dark"] .app-header{background:rgba(20,27,53,.96);border-color:#2a3560}:root[data-theme="dark"] .app-header-title{color:#edf0ff}:root[data-theme="dark"] .app-header-subtitle{color:#b6c0dc}:root[data-theme="dark"] .app-header-balance{background:#22284c;border-color:#3d4574}:root[data-theme="dark"] .app-header-balance span{color:#c1c8e0}:root[data-theme="dark"] .app-header-balance strong{color:#e2dcff}:root[data-theme="dark"] .mobile-tabbar{background:rgba(24,32,68,.96);border-color:#303b64}:root[data-theme="dark"] .mobile-tabbar a.active{color:#d6ccff;background:#302a59}:root[data-theme="dark"] .site-footer{background:#171431;color:#e8e4ff}}
 
-/* ---- app (mobile) pages ---- */
-body.app{
-  background:radial-gradient(1200px 600px at 100% -10%,#e8ecff 0,transparent 60%),
-             radial-gradient(900px 500px at -10% 10%,#e6fbfa 0,transparent 55%),var(--bg);
-  margin:0 0 calc(var(--bottom-nav-height) + env(safe-area-inset-bottom) + 18px);
-  padding-top:env(safe-area-inset-top);
-  min-height:100dvh;display:flex;flex-direction:column;
-}
-body.app .container{max-width:540px;}
-body.app>.site-footer,body.auth>.site-footer{margin-top:auto;}
-.site-footer{width:100%;max-width:none!important;margin:0;padding:14px 18px calc(14px + env(safe-area-inset-bottom));display:flex;flex-direction:column;align-items:center;gap:8px;background:#171431;border-top:1px solid rgba(255,255,255,.14);color:#e8e4ff;text-align:center;}
-.site-footer nav{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:8px 14px;}
-.site-footer nav a{color:#a99cff;font-size:.8rem;line-height:1.5;font-weight:600;text-decoration:none;display:inline-flex;align-items:center;}
-.site-footer nav a:hover,.site-footer nav a:focus-visible{color:#fff;text-decoration:underline;}
-.site-footer .copyright{font-size:.75rem;color:#c5c0dc;line-height:1.4;}
-
-/* ---- auth pages ---- */
-body.auth{
-  min-height:100dvh;display:flex;flex-direction:column;align-items:stretch;padding:1rem;
-  background:linear-gradient(145deg,var(--primary) 0%,var(--primary-2) 100%);
-}
-.auth>.glass-card{margin-block:auto;}
-.glass-card{
-  background:rgba(255,255,255,.96);backdrop-filter:blur(12px);border-radius:28px;
-  box-shadow:0 25px 50px rgba(0,0,0,.25);padding:2.4rem 2rem;width:100%;max-width:430px;border:1px solid rgba(255,255,255,.3);
-}
-.brand-icon{
-  width:68px;height:68px;background:linear-gradient(145deg,var(--primary),var(--primary-2));border-radius:20px;
-  display:flex;align-items:center;justify-content:center;margin:0 auto 1.3rem;color:#fff;font-size:1.9rem;
-  box-shadow:0 12px 24px rgba(108,92,231,.35);
-}
-
-/* ---- shared components ---- */
-.card-soft{background:var(--card);border-radius:24px;padding:1.4rem 1.25rem;box-shadow:0 18px 40px rgba(43,54,116,.06);border:1px solid rgba(43,54,116,.04);}
-.section-title{font-weight:700;font-size:1.05rem;display:flex;align-items:center;gap:.55rem;}
-.section-ico{width:40px;height:40px;border-radius:13px;background:linear-gradient(135deg,var(--primary),var(--primary-2));color:#fff;display:flex;align-items:center;justify-content:center;font-size:1.15rem;}
-.form-label{font-weight:600;font-size:.74rem;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:.4rem;}
-.form-control,.form-select{border-radius:15px;border:1.5px solid var(--line);padding:.8rem 1rem;background:#fafbff;font-size:.95rem;}
-.form-control:focus,.form-select:focus{border-color:var(--primary);box-shadow:0 0 0 4px rgba(108,92,231,.12);background:#fff;}
-.btn-grad{background:linear-gradient(135deg,var(--primary),var(--primary-2));border:none;border-radius:15px;padding:.85rem;font-weight:700;color:#fff;width:100%;box-shadow:0 12px 26px rgba(72,52,212,.30);transition:.2s;display:flex;align-items:center;justify-content:center;gap:.5rem;}
-.btn-grad:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 16px 32px rgba(72,52,212,.42);color:#fff;}
-.btn-grad:disabled{opacity:.55;}
-.hero{border-radius:26px;padding:1.5rem 1.4rem;color:#fff;position:relative;overflow:hidden;background:linear-gradient(135deg,var(--primary),var(--primary-2));box-shadow:0 18px 40px rgba(72,52,212,.30);}
-.hero::after{content:'';position:absolute;right:-40px;top:-40px;width:160px;height:160px;background:rgba(255,255,255,.12);border-radius:50%;}
-.pill{font-size:.7rem;font-weight:600;padding:.35rem .7rem;border-radius:20px;background:#f0f2fb;color:var(--ink);display:inline-flex;align-items:center;gap:.3rem;}
-.badge-soft{padding:.35rem .7rem;border-radius:20px;font-size:.7rem;font-weight:600;}
-.badge-success{background:#e4faf3;color:#00876a;}
-.badge-warning{background:#fff6e5;color:#b8860b;}
-.badge-danger{background:#fdeee9;color:#c0392b;}
-.badge-secondary{background:#eef1f8;color:#5a6a85;}
-
-/* top-right action buttons */
-  .top-actions{position:fixed;top:14px;right:14px;z-index:1600;display:flex;align-items:center;gap:8px;}
-  .royal-brand-lockup{position:static!important;}
-.nav-bell{width:46px;height:46px;border-radius:14px;border:1px solid rgba(108,92,231,.12);background:rgba(255,255,255,.95);backdrop-filter:blur(10px);box-shadow:0 10px 26px rgba(43,54,116,.18);display:flex;align-items:center;justify-content:center;color:var(--primary);font-size:1.05rem;transition:transform .2s,box-shadow .2s;text-decoration:none;position:relative;}
-.nav-bell:hover{transform:translateY(-1px);box-shadow:0 14px 30px rgba(43,54,116,.22);color:var(--primary-2);}
-.nav-bell:active{transform:scale(.95);} 
-.nav-bell-badge{position:absolute;top:-3px;right:-3px;min-width:18px;height:18px;border-radius:999px;background:#e74c3c;color:#fff;font-size:.68rem;font-weight:800;display:inline-flex;align-items:center;justify-content:center;padding:0 .2rem;box-shadow:0 6px 12px rgba(231,76,60,.28);}
-.hamburger{width:46px;height:46px;border-radius:14px;border:none;background:rgba(255,255,255,.94);backdrop-filter:blur(10px);box-shadow:0 10px 26px rgba(43,54,116,.18);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;cursor:pointer;transition:transform .2s;}
-.hamburger:active{transform:scale(.92);}
-.hamburger span{display:block;width:20px;height:2.4px;border-radius:3px;background:var(--ink);transition:.3s;}
-body.drawer-open .hamburger span:nth-child(1){transform:translateY(6.4px) rotate(45deg);}
-body.drawer-open .hamburger span:nth-child(2){opacity:0;}
-body.drawer-open .hamburger span:nth-child(3){transform:translateY(-6.4px) rotate(-45deg);}
-
-/* slide-in drawer nav */
-.nav-backdrop{position:fixed;inset:0;background:rgba(18,22,45,.5);backdrop-filter:blur(3px);opacity:0;visibility:hidden;transition:.3s;z-index:1400;}
-.nav-backdrop.open{opacity:1;visibility:visible;}
-.drawer{position:fixed;top:0;right:0;height:100%;width:300px;max-width:84vw;background:#fff;z-index:1500;transform:translateX(106%);transition:transform .38s cubic-bezier(.5,.05,.2,1);display:flex;flex-direction:column;box-shadow:-24px 0 60px rgba(18,22,45,.28);border-top-left-radius:28px;border-bottom-left-radius:28px;overflow:hidden;}
-.drawer.open{transform:translateX(0);}
-.drawer-head{background:linear-gradient(140deg,var(--primary),var(--primary-2));color:#fff;padding:1.7rem 1.3rem 1.5rem;position:relative;overflow:hidden;}
-.drawer-head::after{content:'';position:absolute;right:-30px;top:-30px;width:120px;height:120px;background:rgba(255,255,255,.12);border-radius:50%;}
-.drawer-head .dclose{position:absolute;top:14px;right:14px;width:34px;height:34px;border-radius:11px;border:none;background:rgba(255,255,255,.2);color:#fff;font-size:1.05rem;display:flex;align-items:center;justify-content:center;z-index:1;}
-.drawer-ava{width:54px;height:54px;border-radius:16px;background:rgba(255,255,255,.22);border:2px solid rgba(255,255,255,.35);display:flex;align-items:center;justify-content:center;font-size:1.5rem;font-weight:800;}
-.drawer-bal{margin-top:1rem;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.26);border-radius:14px;padding:.55rem .9rem;display:flex;justify-content:space-between;align-items:center;position:relative;z-index:1;}
-.drawer-nav{flex:1;padding:1rem .8rem;overflow-y:auto;}
-.drawer-link{display:flex;align-items:center;gap:.85rem;padding:.8rem .85rem;border-radius:15px;color:var(--ink);font-weight:600;font-size:.92rem;margin-bottom:.25rem;transition:.15s;}
-.drawer-link .di{width:38px;height:38px;border-radius:12px;background:#f0f2fb;color:var(--primary);display:flex;align-items:center;justify-content:center;font-size:1.1rem;transition:.15s;flex:0 0 auto;}
-.drawer-link:hover{background:#f6f7fd;}
-.drawer-link.active{background:linear-gradient(135deg,rgba(108,92,231,.13),rgba(72,52,212,.10));color:var(--primary-2);}
-.drawer-link.active .di{background:linear-gradient(135deg,var(--primary),var(--primary-2));color:#fff;box-shadow:0 8px 16px rgba(108,92,231,.35);}
-.drawer-link.danger{color:var(--danger);}
-.drawer-link.danger .di{background:#fdeee9;color:#c0392b;}
-.drawer-foot{padding:.9rem 1.3rem;border-top:1px solid #f0f2f8;font-size:.7rem;color:var(--muted);text-align:center;}
-.mobile-tabbar{display:none;}
-.sticky-order-fab{position:fixed;right:16px;bottom:calc(var(--bottom-nav-height) + env(safe-area-inset-bottom) + 14px);z-index:1250;border-radius:999px;box-shadow:0 14px 28px rgba(72,52,212,.32);}
-
-@media (max-width: 768px){
-  body.app{padding-bottom:calc(var(--bottom-nav-height) + env(safe-area-inset-bottom) + 18px);}
-  .mobile-tabbar{position:fixed;left:0;right:0;bottom:0;z-index:1300;display:grid;grid-template-columns:repeat(5,1fr);padding:.45rem .35rem calc(.45rem + env(safe-area-inset-bottom));background:rgba(255,255,255,.94);backdrop-filter:blur(18px);border-top:1px solid rgba(108,92,231,.12);box-shadow:0 -10px 28px rgba(43,54,116,.12);}
-  .mobile-tabbar a{min-height:52px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.16rem;color:var(--muted);font-size:.64rem;font-weight:700;border-radius:14px;}
-  .mobile-tabbar a i{font-size:1.1rem;line-height:1;}
-  .mobile-tabbar a.active{color:var(--primary-2);background:rgba(108,92,231,.10);}
-  .sticky-order-fab{bottom:calc(var(--bottom-nav-height) + env(safe-area-inset-bottom) + 76px);}
-}
-@media (prefers-color-scheme: dark){
-  :root{--ink:#edf0ff;--muted:#aab3d0;--card:#182044;--bg:#0e1430;--line:#2a3560;}
-  body.app{background:radial-gradient(900px 500px at 100% -10%,#202657 0,transparent 60%),var(--bg);}
-  .card-soft,.drawer,.nav-bell,.hamburger,.mobile-tabbar,.glass-card{background:#182044;color:var(--ink);border-color:#2a3560;}
-  .form-control,.form-select{background:#111832;color:var(--ink);border-color:#34416f;}
-  .form-control:focus,.form-select:focus{background:#111832;color:var(--ink);}
-  .drawer-link{color:var(--ink);}.drawer-link:hover{background:#222b50;}.drawer-foot{border-color:#2a3560;}
-}
-
-/* toast */
-.toast-wrap{position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:2000;width:calc(100% - 28px);max-width:512px;}
-/* global loading */
-#globalLoader{position:fixed;inset:0;background:rgba(255,255,255,.86);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;z-index:3000;transition:opacity .25s ease;}
-#globalLoader.hidden{opacity:0;pointer-events:none;}
-#globalLoader .loader-card{background:#fff;border-radius:24px;padding:1rem 1.2rem;box-shadow:0 20px 45px rgba(43,54,116,.16);display:flex;align-items:center;gap:.8rem;border:1px solid rgba(108,92,231,.12);}
-#globalLoader .spinner{width:34px;height:34px;border-radius:50%;border:3px solid #e9edf7;border-top-color:var(--primary);animation:spin .9s linear infinite;}
-#globalLoader .loader-text{font-weight:700;color:var(--ink);font-size:.95rem;}
-.skeleton{background:linear-gradient(90deg,#eef1f8 25%,#f7f9ff 50%,#eef1f8 75%);background-size:200% 100%;animation:sk 1.2s infinite;border-radius:10px;height:14px;}
-@keyframes sk{0%{background-position:200% 0}100%{background-position:-200% 0}}
-@keyframes spin{to{transform:rotate(360deg);}}
-
-@media (prefers-color-scheme: dark){
-  html{color-scheme:dark}
-  body.app{color:#edf0ff;background:#0e1430}
-  .card-soft,.glass-card,.drawer,.mobile-tabbar,.nav-bell,.hamburger,.catalogue-card,.catalogue-empty{background:#182044!important;color:#edf0ff!important;border-color:#303b64!important}
-  .drawer-link{color:#edf0ff!important}.drawer-link:hover{background:#222d54!important}.drawer-link .di{background:#253052;color:#c8c0ff}
-  .form-control,.form-select,.input-group-text,.input-group-text.bg-white,.bg-white,.btn-light{background:#141c38!important;color:#f1f4ff!important;border-color:#35416c!important}
-  .form-control::placeholder{color:#b3bfd9!important;opacity:1}
-  .text-muted,.text-secondary,.result-count,.catalogue-meta,.public-price-note,.public-price-empty{color:#b9c4de!important}
-  .catalogue-tab,.category-tab{background:#1b2545;color:#d4dcf0;border-color:#35416c}
-  .catalogue-tab.active,.category-tab.active{color:#fff}
-  .table,.table td,.table th{--bs-table-color:#eaf0ff;--bs-table-bg:transparent;--bs-table-border-color:#303b64;color:#eaf0ff}
-  .table-hover>tbody>tr:hover>*{--bs-table-color-state:#fff;--bs-table-bg-state:#222d54}
-  .badge-success{background:#10392f;color:#9aebd5}.badge-warning{background:#42351d;color:#ffe09a}.badge-danger{background:#442922;color:#ffb9a8}.badge-secondary{background:#29334f;color:#d2dcf1}
-  #globalLoader{background:rgba(8,12,28,.88)}#globalLoader .loader-card{background:#182044;color:#edf0ff;border-color:#303b64}#globalLoader .loader-text{color:#edf0ff}
-  .public-price-wrap{background:#111832;border-color:#35416c;color:#edf0ff}
-  .public-price-table th,.public-price-table td{color:#e7edff;border-color:#303b64}
-  .public-price-table th{background:#202a4b;color:#d6def3}
-  .public-price-empty{color:#b9c4de}
-}
+.app-header .nav-bell{order:2;margin-left:auto}.app-header .hamburger{order:3}.btn-primary,.btn-primary-grad,.btn-grad{background:#4834d4;color:#fff}
+@media(min-width:600px){.app-header{flex-wrap:nowrap}.app-header-heading{order:1;flex:1 1 auto}.app-header-balance{order:2;flex:0 0 auto;width:auto}.app-header .nav-bell{order:3;margin-left:0}.app-header .hamburger{order:4}}
 </style>
 {$extraHead}
 HTML;
@@ -349,107 +219,112 @@ HTML;
  */
 function ui_nav($active = 'home', $opts = [])
 {
-  $username = $_SESSION['username'] ?? 'Mteja';
-  $role = $_SESSION['role'] ?? 'user';
+  global $conn;
+  $username = htmlspecialchars((string) ($_SESSION['username'] ?? 'Mteja'), ENT_QUOTES, 'UTF-8');
+  $role = (string) ($_SESSION['role'] ?? 'user');
   $initial = strtoupper(function_exists('mb_substr') ? mb_substr($username, 0, 1) : substr($username, 0, 1));
-  $appName = APP_NAME;
-
-  $notificationCount = isset($_SESSION['user_id']) ? getUnreadNotificationCount($_SESSION['user_id']) : 0;
-
-  $links = [
-    'home' => ['index.php', 'bi-grid-1x2-fill', 'Dashboard'],
-    'services' => ['services.php', 'bi-list-stars', 'Huduma'],
-    'orders' => ['orders.php', 'bi-bag-check-fill', 'Orders Zangu'],
-    'favorites' => ['favorites.php', 'bi-heart-fill', 'Favorites'],
-    'notifications' => ['notifications.php', 'bi-bell-fill', 'Notisi' . ($notificationCount ? ' (' . $notificationCount . ')' : '')],
-    'pro' => ['pro-dashboard.php', 'bi-rocket-fill', 'Pro Dashboard'],
-    'api' => ['api-center.php', 'bi-key-fill', 'API Center'],
-    'topup' => ['#', 'bi-wallet2', 'Ongeza Salio'],
-    'howto' => ['howto.php', 'bi-journal-text', 'Mwongozo'],
-    'profile' => ['profile.php', 'bi-person-fill', 'Profile'],
+  $appName = htmlspecialchars(APP_NAME, ENT_QUOTES, 'UTF-8');
+  $userId = (int) ($_SESSION['user_id'] ?? 0);
+  $notificationCount = $userId > 0 ? getUnreadNotificationCount($userId) : 0;
+  $balance = $opts['balance'] ?? null;
+  if ($balance === null && $userId > 0 && isset($conn)) {
+    try {
+      $balanceStmt = $conn->prepare('SELECT balance FROM users WHERE id = ? LIMIT 1');
+      $balanceStmt->bind_param('i', $userId);
+      $balanceStmt->execute();
+      $balance = $balanceStmt->get_result()->fetch_assoc()['balance'] ?? 0;
+    } catch (Throwable $e) {
+      $balance = 0;
+    }
+  }
+  $balance = (float) ($balance ?? 0);
+  $pageMeta = [
+    'home' => ['Dashboard', 'Your account at a glance', 'header.home.title', 'header.home.subtitle'],
+    'services' => ['Services', 'Browse the available catalogue', 'header.services.title', 'header.services.subtitle'],
+    'orders' => ['Orders', 'Track and manage your orders', 'header.orders.title', 'header.orders.subtitle'],
+    'profile' => ['Account', 'Profile and account settings', 'header.account.title', 'header.account.subtitle'],
+    'favorites' => ['Favorites', 'Your saved orders', 'header.favorites.title', 'header.favorites.subtitle'],
+    'notifications' => ['Notifications', 'Your recent updates', 'header.notifications.title', 'header.notifications.subtitle'],
+    'api' => ['API Center', 'Manage developer API access', 'header.api.title', 'header.api.subtitle'],
+    'howto' => ['Guide', 'Help for using the panel', 'header.guide.title', 'header.guide.subtitle'],
+    'moderator' => ['Moderator Desk', 'Review moderation tasks', 'header.moderator.title', 'header.moderator.subtitle'],
   ];
-  if ($role === 'admin') {
-    $links['admin'] = ['admin.php', 'bi-speedometer2', 'Admin Panel'];
-  }
-  if (in_array($role, ['admin', 'moderator'], true)) {
-    $links['moderator'] = ['moderator.php', 'bi-shield-check', 'Moderator Desk'];
-  }
+  [$pageTitle, $pageSubtitle, $titleKey, $subtitleKey] = $pageMeta[$active] ?? $pageMeta['home'];
+  $links = [
+    'home' => ['index.php', 'bi-grid-1x2-fill', 'Dashboard', 'nav.dashboard'],
+    'services' => ['services.php', 'bi-list-stars', 'Services', 'nav.services'],
+    'orders' => ['orders.php', 'bi-bag-check-fill', 'My Orders', 'nav.orders'],
+    'favorites' => ['favorites.php', 'bi-heart-fill', 'Favorites', 'nav.favorites'],
+    'notifications' => ['notifications.php', 'bi-bell-fill', 'Notifications', 'nav.notifications'],
+    'pro' => ['pro-dashboard.php', 'bi-rocket-fill', 'Pro Dashboard', 'nav.pro'],
+    'api' => ['api-center.php', 'bi-key-fill', 'API Center', 'nav.api'],
+    'topup' => ['#', 'bi-wallet2', 'Add Balance', 'nav.topup'],
+    'howto' => ['howto.php', 'bi-journal-text', 'Guide', 'nav.guide'],
+    'profile' => ['profile.php', 'bi-person-fill', 'Account', 'nav.account'],
+  ];
+  if ($role === 'admin') $links['admin'] = ['admin.php', 'bi-speedometer2', 'Admin Panel', 'nav.admin'];
+  if (in_array($role, ['admin', 'moderator'], true)) $links['moderator'] = ['moderator.php', 'bi-shield-check', 'Moderator Desk', 'nav.moderator'];
 
   $linksHtml = '';
-  foreach ($links as $key => [$href, $icon, $label]) {
+  foreach ($links as $key => [$href, $icon, $label, $i18n]) {
     $cls = $active === $key ? 'drawer-link active' : 'drawer-link';
     $attr = $key === 'topup' ? ' data-bs-toggle="modal" data-bs-target="#topUpModal"' : '';
-    $linksHtml .= "<a href=\"{$href}\"{$attr} class=\"{$cls} js-nav-link\"><span class=\"di\"><i class=\"bi {$icon}\"></i></span>{$label}</a>";
+    $linksHtml .= '<a href="' . htmlspecialchars($href, ENT_QUOTES, 'UTF-8') . '"' . $attr . ' class="' . $cls . ' js-nav-link"><span class="di"><i class="bi ' . $icon . '"></i></span><span data-i18n="' . $i18n . '">' . htmlspecialchars($label, ENT_QUOTES, 'UTF-8') . '</span></a>';
   }
-
-  $balHtml = '';
-  if (isset($opts['balance'])) {
-    $bal = number_format((float) $opts['balance']);
-    $balHtml = "<div class=\"drawer-bal\"><span style=\"font-size:.72rem;opacity:.85;\"><i class=\"bi bi-wallet2 me-1\"></i>Salio</span><strong>{$bal} TZS</strong></div>";
-  }
-
-  // Support / community (WhatsApp group + channel)
   $waGroup = defined('WHATSAPP_GROUP_URL') ? WHATSAPP_GROUP_URL : '#';
   $waChannel = defined('WHATSAPP_CHANNEL_URL') ? WHATSAPP_CHANNEL_URL : '#';
-  $supportHtml = <<<HTML
-<div style="padding:.6rem .85rem .1rem;font-size:.64rem;font-weight:700;letter-spacing:.6px;color:#8a93b2;text-transform:uppercase;">Msaada &amp; Jamii</div>
-<a href="{$waGroup}" target="_blank" rel="noopener" class="drawer-link js-nav-link"><span class="di" style="background:#e7fbef;color:#25D366;"><i class="bi bi-whatsapp"></i></span>WhatsApp Group</a>
-<a href="{$waChannel}" target="_blank" rel="noopener" class="drawer-link js-nav-link"><span class="di" style="background:#e7fbef;color:#25D366;"><i class="bi bi-megaphone-fill"></i></span>WhatsApp Channel</a>
-HTML;
-
-  $bellBadge = '';
-  if (!empty($_SESSION['user_id']) && $notificationCount > 0) {
-    $bellBadge = '<span class="nav-bell-badge">' . ($notificationCount > 99 ? '99+' : (int) $notificationCount) . '</span>';
-  }
-
+  $supportHtml = '<div class="drawer-section-title" data-i18n="nav.support">Help &amp; community</div>'
+    . '<a href="' . htmlspecialchars($waGroup, ENT_QUOTES, 'UTF-8') . '" target="_blank" rel="noopener" class="drawer-link js-nav-link"><span class="di"><i class="bi bi-whatsapp"></i></span><span data-i18n="nav.whatsappGroup">WhatsApp Group</span></a>'
+    . '<a href="' . htmlspecialchars($waChannel, ENT_QUOTES, 'UTF-8') . '" target="_blank" rel="noopener" class="drawer-link js-nav-link"><span class="di"><i class="bi bi-megaphone-fill"></i></span><span data-i18n="nav.whatsappChannel">WhatsApp Channel</span></a>';
+  $bellBadge = ($userId > 0 && $notificationCount > 0)
+    ? '<span class="nav-bell-badge">' . ($notificationCount > 99 ? '99+' : (int) $notificationCount) . '</span>'
+    : '';
+  $balanceFormatted = number_format($balance);
   $mobileItems = [
-    'home' => ['index.php', 'bi-house-fill', 'Home'],
-    'services' => ['services.php', 'bi-grid-3x3-gap-fill', 'Services'],
-    'new' => ['index.php#orderForm', 'bi-plus-circle-fill', 'New Order'],
-    'orders' => ['orders.php', 'bi-bag-check-fill', 'Orders'],
-    'profile' => ['profile.php', 'bi-person-fill', 'Account'],
+    'home' => ['index.php', 'bi-house-fill', 'Home', 'nav.home'],
+    'services' => ['services.php', 'bi-grid-3x3-gap-fill', 'Services', 'nav.services'],
+    'new' => ['index.php#orderForm', 'bi-plus-circle-fill', 'New Order', 'nav.newOrder'],
+    'orders' => ['orders.php', 'bi-bag-check-fill', 'Orders', 'nav.ordersShort'],
+    'profile' => ['profile.php', 'bi-person-fill', 'Account', 'nav.account'],
   ];
   $mobileHtml = '';
-  foreach ($mobileItems as $key => [$href, $icon, $label]) {
-    $cls = ($active === $key || ($key === 'new' && $active === 'home')) ? 'active' : '';
-    $mobileHtml .= "<a class=\"{$cls}\" href=\"{$href}\"><i class=\"bi {$icon}\"></i><span>{$label}</span></a>";
+  foreach ($mobileItems as $key => [$href, $icon, $label, $i18n]) {
+    $cls = $active === $key ? 'active' : '';
+    $mobileHtml .= '<a data-tab="' . $key . '" class="' . $cls . '" href="' . $href . '"><i class="bi ' . $icon . '"></i><span data-i18n="' . $i18n . '">' . $label . '</span></a>';
   }
-
+  $styleFile = __DIR__ . '/../assets/style.css';
+  $languageFile = __DIR__ . '/../assets/i18n.js';
+  $languageScriptVersion = is_file($languageFile) ? substr((string) hash_file('sha256', $languageFile), 0, 12) : '1';
+  $defaultTab = in_array($active, ['home', 'services', 'orders', 'profile'], true) ? $active : 'profile';
   echo <<<HTML
-<div class="top-actions">
-  <a href="notifications.php" class="nav-bell" aria-label="Notisi" title="Notisi"><i class="bi bi-bell-fill"></i>{$bellBadge}</a>
-  <button class="hamburger" id="navToggle" aria-label="Menu"><span></span><span></span><span></span></button>
-</div>
+<header class="app-header" aria-label="Application navigation">
+  <div class="app-header-heading"><span class="app-header-title" data-i18n="{$titleKey}">{$pageTitle}</span><span class="app-header-subtitle" data-i18n="{$subtitleKey}">{$pageSubtitle}</span></div>
+  <div class="app-header-balance" aria-label="Account balance"><i class="bi bi-wallet2" aria-hidden="true"></i><span data-i18n="common.balance">Balance</span><strong>{$balanceFormatted} TZS</strong></div>
+  <div class="app-header-controls"><a href="notifications.php" class="nav-bell" aria-label="Notifications" title="Notifications"><i class="bi bi-bell-fill"></i>{$bellBadge}</a><button class="hamburger" id="navToggle" type="button" aria-label="Menu" aria-controls="appDrawer" aria-expanded="false"><span></span><span></span><span></span></button></div>
+</header>
 <div class="nav-backdrop" id="navBackdrop"></div>
-<aside class="drawer" id="appDrawer">
-  <div class="drawer-head">
-    <button class="dclose" id="navClose" aria-label="Funga"><i class="bi bi-x-lg"></i></button>
-    <div class="d-flex align-items-center gap-3">
-      <div class="drawer-ava">{$initial}</div>
-      <div>
-        <div class="fw-bold" style="font-size:1.05rem;line-height:1.15;">{$username}</div>
-        <div style="font-size:.72rem;opacity:.8;">{$appName} Member</div>
-      </div>
-    </div>
-    {$balHtml}
-  </div>
-  <nav class="drawer-nav">{$linksHtml}{$supportHtml}</nav>
-  <a href="logout.php" class="drawer-link danger js-nav-link" style="margin:0 .8rem .7rem;"><span class="di"><i class="bi bi-box-arrow-right"></i></span>Toka (Logout)</a>
-  <div class="drawer-foot">{$appName} SMM Panel &middot; v2.0</div>
+<aside class="drawer" id="appDrawer" aria-label="Main menu">
+  <div class="drawer-head"><button class="dclose" id="navClose" type="button" aria-label="Close menu"><i class="bi bi-x-lg"></i></button><div class="d-flex align-items-center gap-3"><div class="drawer-ava">{$initial}</div><div><div class="fw-bold" style="font-size:1.05rem;line-height:1.15;">{$username}</div><div style="font-size:.72rem;opacity:.8;">{$appName} Member</div></div></div><div class="drawer-bal"><span style="font-size:.72rem;opacity:.85;"><i class="bi bi-wallet2 me-1"></i><span data-i18n="common.balance">Balance</span></span><strong>{$balanceFormatted} TZS</strong></div></div>
+  <nav class="drawer-nav">{$linksHtml}{$supportHtml}<a href="profile.php#help-legal" class="drawer-link"><span class="di"><i class="bi bi-life-preserver"></i></span><span data-i18n="nav.helpLegal">Help &amp; legal</span></a></nav>
+  <a href="logout.php" class="drawer-link danger js-nav-link" style="margin:0 .8rem .5rem;"><span class="di"><i class="bi bi-box-arrow-right"></i></span><span data-i18n="nav.logout">Log out</span></a>
+  <div class="drawer-foot"><div>{$appName} SMM Panel &middot; v2.0</div><div class="drawer-preferences"><div class="language-toggle" role="group" aria-label="Language"><button type="button" data-set-language="en" aria-pressed="false">EN</button><button type="button" data-set-language="sw" aria-pressed="false">SW</button></div><button type="button" class="theme-toggle" data-toggle-theme data-i18n="theme.system" aria-label="Toggle color theme">Theme: System</button></div></div>
 </aside>
-<nav class="mobile-tabbar" aria-label="Quick navigation">{$mobileHtml}</nav>
-<a class="sticky-order-fab btn btn-primary d-md-none" href="index.php#orderForm" aria-label="New Order"><i class="bi bi-plus-lg me-1"></i> New Order</a>
+<nav class="mobile-tabbar" data-default-tab="{$defaultTab}" aria-label="Quick navigation">{$mobileHtml}</nav>
 <script>
 (function(){
   var t=document.getElementById('navToggle'),d=document.getElementById('appDrawer'),b=document.getElementById('navBackdrop'),c=document.getElementById('navClose');
-  function openD(){d.classList.add('open');b.classList.add('open');document.body.classList.add('drawer-open');}
-  function closeD(){d.classList.remove('open');b.classList.remove('open');document.body.classList.remove('drawer-open');}
+  function openD(){d.classList.add('open');b.classList.add('open');document.body.classList.add('drawer-open');t.setAttribute('aria-expanded','true');}
+  function closeD(){d.classList.remove('open');b.classList.remove('open');document.body.classList.remove('drawer-open');t.setAttribute('aria-expanded','false');}
   t.addEventListener('click',function(){d.classList.contains('open')?closeD():openD();});
-  b.addEventListener('click',closeD); c.addEventListener('click',closeD);
+  b.addEventListener('click',closeD);c.addEventListener('click',closeD);
   document.querySelectorAll('.js-nav-link').forEach(function(a){a.addEventListener('click',closeD);});
   document.addEventListener('keydown',function(e){if(e.key==='Escape')closeD();});
+  var tabs=document.querySelector('.mobile-tabbar');
+  function markTab(){if(!tabs)return;var selected=location.hash==='#orderForm'?'new':(tabs.dataset.defaultTab||'home');tabs.querySelectorAll('a').forEach(function(a){a.classList.toggle('active',a.dataset.tab===selected);});}
+  markTab();window.addEventListener('hashchange',markTab);
 })();
 </script>
+<script src="assets/i18n.js?v={$languageScriptVersion}" defer></script>
 HTML;
 }
 
@@ -517,10 +392,13 @@ function toast(msg,type='primary'){
 </script>
 {$extraScript}
 HTML;
-  renderChatbotWidget();
   pwa_foot();
-  $footerYear = date('Y');
-  echo '<footer class="site-footer"><nav aria-label="Footer"><a href="services.php">Services</a><a href="pricing.php">Pricing</a><a href="api.php">Reseller API</a><a href="terms.php">Terms</a><a href="privacy.php">Privacy</a><a href="refund-refill.php">Refund / Refill</a></nav><div class="copyright">&copy; ' . htmlspecialchars($footerYear, ENT_QUOTES, 'UTF-8') . ' Royal SMM Panel</div></footer>';
+  $page = basename((string) ($_SERVER['SCRIPT_NAME'] ?? ''));
+  $publicFooterPages = ['services.php', 'pricing.php', 'api.php', 'terms.php', 'privacy.php', 'refund-refill.php'];
+  if (!isLoggedIn() && in_array($page, $publicFooterPages, true)) {
+    $footerYear = date('Y');
+    echo '<footer class="site-footer"><nav aria-label="Footer"><a href="services.php">Services</a><a href="pricing.php">Pricing</a><a href="api.php">Reseller API</a><a href="terms.php">Terms</a><a href="privacy.php">Privacy</a><a href="refund-refill.php">Refund / Refill</a></nav><div class="copyright">&copy; ' . htmlspecialchars($footerYear, ENT_QUOTES, 'UTF-8') . ' Royal SMM Panel</div></footer>';
+  }
   echo <<<HTML
 </body>
 </html>
