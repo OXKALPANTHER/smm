@@ -864,7 +864,6 @@ function withProvider(url) {
     return url + (url.includes('?') ? '&' : '?') + 'provider=' + encodeURIComponent(currentProvider);
 }
 
-const $service = $('#serviceSelect');
 const quantityInput = document.getElementById('quantity');
 const totalPrice = document.getElementById('totalPrice');
 const submitBtn = document.getElementById('submitBtn');
@@ -874,6 +873,23 @@ const qtyRange = document.getElementById('qtyRange');
 const serviceResults = document.getElementById('serviceResults');
 const serviceResultsList = document.getElementById('serviceResultsList');
 const serviceResultsCount = document.getElementById('serviceResultsCount');
+
+// The order form must still work if a CDN library is slow or unavailable.
+// Keep the jQuery path when available, with a native fallback for the order API.
+const serviceElement = document.getElementById('serviceSelect');
+const $service = window.jQuery ? window.jQuery(serviceElement) : {
+    0: serviceElement,
+    prop(name, value) { if (arguments.length > 1) serviceElement[name] = value; return this; },
+    empty() { serviceElement.replaceChildren(); return this; },
+    append(value) {
+        if (typeof value === 'string') serviceElement.insertAdjacentHTML('beforeend', value);
+        else if (value) serviceElement.appendChild(value);
+        return this;
+    },
+    val(value) { if (arguments.length) serviceElement.value = value; return serviceElement.value; },
+    trigger(name) { serviceElement.dispatchEvent(new Event(name, { bubbles: true })); return this; },
+    on(name, handler) { serviceElement.addEventListener(name, handler); return this; }
+};
 
 function toast(msg, type = 'primary') {
     const el = document.createElement('div');
