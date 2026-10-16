@@ -602,3 +602,26 @@ body.app a:not(.btn):not(.badge):not(.drawer-link):not(.nav-bell):not(.mobile-ta
 @media(max-width:768px){.royal-whatsapp{width:48px;height:48px;min-height:48px;padding:0;border-radius:50%;justify-content:center;gap:0}.royal-whatsapp span{display:none}.royal-whatsapp i{font-size:1.2rem}}
 
 @media(max-width:768px){.royal-whatsapp.support-obstructing{visibility:hidden;pointer-events:none}}
+
+
+/* Public routes do not render the fixed dashboard header or bottom tab bar. */
+body.app.public-page{padding-top:0!important;padding-bottom:0!important}
+body.app.public-page .royal-whatsapp{bottom:18px!important}
+.public-page-header{min-height:46px}
+@media(max-width:380px){.public-page-header{gap:6px}.public-page-header nav{gap:4px!important}.public-page-header nav .btn{padding-inline:.5rem;font-size:.875rem}}
+.public-page .hero .opacity-75{color:#f3f0ff!important;opacity:1!important}
+
+/* Meet WCAG AA contrast for public homepage copy on light surfaces and the purple hero. */
+body:not(.app):not(.auth){--muted:#5b647e}
+body:not(.app):not(.auth) .hero-copy>p,body:not(.app):not(.auth) .trust{color:#f3f0ff}
+body:not(.app):not(.auth) .mock-label,body:not(.app):not(.auth) .mock>div[style*="color:#9098ae"],body:not(.app):not(.auth) .step-no{color:#5b647e!important}
+body:not(.app):not(.auth) .live{color:#0b654d}
+body:not(.app):not(.auth) .brand-mark{background:linear-gradient(145deg,#765fed,#5536df)}
+span[style*="color:#b8860b"]{color:#775600!important}
+:root[data-theme="dark"] span[style*="color:#b8860b"]{color:#f0d37b!important}
+@media(prefers-color-scheme:dark){
+ body:not(.app):not(.auth){--muted:#c5cee3}
+ body:not(.app):not(.auth) .hero-copy>p,body:not(.app):not(.auth) .trust{color:#f3f0ff}
+ body:not(.app):not(.auth) .mock-label,body:not(.app):not(.auth) .mock>div[style*="color:#9098ae"],body:not(.app):not(.auth) .step-no{color:#c5cee3!important}
+ span[style*="color:#b8860b"]{color:#f0d37b!important}
+}
