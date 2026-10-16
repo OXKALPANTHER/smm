@@ -56,26 +56,26 @@ if ($nameLength < 3 || $nameLength > 60 || !preg_match('/^\p{L}[\p{L}\p{M} .\'-]
 }
 
 $userId = (int) $_SESSION['user_id'];
-$orderStmt = $conn->prepare("SELECT id, status, platform FROM orders WHERE id = ? AND user_id = ? LIMIT 1");
-$orderStmt->bind_param('ii', $orderId, $userId);
-$orderStmt->execute();
-$order = $orderStmt->get_result()->fetch_assoc();
+$orderStmt = $pdo->prepare("SELECT id, status, platform FROM orders WHERE id = ? AND user_id = ? LIMIT 1");
+$orderStmt->execute([$orderId, $userId]);
+$order = $orderStmt->fetch(PDO::FETCH_ASSOC);
 if (!$order || strtolower(trim((string) $order['status'])) !== 'completed') {
     testimonialRedirect('danger', 'Only your completed orders can be reviewed.');
 }
 
-$existingStmt = $conn->prepare('SELECT id FROM testimonials WHERE order_id = ? LIMIT 1');
-$existingStmt->bind_param('i', $orderId);
-$existingStmt->execute();
-if ($existingStmt->get_result()->fetch_assoc()) {
+$existingStmt = $pdo->prepare('SELECT id FROM testimonials WHERE order_id = ? LIMIT 1');
+$existingStmt->execute([$orderId]);
+if ($existingStmt->fetch(PDO::FETCH_ASSOC)) {
     testimonialRedirect('warning', 'This order already has a review.');
 }
 
 $platform = trim((string) ($order['platform'] ?? '')) ?: 'Social media';
 try {
-    $insert = $conn->prepare("INSERT INTO testimonials (user_id, order_id, display_name, rating, message, platform, status, consent_to_publish) VALUES (?, ?, ?, ?, ?, ?, 'pending', 1)");
-    $insert->bind_param('iisiss', $userId, $orderId, $displayName, $rating, $message, $platform);
-    $insert->execute();
+    $insert = $pdo->prepare("INSERT INTO testimonials (user_id, order_id, display_name, rating, message, platform, status, consent_to_publish) VALUES (?, ?, ?, ?, ?, ?, 'pending', 1)");
+    if (!$insert->execute([$userId, $orderId, $displayName, $rating, $message, $platform])) {
+        $errorInfo = $insert->errorInfo();
+        throw new RuntimeException('Testimonial insert failed: ' . ((string) ($errorInfo[2] ?? 'database rejected the insert')));
+    }
     testimonialRedirect('success', 'Thank you. Your review was submitted for moderation.');
 } catch (Throwable $e) {
     error_log('Customer testimonial submission failed: ' . $e->getMessage());

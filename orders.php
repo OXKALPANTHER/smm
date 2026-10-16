@@ -35,10 +35,9 @@ $stmt->bind_param("i", $user_id);
 $stmt->execute();
 $orders = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 $reviewedOrders = [];
-$reviewStmt = $conn->prepare('SELECT order_id FROM testimonials WHERE user_id = ? AND order_id IS NOT NULL');
-$reviewStmt->bind_param('i', $user_id);
-$reviewStmt->execute();
-foreach ($reviewStmt->get_result()->fetch_all(MYSQLI_ASSOC) as $reviewRow) {
+$reviewStmt = $pdo->prepare('SELECT order_id FROM testimonials WHERE user_id = ? AND order_id IS NOT NULL');
+$reviewStmt->execute([$user_id]);
+foreach ($reviewStmt->fetchAll(PDO::FETCH_ASSOC) as $reviewRow) {
     $reviewedOrders[(int) $reviewRow['order_id']] = true;
 }
 $reviewFlash = $_SESSION['testimonial_flash'] ?? null;
@@ -213,7 +212,7 @@ ui_head('Orders Zangu — ' . APP_NAME, 'app');
                     $statusLabel = normalizeOrderStatus($o['status']);
                     $isCompleted = $statusLabel === 'Completed';
                     $isCanceled = $statusLabel === 'Canceled';
-                    $canReview = strtolower(trim((string) $o['status'])) === 'completed' && empty($reviewedOrders[(int) $o['id']]);
+                    $canReview = $isCompleted && empty($reviewedOrders[(int) $o['id']]);
                     $canRefill = !empty($o['refill_available']) && empty($o['refill_requested']) && $isCompleted;
                     $showCancel = !$isCompleted && !$isCanceled && serviceSupportsCancellation($o);
                     ?>
@@ -307,7 +306,7 @@ ui_head('Orders Zangu — ' . APP_NAME, 'app');
                     $statusLabel = normalizeOrderStatus($o['status']);
                     $isCompleted = $statusLabel === 'Completed';
                     $isCanceled = $statusLabel === 'Canceled';
-                    $canReview = strtolower(trim((string) $o['status'])) === 'completed' && empty($reviewedOrders[(int) $o['id']]);
+                    $canReview = $isCompleted && empty($reviewedOrders[(int) $o['id']]);
                     $canRefill = !empty($o['refill_available']) && empty($o['refill_requested']) && $isCompleted;
                     $showCancel = !$isCompleted && !$isCanceled && serviceSupportsCancellation($o);
                     ?>

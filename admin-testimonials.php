@@ -94,8 +94,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $pending = [];
-$result = $conn->query("SELECT id, user_id, order_id, display_name, rating, message, platform, consent_to_publish, created_at FROM testimonials WHERE status = 'pending' ORDER BY created_at ASC, id ASC");
-if ($result) $pending = $result->fetch_all(MYSQLI_ASSOC);
+$pendingQueryError = '';
+try {
+    $pendingStmt = $pdo->prepare("SELECT id, user_id, order_id, display_name, rating, message, platform, consent_to_publish, created_at FROM testimonials WHERE LOWER(TRIM(status)) = 'pending' ORDER BY created_at ASC, id ASC");
+    $pendingStmt->execute();
+    $pending = $pendingStmt->fetchAll(PDO::FETCH_ASSOC);
+} catch (Throwable $e) {
+    error_log('Admin pending testimonial query failed: ' . $e->getMessage());
+    $pendingQueryError = 'Pending testimonials could not be loaded. Please check the database connection and schema.';
+}
 $flash = $_SESSION['testimonial_admin_flash'] ?? null;
 unset($_SESSION['testimonial_admin_flash']);
 ui_head('Testimonials — Admin', 'admin');
@@ -104,6 +111,7 @@ ui_head('Testimonials — Admin', 'admin');
 <main class="review-admin">
   <div class="review-top"><div><h1 style="font-size:1.4rem;margin:0">Testimonial moderation</h1><p class="review-meta" style="margin:.25rem 0 0">Pending reviews are private until approved and consented.</p></div><a href="admin.php" style="background:#eeeafd;color:#4932c4">Back to Admin</a></div>
   <?php if ($flash): ?><div class="review-notice" role="status"><?= htmlspecialchars((string) $flash['message'], ENT_QUOTES, 'UTF-8') ?></div><?php endif; ?>
+  <?php if ($pendingQueryError): ?><div class="review-notice" role="alert"><?= htmlspecialchars($pendingQueryError, ENT_QUOTES, 'UTF-8') ?></div><?php endif; ?>
   <section class="review-form" aria-labelledby="manualReviewTitle"><h2 id="manualReviewTitle">Add testimonial manually</h2><p class="review-meta">Use only genuine customer feedback for which publication permission has been confirmed. Manual entries are not marked as verified customers.</p>
     <form method="post">
       <?= csrf_field() ?><input type="hidden" name="action" value="add">
