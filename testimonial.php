@@ -61,7 +61,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt = $conn->prepare("INSERT INTO testimonials (user_id, order_id, display_name, rating, message, platform, status, consent_to_publish, created_at) VALUES (?, ?, ?, ?, ?, ?, 'pending', 1, CURRENT_TIMESTAMP)");
             $stmt->bind_param('iisiss', $userId, $orderId, $name, $rating, $message, $platform);
         }
-        $stmt->execute();
+        if (!$stmt->execute()) {
+            throw new RuntimeException('Testimonial insert failed: ' . ((string) ($stmt->error ?? 'database rejected the insert')));
+        }
         testimonialRedirect('success', 'Thank you. Your testimonial was sent to the admin for approval.');
     } catch (Throwable $e) {
         error_log('Customer testimonial submission failed: ' . $e->getMessage());
