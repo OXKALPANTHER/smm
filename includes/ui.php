@@ -304,7 +304,7 @@ function ui_nav($active = 'home', $opts = [])
 <header class="app-header" aria-label="Application navigation">
   <div class="app-header-heading"><span class="app-header-title" data-i18n="{$titleKey}">{$pageTitle}</span><span class="app-header-subtitle" data-i18n="{$subtitleKey}">{$pageSubtitle}</span></div>
   <div class="app-header-balance" aria-label="Account balance"><i class="bi bi-wallet2" aria-hidden="true"></i><span data-i18n="common.balance">Balance</span><strong>{$balanceFormatted} TZS</strong></div>
-  <div class="app-header-controls"><a href="notifications.php" class="nav-bell" aria-label="Notifications" title="Notifications"><i class="bi bi-bell-fill"></i>{$bellBadge}</a><button class="hamburger" id="navToggle" type="button" aria-label="Menu" aria-controls="appDrawer" aria-expanded="false"><span></span><span></span><span></span></button></div>
+  <div class="app-header-controls"><a href="orders.php" class="header-orders-link" aria-label="My Orders" title="My Orders"><i class="bi bi-bag-check-fill"></i><span data-i18n="nav.orders">My Orders</span></a><a href="notifications.php" class="nav-bell" aria-label="Notifications" title="Notifications"><i class="bi bi-bell-fill"></i>{$bellBadge}</a><button class="hamburger" id="navToggle" type="button" aria-label="Menu" aria-controls="appDrawer" aria-expanded="false"><span></span><span></span><span></span></button></div>
 </header>
 <div class="nav-backdrop" id="navBackdrop"></div>
 <aside class="drawer" id="appDrawer" aria-label="Main menu">

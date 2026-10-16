@@ -1706,8 +1706,8 @@ function ensureTestimonialsTable($pdo)
         if (DB_DRIVER === 'pgsql') {
             $pdo->exec("CREATE TABLE IF NOT EXISTS testimonials (
                 id BIGSERIAL PRIMARY KEY,
-                user_id BIGINT NULL REFERENCES users(id) ON DELETE SET NULL,
-                order_id BIGINT NULL UNIQUE REFERENCES orders(id) ON DELETE SET NULL,
+                user_id BIGINT NULL,
+                order_id BIGINT NULL UNIQUE,
                 display_name VARCHAR(100) NOT NULL,
                 rating SMALLINT NOT NULL CHECK (rating BETWEEN 1 AND 5),
                 message TEXT NOT NULL,
@@ -1733,14 +1733,13 @@ function ensureTestimonialsTable($pdo)
                 approved_at DATETIME NULL,
                 UNIQUE KEY uq_testimonials_order_id (order_id),
                 INDEX idx_testimonials_public (status, consent_to_publish),
-                CONSTRAINT fk_testimonials_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
-                CONSTRAINT fk_testimonials_order FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE SET NULL
+                INDEX idx_testimonials_user (user_id)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
         } else {
             $pdo->exec("CREATE TABLE IF NOT EXISTS testimonials (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id INTEGER NULL REFERENCES users(id) ON DELETE SET NULL,
-                order_id INTEGER NULL UNIQUE REFERENCES orders(id) ON DELETE SET NULL,
+                user_id INTEGER NULL,
+                order_id INTEGER NULL UNIQUE,
                 display_name TEXT NOT NULL,
                 rating INTEGER NOT NULL CHECK (rating BETWEEN 1 AND 5),
                 message TEXT NOT NULL,
