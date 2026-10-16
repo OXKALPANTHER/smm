@@ -348,9 +348,9 @@ function statusBadge($status) {
         /* Platform chips — wrapped grid so every platform is visible at once */
         .platform-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(70px, 1fr)); gap: .5rem; padding: .2rem 0; }
         .chip {
-            border: 1.5px solid #e9edf7; background: #fafbff; border-radius: 16px;
-            padding: .6rem .3rem; display: flex; flex-direction: column; align-items: center; gap: .3rem;
-            cursor: pointer; transition: all .15s; color: var(--muted); font-size: .64rem; font-weight: 600; text-align: center;
+            appearance: none; width: 100%; min-height: 64px; border: 1.5px solid #e9edf7; background: #fafbff; border-radius: 16px;
+            padding: .6rem .3rem; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .3rem;
+            cursor: pointer; touch-action: manipulation; transition: all .15s; color: var(--muted); font: inherit; font-size: .64rem; font-weight: 600; text-align: center;
         }
         .chip span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .chip i { font-size: 1.3rem; }
@@ -600,15 +600,16 @@ function statusBadge($status) {
             </div>
 
             <div class="or-divider" data-i18n="order.choosePlatform">au chagua platform</div>
-            <div class="platform-row" id="platformRow">
+            <div class="platform-row" id="platformRow" role="group" aria-label="Choose a social media platform">
                 <?php foreach ($platformsCfg as $key => $p):
                     $ico = $platformIcons[$key] ?? 'bi-globe'; ?>
-                    <div class="chip" data-platform="<?= htmlspecialchars($key) ?>">
+                    <button type="button" class="chip" data-platform="<?= htmlspecialchars($key) ?>" aria-pressed="false">
                         <i class="bi <?= $ico ?>"></i>
                         <span><?= htmlspecialchars($p['name']) ?></span>
-                    </div>
+                    </button>
                 <?php endforeach; ?>
             </div>
+            <div id="platformStatus" class="visually-hidden" aria-live="polite"></div>
 
             <!-- Service -->
             <div class="mt-3">
@@ -837,14 +838,48 @@ function toast(msg, type = 'primary') {
 
 function fmt(n) { return Number(n).toLocaleString('en-US'); }
 
+let activeServiceRequest = null;
+let serviceLoadVersion = 0;
+let searchTimer = null;
+
+function setPlatformSelection(platform = '') {
+    currentPlatform = platform;
+    document.querySelectorAll('.chip').forEach(chip => {
+        const active = chip.dataset.platform === platform;
+        chip.classList.toggle('active', active);
+        chip.setAttribute('aria-pressed', active ? 'true' : 'false');
+    });
+    const status = document.getElementById('platformStatus');
+    if (status) status.textContent = platform ? `Platform ${platform} selected.` : 'Platform selection cleared.';
+}
+
+function clearServiceResults(message = 'Chagua platform kwanza...') {
+    serviceLoadVersion += 1;
+    if (activeServiceRequest) {
+        activeServiceRequest.abort();
+        activeServiceRequest = null;
+    }
+    currentService = null;
+    resetServiceUI();
+    recalc();
+    $service.empty().append(new Option(message, '', true, true)).prop('disabled', true).trigger('change');
+}
+
 // ---- Shared service loader (used by platform chips AND global search) ----
 async function loadServices(url, opts = {}) {
+    const requestVersion = ++serviceLoadVersion;
+    if (activeServiceRequest) activeServiceRequest.abort();
+    const controller = new AbortController();
+    activeServiceRequest = controller;
     $service.prop('disabled', true).empty().append('<option>Inapakia huduma...</option>').trigger('change');
     currentService = null; resetServiceUI(); recalc();
     try {
-        const r = await fetch(url);
+        const r = await fetch(url, { signal: controller.signal, cache: 'no-store' });
         const j = await r.json();
-        if (j.success && j.data && j.data.length) {
+        // Ignore a response for a platform/search that has since been replaced.
+        if (requestVersion !== serviceLoadVersion) return;
+        if (!r.ok) throw new Error(j.error || 'Service request failed');
+        if (j.success && Array.isArray(j.data) && j.data.length) {
             $service.empty().append('<option value="">-- Chagua huduma --</option>');
             j.data.forEach(s => {
                 const opt = new Option(`${s.name.substring(0,70)}  ·  ${fmt(s.price_per_1000)} TZS/1K`, s.id, false, false);
@@ -871,8 +906,11 @@ async function loadServices(url, opts = {}) {
             toast(opts.emptyMsg || 'Hakuna huduma iliyopatikana', 'warning');
         }
     } catch (e) {
+        if (e.name === 'AbortError' || requestVersion !== serviceLoadVersion) return;
         $service.empty().append('<option value="">Kosa la mtandao</option>').prop('disabled', true).trigger('change');
         toast('Imeshindwa kupakua huduma. Jaribu tena.', 'danger');
+    } finally {
+        if (requestVersion === serviceLoadVersion) activeServiceRequest = null;
     }
 }
 
@@ -882,9 +920,8 @@ const svcSearchClr = document.getElementById('svcSearchClr');
 // Platform selection (chips)
 document.querySelectorAll('.chip').forEach(chip => {
     chip.addEventListener('click', () => {
-        document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
-        chip.classList.add('active');
-        currentPlatform = chip.dataset.platform;
+        clearTimeout(searchTimer);
+        setPlatformSelection(chip.dataset.platform);
         if (svcSearchEl)  svcSearchEl.value = '';
         if (svcSearchClr) svcSearchClr.style.display = 'none';
         loadServices(withProvider(`api-services.php?platform=${encodeURIComponent(chip.dataset.platform)}`),
@@ -893,17 +930,21 @@ document.querySelectorAll('.chip').forEach(chip => {
 });
 
 // Global search across the whole catalogue (debounced)
-let searchTimer = null;
 if (svcSearchEl) {
     svcSearchEl.addEventListener('input', () => {
         const q = svcSearchEl.value.trim();
         svcSearchClr.style.display = q ? 'flex' : 'none';
         clearTimeout(searchTimer);
+        setPlatformSelection('');
         // A numeric value is an exact Service ID lookup and should work even
         // when it is only one character; text searches still wait for 2 chars.
-        if (q.length < 1 || (!/^\d+$/.test(q) && q.length < 2)) return;
-        document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+        if (q.length < 1 || (!/^\d+$/.test(q) && q.length < 2)) {
+            clearServiceResults(q ? 'Andika angalau herufi 2 kutafuta...' : 'Chagua platform kwanza...');
+            return;
+        }
+        clearServiceResults('Inasubiri utafutaji...');
         searchTimer = setTimeout(() => {
+            if (svcSearchEl.value.trim() !== q) return;
             const param = /^\d+$/.test(q)
                 ? `service_id=${encodeURIComponent(q)}`
                 : `q=${encodeURIComponent(q)}`;
@@ -914,6 +955,9 @@ if (svcSearchEl) {
     svcSearchClr.addEventListener('click', () => {
         svcSearchEl.value = '';
         svcSearchClr.style.display = 'none';
+        clearTimeout(searchTimer);
+        setPlatformSelection('');
+        clearServiceResults();
         svcSearchEl.focus();
     });
 }

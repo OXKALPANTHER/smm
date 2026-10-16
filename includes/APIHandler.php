@@ -156,12 +156,36 @@ class APIHandler
         }
 
         $needle = strtolower(trim($platform));
-        // Normalise a couple of display names to their matchable keyword.
+        // Provider catalogues are not consistent about their display labels. In
+        // particular, X services are often listed only as "X" rather than
+        // "Twitter". Keep the dashboard's stable platform keys while matching
+        // the common provider aliases safely (so "x" never matches "max").
         $needle = str_replace(['twitter/x', 'twitter / x'], 'twitter', $needle);
+        $aliases = [
+            'twitter'    => ['twitter', 'x'],
+            'tiktok'     => ['tiktok', 'tik tok'],
+            'facebook'   => ['facebook', 'fb'],
+            'instagram'  => ['instagram', 'ig'],
+            'youtube'    => ['youtube', 'yt'],
+            'telegram'   => ['telegram', 'tg'],
+            'whatsapp'   => ['whatsapp', 'whats app'],
+            'linkedin'   => ['linkedin', 'linked in'],
+            'soundcloud' => ['soundcloud', 'sound cloud'],
+            'audiomack'  => ['audiomack', 'audio mack'],
+        ];
+        $terms = $aliases[$needle] ?? [$needle];
 
-        return array_values(array_filter($all, function ($s) use ($needle) {
+        return array_values(array_filter($all, function ($s) use ($terms) {
             $haystack = strtolower(($s['name'] ?? '') . ' ' . ($s['category'] ?? ''));
-            return strpos($haystack, $needle) !== false;
+            foreach ($terms as $term) {
+                // Explicit token boundaries preserve reliable matching for short
+                // aliases such as X, IG, FB, TG, and YT.
+                $pattern = '/(?<![\p{L}\p{N}])' . preg_quote($term, '/') . '(?![\p{L}\p{N}])/iu';
+                if (preg_match($pattern, $haystack) === 1) {
+                    return true;
+                }
+            }
+            return false;
         }));
     }
 
