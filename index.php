@@ -886,7 +886,7 @@ const $service = window.jQuery ? window.jQuery(serviceElement) : {
         else if (value) serviceElement.appendChild(value);
         return this;
     },
-    val(value) { if (arguments.length) serviceElement.value = value; return serviceElement.value; },
+    val(value) { if (arguments.length) { serviceElement.value = value; return this; } return serviceElement.value; },
     trigger(name) { serviceElement.dispatchEvent(new Event(name, { bubbles: true })); return this; },
     on(name, handler) { serviceElement.addEventListener(name, handler); return this; }
 };
