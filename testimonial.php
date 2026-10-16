@@ -47,22 +47,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     try {
         if ($orderId > 0) {
-            $orderStmt = $conn->prepare("SELECT id FROM orders WHERE id = ? AND user_id = ? AND LOWER(TRIM(status)) = 'completed' LIMIT 1");
-            $orderStmt->bind_param('ii', $orderId, $userId);
-            $orderStmt->execute();
-            if (!$orderStmt->get_result()->fetch_assoc()) {
+            $orderStmt = $pdo->prepare("SELECT id FROM orders WHERE id = ? AND user_id = ? AND LOWER(TRIM(status)) = 'completed' LIMIT 1");
+            $orderStmt->execute([$orderId, $userId]);
+            if (!$orderStmt->fetch(PDO::FETCH_ASSOC)) {
                 testimonialRedirect('danger', 'That order is not eligible for a verified testimonial.');
             }
+            $stmt = $pdo->prepare("INSERT INTO testimonials (user_id, order_id, display_name, rating, message, platform, status, consent_to_publish, created_at) VALUES (?, ?, ?, ?, ?, ?, 'pending', 1, CURRENT_TIMESTAMP)");
+            $ok = $stmt->execute([$userId, $orderId, $name, $rating, $message, $platform]);
         } else {
-            $stmt = $conn->prepare("INSERT INTO testimonials (user_id, order_id, display_name, rating, message, platform, status, consent_to_publish, created_at) VALUES (?, NULL, ?, ?, ?, ?, 'pending', 1, CURRENT_TIMESTAMP)");
-            $stmt->bind_param('isiss', $userId, $name, $rating, $message, $platform);
+            $stmt = $pdo->prepare("INSERT INTO testimonials (user_id, order_id, display_name, rating, message, platform, status, consent_to_publish, created_at) VALUES (?, NULL, ?, ?, ?, ?, 'pending', 1, CURRENT_TIMESTAMP)");
+            $ok = $stmt->execute([$userId, $name, $rating, $message, $platform]);
         }
-        if ($orderId > 0) {
-            $stmt = $conn->prepare("INSERT INTO testimonials (user_id, order_id, display_name, rating, message, platform, status, consent_to_publish, created_at) VALUES (?, ?, ?, ?, ?, ?, 'pending', 1, CURRENT_TIMESTAMP)");
-            $stmt->bind_param('iisiss', $userId, $orderId, $name, $rating, $message, $platform);
-        }
-        if (!$stmt->execute()) {
-            throw new RuntimeException('Testimonial insert failed: ' . ((string) ($stmt->error ?? 'database rejected the insert')));
+        if (!$ok) {
+            $errorInfo = $stmt->errorInfo();
+            throw new RuntimeException('Testimonial insert failed: ' . ((string) ($errorInfo[2] ?? 'database rejected the insert')));
         }
         testimonialRedirect('success', 'Thank you. Your testimonial was sent to the admin for approval.');
     } catch (Throwable $e) {
