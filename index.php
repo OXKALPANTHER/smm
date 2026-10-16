@@ -283,7 +283,25 @@ function statusBadge($status) {
         }
         .container { max-width: 540px; }
         @media (min-width: 768px) { .container { max-width: 900px; } }
-        @media (min-width: 1100px) { .container { max-width: 1120px; } .dashboard-content { display:grid; grid-template-columns:minmax(0,1.3fr) minmax(320px,.7fr); align-items:start; gap:1rem; } .dashboard-content>.card-soft { margin-top:0!important; } }
+        /* Large screens use the available width instead of squeezing the order
+           form and recent orders into narrow side-by-side columns. */
+        @media (min-width: 1100px) {
+            .container { width: calc(100% - 64px); max-width: 1480px; }
+            .dashboard-content { display: block; }
+            .dashboard-content > .card-soft { width: 100%; margin-top: 0 !important; }
+            .dashboard-content > .card-soft + .card-soft { margin-top: 1rem !important; }
+            .platform-row { grid-template-columns: repeat(auto-fit, minmax(104px, 1fr)); gap: .7rem; }
+            .chip { min-height: 76px; font-size: .72rem; }
+            .chip i { font-size: 1.5rem; }
+            .dashboard-content > .card-soft:last-child { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); column-gap: 1.2rem; }
+            .dashboard-content > .card-soft:last-child > .d-flex,
+            .dashboard-content > .card-soft:last-child > .text-center { grid-column: 1 / -1; }
+            .dashboard-content > .card-soft:last-child .order-item { min-width: 0; }
+        }
+        @media (min-width: 1600px) {
+            .container { width: calc(100% - 96px); max-width: 1680px; }
+            .dashboard-content > .card-soft { padding-left: 1.8rem; padding-right: 1.8rem; }
+        }
         .verify-nudge{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:.95rem 1.1rem;margin-top:.85rem;border:1px solid #dedaff;border-radius:18px;background:linear-gradient(110deg,#fff,#f5f3ff);box-shadow:0 8px 22px rgba(72,52,212,.06)}
         .verify-nudge .vico{width:42px;height:42px;flex:0 0 auto;display:grid;place-items:center;border-radius:14px;background:#eeebff;color:var(--primary-2);font-size:1.2rem}
         .verify-nudge p{margin:0;color:var(--muted);font-size:.76rem}
@@ -501,6 +519,20 @@ function statusBadge($status) {
         .platform-row .chip:nth-child(9){animation-delay:.35s}
         .chip:hover{transform:translateY(-3px);box-shadow:0 10px 20px rgba(108,92,231,.18);border-color:var(--primary);}
         .chip.active{transform:translateY(-2px) scale(1.03);}
+        /* Platform choices must be immediately visible and responsive; the old
+           staggered entrance made the controls feel delayed on mobile. */
+        .chip,.platform-row .chip:nth-child(n){animation:none;}
+
+        @media (max-width: 767px) {
+            .dashboard-content { display: flex; flex-direction: column; gap: 1rem; }
+            .dashboard-content > .card-soft { width: 100%; margin-top: 0 !important; }
+            .platform-row { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .7rem; }
+            .chip { min-height: 86px; padding: .65rem .25rem; }
+            .chip i { font-size: 1.45rem; }
+        }
+        @media (max-width: 380px) {
+            .platform-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        }
 
         /* belt: animated gradient + brighter icons so platforms are well seen */
         .belt{background:linear-gradient(135deg,var(--primary),var(--primary-2),#5a45d6);background-size:220% 220%;animation:gradShift 12s ease infinite;}
