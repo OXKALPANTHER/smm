@@ -120,6 +120,7 @@ function ui_head($title, $bodyClass = 'app', $extraHead = '')
     'register.php' => 'Create Account | Royal SMM Panel',
     'api-center.php' => 'API Center | Royal SMM Panel',
     'api-docs.php' => 'API Documentation | Royal SMM Panel',
+    'testimonial.php' => 'Share Feedback | Royal SMM Panel',
   ];
   $pageDescriptions = [
     'services.php' => 'Browse Instagram, TikTok, YouTube, Facebook and Telegram services with live rates, min/max limits and refill info. Compare and order in minutes.',
@@ -132,6 +133,7 @@ function ui_head($title, $bodyClass = 'app', $extraHead = '')
     'register.php' => 'Create a Royal SMM Panel account to browse social media services, compare rates and manage orders.',
     'api-center.php' => 'Manage reseller API access and keys for your Royal SMM Panel account.',
     'api-docs.php' => 'Read Royal SMM reseller API documentation for service listings, order placement, authentication and status tracking.',
+    'testimonial.php' => 'Share genuine feedback with Royal SMM. Your testimonial is reviewed by an admin before publication.',
   ];
   $metaTitle = $pageTitles[$page] ?? trim(strip_tags((string) $title));
   $metaDescription = $pageDescriptions[$page] ?? ($metaTitle . ' on Royal SMM Panel. Manage social media services, order tracking and account support.');
@@ -247,6 +249,7 @@ function ui_nav($active = 'home', $opts = [])
     'notifications' => ['Notifications', 'Your recent updates', 'header.notifications.title', 'header.notifications.subtitle'],
     'api' => ['API Center', 'Manage developer API access', 'header.api.title', 'header.api.subtitle'],
     'howto' => ['Guide', 'Help for using the panel', 'header.guide.title', 'header.guide.subtitle'],
+    'testimonials' => ['Share Feedback', 'Tell us about your experience', 'header.testimonials.title', 'header.testimonials.subtitle'],
     'moderator' => ['Moderator Desk', 'Review moderation tasks', 'header.moderator.title', 'header.moderator.subtitle'],
   ];
   [$pageTitle, $pageSubtitle, $titleKey, $subtitleKey] = $pageMeta[$active] ?? $pageMeta['home'];
@@ -261,6 +264,7 @@ function ui_nav($active = 'home', $opts = [])
     'topup' => ['#', 'bi-wallet2', 'Add Balance', 'nav.topup'],
     'howto' => ['howto.php', 'bi-journal-text', 'Guide', 'nav.guide'],
     'profile' => ['profile.php', 'bi-person-fill', 'Account', 'nav.account'],
+    'testimonials' => ['testimonial.php', 'bi-chat-square-quote-fill', 'Share Feedback', 'nav.testimonials'],
   ];
   if ($role === 'admin') $links['admin'] = ['admin.php', 'bi-speedometer2', 'Admin Panel', 'nav.admin'];
   if (in_array($role, ['admin', 'moderator'], true)) $links['moderator'] = ['moderator.php', 'bi-shield-check', 'Moderator Desk', 'nav.moderator'];

@@ -352,6 +352,7 @@ ui_head('Profile — ' . APP_NAME, 'app');
             <a class="help-legal-link" href="terms.php"><i class="bi bi-file-text"></i><span data-i18n="account.terms">Terms</span></a>
             <a class="help-legal-link" href="privacy.php"><i class="bi bi-shield-lock"></i><span data-i18n="account.privacy">Privacy</span></a>
             <a class="help-legal-link" href="refund-refill.php"><i class="bi bi-arrow-repeat"></i><span data-i18n="account.refundRefill">Refund / Refill</span></a>
+            <a class="help-legal-link" href="testimonial.php"><i class="bi bi-chat-square-quote-fill"></i><span>Share feedback</span></a>
         </div>
     </section>
 </div>
