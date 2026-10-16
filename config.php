@@ -1705,9 +1705,9 @@ function ensureTestimonialsTable($pdo)
     try {
         if (DB_DRIVER === 'pgsql') {
             $pdo->exec("CREATE TABLE IF NOT EXISTS testimonials (
-                id SERIAL PRIMARY KEY,
-                user_id INTEGER NULL REFERENCES users(id) ON DELETE SET NULL,
-                order_id INTEGER NULL UNIQUE REFERENCES orders(id) ON DELETE SET NULL,
+                id BIGSERIAL PRIMARY KEY,
+                user_id BIGINT NULL REFERENCES users(id) ON DELETE SET NULL,
+                order_id BIGINT NULL UNIQUE REFERENCES orders(id) ON DELETE SET NULL,
                 display_name VARCHAR(100) NOT NULL,
                 rating SMALLINT NOT NULL CHECK (rating BETWEEN 1 AND 5),
                 message TEXT NOT NULL,
