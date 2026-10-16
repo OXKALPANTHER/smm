@@ -625,3 +625,18 @@ span[style*="color:#b8860b"]{color:#775600!important}
  body:not(.app):not(.auth) .mock-label,body:not(.app):not(.auth) .mock>div[style*="color:#9098ae"],body:not(.app):not(.auth) .step-no{color:#c5cee3!important}
  span[style*="color:#b8860b"]{color:#f0d37b!important}
 }
+
+
+/* Keep dashboard hero chrome scoped away from the original public homepage layout. */
+body:not(.app):not(.auth) .hero{background:transparent!important;color:var(--ink);border-radius:0;box-shadow:none;overflow:visible}
+body:not(.app):not(.auth) .hero::after{display:none}
+body:not(.app):not(.auth) .hero-copy>p,body:not(.app):not(.auth) .trust{color:var(--muted)}
+@media(prefers-color-scheme:dark){
+ body:not(.app):not(.auth){--ink:#edf1ff;--muted:#c5cee3;--line:#303958;--bg:#0d1428;--white:#18213c}
+ body:not(.app):not(.auth) .hero{color:var(--ink)}
+ body:not(.app):not(.auth) .hero-copy>p,body:not(.app):not(.auth) .trust{color:var(--muted)}
+ body:not(.app):not(.auth) .brand em,body:not(.app):not(.auth) .kicker{color:#c8bfff}
+ body:not(.app):not(.auth) .mock,body:not(.app):not(.auth) .float-tag{background:#18213c!important;color:#edf1ff;border-color:#303958}
+ body:not(.app):not(.auth) .float-tag b{color:#c8bfff!important}
+ body:not(.app):not(.auth) .mock-num{color:#f1f4ff!important}
+}
