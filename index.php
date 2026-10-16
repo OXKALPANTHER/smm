@@ -456,6 +456,12 @@ function statusBadge($status) {
         .service-results { margin-top: .85rem; border: 1px solid #e9edf7; border-radius: 18px; background: #fbfcff; padding: .75rem; }
         .service-results[hidden] { display: none; }
         .service-results-head { display:flex; align-items:center; justify-content:space-between; gap:.75rem; margin-bottom:.6rem; color:var(--muted); font-size:.72rem; font-weight:700; text-transform:uppercase; letter-spacing:.35px; }
+        .service-results-toggle { border:0; background:transparent; color:var(--primary); padding:.25rem .4rem; min-height:32px; font-size:1rem; cursor:pointer; }
+        .service-results-launcher { display:flex; align-items:center; justify-content:space-between; width:100%; margin:.35rem 0 .6rem; padding:.7rem .8rem; border:1px solid #e6eaf5; border-radius:14px; background:#fbfcff; color:var(--primary); font-size:.78rem; font-weight:700; cursor:pointer; }
+        .service-results-launcher[hidden] { display:none; }
+        .service-dialog-tools { display:flex; align-items:center; gap:.45rem; margin-bottom:.6rem; padding:.45rem .65rem; border:1px solid #e6eaf5; border-radius:12px; background:#fff; }
+        .service-dialog-tools i { color:var(--muted); }
+        .service-dialog-search { width:100%; border:0; outline:0; background:transparent; color:var(--ink); font-size:.8rem; }
         .service-results-list { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.55rem; max-height:520px; overflow:auto; padding:.1rem; }
         .service-option { width:100%; border:1px solid #e6eaf5; border-radius:14px; background:#fff; padding:.75rem .8rem; color:var(--ink); text-align:left; cursor:pointer; transition:border-color .15s, box-shadow .15s, transform .15s; }
         .service-option:hover,.service-option:focus-visible { border-color:var(--primary); box-shadow:0 8px 18px rgba(108,92,231,.13); transform:translateY(-1px); outline:none; }
@@ -657,8 +663,10 @@ function statusBadge($status) {
             <!-- Service -->
             <div class="mt-3">
                 <label class="form-label"><span data-i18n="order.service">2. Chagua Huduma</span></label>
+                <button type="button" class="service-results-launcher" id="serviceResultsLauncher" hidden><span><i class="bi bi-list-check me-1"></i> Fungua orodha ya huduma</span><i class="bi bi-chevron-down"></i></button>
                 <div id="serviceResults" class="service-results" hidden aria-live="polite">
-                    <div class="service-results-head"><span>Huduma za platform hii</span><span id="serviceResultsCount"></span></div>
+                    <div class="service-results-head"><span>Huduma za platform hii <span id="serviceResultsCount"></span></span><button type="button" class="service-results-toggle" id="serviceResultsToggle" aria-expanded="true" aria-controls="serviceResultsList" aria-label="Funga huduma"><i class="bi bi-chevron-up"></i></button></div>
+                    <div class="service-dialog-tools"><i class="bi bi-search"></i><input type="search" id="serviceDialogSearch" class="service-dialog-search" autocomplete="off" placeholder="Tafuta huduma ndani ya orodha..."><button type="button" class="btn-close" id="serviceDialogSearchClear" aria-label="Futa utafutaji" style="display:none"></button></div>
                     <div id="serviceResultsList" class="service-results-list" role="listbox" aria-label="Available services"></div>
                 </div>
                 <select class="form-select d-none" id="serviceSelect" name="service_id" disabled>
@@ -873,6 +881,10 @@ const qtyRange = document.getElementById('qtyRange');
 const serviceResults = document.getElementById('serviceResults');
 const serviceResultsList = document.getElementById('serviceResultsList');
 const serviceResultsCount = document.getElementById('serviceResultsCount');
+const serviceResultsToggle = document.getElementById('serviceResultsToggle');
+const serviceResultsLauncher = document.getElementById('serviceResultsLauncher');
+const serviceDialogSearch = document.getElementById('serviceDialogSearch');
+const serviceDialogSearchClear = document.getElementById('serviceDialogSearchClear');
 
 // The order form must still work if a CDN library is slow or unavailable.
 // Keep the jQuery path when available, with a native fallback for the order API.
@@ -905,6 +917,31 @@ function fmt(n) { return Number(n).toLocaleString('en-US'); }
 let activeServiceRequest = null;
 let serviceLoadVersion = 0;
 let searchTimer = null;
+let loadedServiceCatalogue = [];
+
+function setServiceDialogOpen(open) {
+    if (!serviceResults) return;
+    serviceResults.hidden = !open;
+    if (serviceResultsLauncher) serviceResultsLauncher.hidden = open || !loadedServiceCatalogue.length;
+    serviceResultsToggle?.setAttribute('aria-expanded', open ? 'true' : 'false');
+    if (serviceResultsToggle) {
+        serviceResultsToggle.setAttribute('aria-label', open ? 'Funga huduma' : 'Fungua huduma');
+        serviceResultsToggle.innerHTML = `<i class="bi bi-chevron-${open ? 'up' : 'down'}"></i>`;
+    }
+}
+
+function filterServiceResults(query = '') {
+    const needle = query.trim().toLocaleLowerCase();
+    const cards = serviceResultsList ? [...serviceResultsList.querySelectorAll('.service-option')] : [];
+    let visible = 0;
+    cards.forEach(card => {
+        const match = !needle || card.textContent.toLocaleLowerCase().includes(needle);
+        card.hidden = !match;
+        if (match) visible++;
+    });
+    if (serviceResultsCount) serviceResultsCount.textContent = `${fmt(visible)}${needle ? ` / ${fmt(cards.length)}` : ''} huduma`;
+    if (serviceDialogSearchClear) serviceDialogSearchClear.style.display = needle ? 'block' : 'none';
+}
 
 function setPlatformSelection(platform = '') {
     currentPlatform = platform;
@@ -928,12 +965,15 @@ function clearServiceResults(message = 'Chagua platform kwanza...') {
     recalc();
     if (serviceResultsList) serviceResultsList.replaceChildren();
     if (serviceResultsCount) serviceResultsCount.textContent = '';
-    if (serviceResults) serviceResults.hidden = true;
+    loadedServiceCatalogue = [];
+    if (serviceDialogSearch) serviceDialogSearch.value = '';
+    setServiceDialogOpen(false);
     $service.empty().append(new Option(message, '', true, true)).prop('disabled', true).trigger('change');
 }
 
 function renderServiceResults(services) {
     if (!serviceResults || !serviceResultsList) return;
+    loadedServiceCatalogue = services;
     serviceResultsList.replaceChildren();
     if (serviceResultsCount) serviceResultsCount.textContent = `${fmt(services.length)} huduma`;
     const fragment = document.createDocumentFragment();
@@ -966,12 +1006,14 @@ function renderServiceResults(services) {
                 option.classList.toggle('active', active);
                 option.setAttribute('aria-selected', active ? 'true' : 'false');
             });
+            setServiceDialogOpen(false);
             document.getElementById('linkInput')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
         });
         fragment.appendChild(button);
     });
     serviceResultsList.appendChild(fragment);
-    serviceResults.hidden = false;
+    filterServiceResults(serviceDialogSearch?.value || '');
+    setServiceDialogOpen(true);
 }
 
 // ---- Shared service loader (used by platform chips AND global search) ----
@@ -1013,13 +1055,13 @@ async function loadServices(url, opts = {}) {
             }
             if (opts.openDropdown) serviceResults?.scrollIntoView({ behavior: 'smooth', block: 'center' });
         } else {
-            if (serviceResults) serviceResults.hidden = true;
+            setServiceDialogOpen(false);
             $service.empty().append('<option value="">Hakuna huduma</option>').prop('disabled', true).trigger('change');
             toast(opts.emptyMsg || 'Hakuna huduma iliyopatikana', 'warning');
         }
     } catch (e) {
         if (e.name === 'AbortError' || requestVersion !== serviceLoadVersion) return;
-        if (serviceResults) serviceResults.hidden = true;
+        setServiceDialogOpen(false);
         $service.empty().append('<option value="">Kosa la mtandao</option>').prop('disabled', true).trigger('change');
         toast('Imeshindwa kupakua huduma. Jaribu tena.', 'danger');
     } finally {
@@ -1029,6 +1071,21 @@ async function loadServices(url, opts = {}) {
 
 const svcSearchEl  = document.getElementById('svcSearch');
 const svcSearchClr = document.getElementById('svcSearchClr');
+
+serviceResultsToggle?.addEventListener('click', () => {
+    setServiceDialogOpen(!!serviceResults?.hidden);
+    if (!serviceResults?.hidden) serviceDialogSearch?.focus();
+});
+serviceResultsLauncher?.addEventListener('click', () => {
+    setServiceDialogOpen(true);
+    serviceDialogSearch?.focus();
+});
+serviceDialogSearch?.addEventListener('input', () => filterServiceResults(serviceDialogSearch.value));
+serviceDialogSearchClear?.addEventListener('click', () => {
+    serviceDialogSearch.value = '';
+    filterServiceResults('');
+    serviceDialogSearch.focus();
+});
 
 // Platform selection (chips)
 document.querySelectorAll('.chip').forEach(chip => {
@@ -1049,10 +1106,9 @@ if (svcSearchEl) {
         svcSearchClr.style.display = q ? 'flex' : 'none';
         clearTimeout(searchTimer);
         setPlatformSelection('');
-        // A numeric value is an exact Service ID lookup and should work even
-        // when it is only one character; text searches still wait for 2 chars.
-        if (q.length < 1 || (!/^\d+$/.test(q) && q.length < 2)) {
-            clearServiceResults(q ? 'Andika angalau herufi 2 kutafuta...' : 'Chagua platform kwanza...');
+        // Search immediately on the first character, including numeric IDs.
+        if (q.length < 1) {
+            clearServiceResults('Chagua platform kwanza...');
             return;
         }
         clearServiceResults('Inasubiri utafutaji...');
