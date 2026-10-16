@@ -71,6 +71,9 @@ if ($existingStmt->fetch(PDO::FETCH_ASSOC)) {
 
 $platform = trim((string) ($order['platform'] ?? '')) ?: 'Social media';
 try {
+    // Reconcile the runtime table before inserting in case the app worker
+    // started before the deployment migration ran.
+    ensureTestimonialsTable($pdo);
     $insert = $pdo->prepare("INSERT INTO testimonials (user_id, order_id, display_name, rating, message, platform, status, consent_to_publish) VALUES (?, ?, ?, ?, ?, ?, 'pending', 1)");
     if (!$insert->execute([$userId, $orderId, $displayName, $rating, $message, $platform])) {
         $errorInfo = $insert->errorInfo();

@@ -46,6 +46,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     try {
+        // Some hosted deployments start the PHP worker before the runtime
+        // migration has completed. Reconcile the table immediately before the
+        // insert so the first customer submission can initialize it safely.
+        ensureTestimonialsTable($pdo);
         if ($orderId > 0) {
             $orderStmt = $pdo->prepare("SELECT id FROM orders WHERE id = ? AND user_id = ? AND LOWER(TRIM(status)) = 'completed' LIMIT 1");
             $orderStmt->execute([$orderId, $userId]);
