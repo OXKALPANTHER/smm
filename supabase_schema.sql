@@ -291,6 +291,24 @@ CREATE TABLE affiliate_referrals (
 CREATE INDEX idx_aff_referrer ON affiliate_referrals(referrer_id);
 
 -- ============================================================
+--  CUSTOMER TESTIMONIALS (moderated and consent-aware)
+-- ============================================================
+CREATE TABLE testimonials (
+    id                 BIGSERIAL PRIMARY KEY,
+    user_id            BIGINT REFERENCES users(id) ON DELETE SET NULL,
+    order_id           BIGINT UNIQUE REFERENCES orders(id) ON DELETE SET NULL,
+    display_name       VARCHAR(100) NOT NULL,
+    rating             SMALLINT NOT NULL CHECK (rating BETWEEN 1 AND 5),
+    message            TEXT NOT NULL,
+    platform           VARCHAR(80) NOT NULL,
+    status             VARCHAR(20) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','approved','rejected')),
+    consent_to_publish BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at         TIMESTAMPTZ NOT NULL DEFAULT now(),
+    approved_at        TIMESTAMPTZ
+);
+CREATE INDEX idx_testimonials_public ON testimonials(status, consent_to_publish);
+
+-- ============================================================
 --  SEED: default admin account
 --  Login -> username: admin   password: Admin@123
 --  (change the password after first login!)
