@@ -17,17 +17,17 @@ if (!function_exists('pwa_head')) {
     function pwa_head() {
         $app = htmlspecialchars(APP_NAME . ' SMM', ENT_QUOTES);
         echo <<<HTML
-<link rel="manifest" href="manifest.json">
+<link rel="manifest" href="manifest.json?v=white-20261018">
 <meta name="theme-color" content="#6c5ce7">
 <meta name="application-name" content="{$app}">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="{$app}">
-<link rel="apple-touch-icon" sizes="180x180" href="assets/apple-touch-icon.png">
-<link rel="icon" type="image/svg+xml" href="assets/icon.svg">
-<link rel="icon" type="image/png" sizes="192x192" href="assets/icon-192.png">
-<link rel="icon" type="image/x-icon" href="assets/favicon.ico">
+<link rel="apple-touch-icon" sizes="180x180" href="assets/apple-touch-icon.png?v=white-20261018">
+<link rel="icon" type="image/svg+xml" href="assets/icon.svg?v=white-20261018">
+<link rel="icon" type="image/png" sizes="192x192" href="assets/icon-192.png?v=white-20261018">
+<link rel="icon" type="image/x-icon" href="assets/favicon.ico?v=white-20261018">
 HTML;
     }
 }
