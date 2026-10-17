@@ -12,7 +12,7 @@ Firebase notifications, biometric/PIN lock, rate prompts, and shortcuts are deli
 
 ## Project identity
 
-The release application ID is `com.t20tech.royalsmm`, version name `1.0.0`, version code `1`, min SDK 24, compile/target SDK 36, and portrait orientation. Release builds use R8 and resource shrinking. The debug build uses the same app identity and is intended for development installation.
+The release application ID is `com.t20tech.royalsmm`, version name `1.0.1`, version code `2`, min SDK 24, compile/target SDK 36, and portrait orientation. Release builds use R8 and resource shrinking. The debug build uses the same app identity and is intended for development installation.
 
 ## Build from a clean checkout
 
