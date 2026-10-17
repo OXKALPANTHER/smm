@@ -1,7 +1,13 @@
-<?xml version='1.0' encoding='utf-8'?>
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Royal SMM</string>
     <string name="title_activity_main">Royal SMM</string>
-    <string name="package_name">com.royalsmm.app</string>
-    <string name="custom_url_scheme">com.royalsmm.app</string>
+    <string name="package_name">com.t20tech.royalsmm</string>
+    <string name="custom_url_scheme">com.t20tech.royalsmm</string>
+    <string name="shortcut_new_order">New Order</string>
+    <string name="shortcut_new_order_long">Create a new Royal SMM order</string>
+    <string name="shortcut_orders">Orders</string>
+    <string name="shortcut_orders_long">View my Royal SMM orders</string>
+    <string name="shortcut_support">Support</string>
+    <string name="shortcut_support_long">Open Royal SMM support</string>
 </resources>

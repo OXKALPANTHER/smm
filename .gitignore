@@ -22,3 +22,12 @@ Thumbs.db
 .claude/
 node_modules/
 mobile-app/node_modules/
+
+# Android local and release credentials
+mobile-app/android/local.properties
+mobile-app/android/keystore.properties
+mobile-app/android/royal-release.jks
+mobile-app/android/release-credentials.txt
+mobile-app/android/app/google-services.json
+mobile-app/android/app/build/
+mobile-app/android/.gradle/

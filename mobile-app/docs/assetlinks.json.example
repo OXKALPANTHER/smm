@@ -1,0 +1,10 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.t20tech.royalsmm",
+      "sha256_cert_fingerprints": ["7D:9E:A1:3B:EA:AC:EF:9D:C6:46:38:69:9A:83:C2:5E:54:DE:3A:FD:93:5C:EE:0C:6C:9F:B3:00:33:53:46:47"]
+    }
+  }
+]

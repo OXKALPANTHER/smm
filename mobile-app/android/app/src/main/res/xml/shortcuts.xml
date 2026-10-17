@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut android:shortcutId="new-order" android:enabled="true" android:icon="@mipmap/ic_launcher" android:shortcutShortLabel="@string/shortcut_new_order" android:shortcutLongLabel="@string/shortcut_new_order_long">
+        <intent android:action="android.intent.action.VIEW" android:targetPackage="com.t20tech.royalsmm" android:targetClass="com.t20tech.royalsmm.MainActivity" android:data="https://royal.t20tech.site/index.php#new-order" />
+    </shortcut>
+    <shortcut android:shortcutId="orders" android:enabled="true" android:icon="@mipmap/ic_launcher" android:shortcutShortLabel="@string/shortcut_orders" android:shortcutLongLabel="@string/shortcut_orders_long">
+        <intent android:action="android.intent.action.VIEW" android:targetPackage="com.t20tech.royalsmm" android:targetClass="com.t20tech.royalsmm.MainActivity" android:data="https://royal.t20tech.site/order.php" />
+    </shortcut>
+    <shortcut android:shortcutId="support" android:enabled="true" android:icon="@mipmap/ic_launcher" android:shortcutShortLabel="@string/shortcut_support" android:shortcutLongLabel="@string/shortcut_support_long">
+        <intent android:action="android.intent.action.VIEW" android:targetPackage="com.t20tech.royalsmm" android:targetClass="com.t20tech.royalsmm.MainActivity" android:data="https://royal.t20tech.site/support.php" />
+    </shortcut>
+</shortcuts>

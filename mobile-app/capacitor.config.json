@@ -1,9 +1,11 @@
 {
-    "appId": "com.royalsmm.app",
-    "appName": "Royal SMM",
-    "webDir": "www",
-    "bundledWebRuntime": false,
-    "server": {
-        "androidScheme": "https"
-    }
+  "appId": "com.t20tech.royalsmm",
+  "appName": "Royal SMM",
+  "webDir": "www",
+  "bundledWebRuntime": false,
+  "server": {
+    "url": "https://royal.t20tech.site",
+    "androidScheme": "https",
+    "cleartext": false
+  }
 }
