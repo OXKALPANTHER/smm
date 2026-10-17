@@ -578,11 +578,11 @@ function statusBadge($status) {
 .app-header .nav-bell{order:2;margin-left:auto}.app-header .hamburger{order:3}.btn-primary,.btn-primary-grad,.btn-grad{background:#4834d4;color:#fff}
 @media(min-width:600px){.app-header{flex-wrap:nowrap}.app-header-heading{order:1;flex:1 1 auto}.app-header-balance{order:2;flex:0 0 auto;width:auto}.app-header .nav-bell{order:3;margin-left:0}.app-header .hamburger{order:4}}
 
-.app-header .hamburger{position:static;inset:auto;top:auto;right:auto;z-index:auto}.price-grid.single{grid-template-columns:1fr}
+.app-header.dashboard-header .app-header-heading,.app-header.dashboard-header .app-header-balance{display:none!important}body.app.dashboard-page{padding-top:calc(72px + env(safe-area-inset-top))!important}.app-header .hamburger{position:static;inset:auto;top:auto;right:auto;z-index:auto}.price-grid.single{grid-template-columns:1fr}
 </style>
     <?php pwa_head(); ?>
 </head>
-<body class="app">
+<body class="app dashboard-page">
 
 <div class="toast-wrap" id="toastWrap"></div>
 
