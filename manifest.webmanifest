@@ -4,7 +4,7 @@
   "description": "Explore social media services and manage your growth from the Royal SMM panel.",
   "lang": "en",
   "dir": "ltr",
-  "start_url": "login.php?source=app",
+  "start_url": "./login.php?source=app",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
@@ -47,13 +47,13 @@
     {
       "name": "Weka Order",
       "short_name": "Order",
-      "url": "index.php",
+      "url": "./index.php",
       "description": "Fungua ukurasa wa kuweka order"
     },
     {
       "name": "Ongeza Salio",
       "short_name": "Salio",
-      "url": "topup.php",
+      "url": "./topup.php",
       "description": "Ongeza salio kwenye akaunti yako"
     }
   ]

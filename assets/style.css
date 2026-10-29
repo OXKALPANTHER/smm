@@ -3,10 +3,10 @@
   --success:#00b894; --warning:#fdcb6e; --danger:#e17055;
   --ink:#2b3674; --muted:#8a93b2; --card:#ffffff; --bg:#eef1fb; --line:#e9edf7; --brand-link:#4932c4;
   --bottom-nav-height:74px;
-    --ui-radius-surface:12px;
-    --ui-radius-field:8px;
-    --ui-radius-control:8px;
-    --ui-shadow-surface:0 8px 26px rgba(43,54,116,.06);
+    --ui-radius-surface:18px;
+    --ui-radius-field:12px;
+    --ui-radius-control:12px;
+    --ui-shadow-surface:0 12px 32px rgba(43,54,116,.08);
 }
 *{-webkit-tap-highlight-color:transparent;box-sizing:border-box;}
 html,body{max-width:100%;overflow-x:hidden;}
@@ -734,4 +734,100 @@ body:not(.app):not(.auth) .hero-copy>p,body:not(.app):not(.auth) .trust{color:va
  body:not(.app):not(.auth) .mock,body:not(.app):not(.auth) .float-tag{background:#18213c!important;color:#edf1ff;border-color:#303958}
  body:not(.app):not(.auth) .float-tag b{color:#c8bfff!important}
  body:not(.app):not(.auth) .mock-num{color:#f1f4ff!important}
+}
+
+/* Shared motion and surface treatment across app, admin, and public pages. */
+@media (prefers-reduced-motion: no-preference) {
+    .app-header {
+        animation: ui-slide-down .36s cubic-bezier(.2, .75, .25, 1) both;
+    }
+
+    .mobile-tabbar {
+        animation: ui-slide-up .36s cubic-bezier(.2, .75, .25, 1) both;
+    }
+
+    .pwa-install-banner[style*="display: flex"],
+    .pwa-ios-hint[style*="display: flex"] {
+        animation: ui-fade-up .28s ease-out both;
+    }
+
+    body.app .hero,
+    body.app .card-soft,
+    body.app .panel,
+    body.admin .panel,
+    body.app .stat-card,
+    body.admin .stat-card,
+    body.auth .auth-shell {
+        animation: ui-fade-up .42s cubic-bezier(.2, .75, .25, 1);
+    }
+
+    body.app .card-soft,
+    body.app .panel,
+    body.admin .panel,
+    body.app .stat-card,
+    body.admin .stat-card,
+    body.app .review-card,
+    body.admin .review-card,
+    body.app .catalogue-card {
+        transition: transform .22s ease, box-shadow .22s ease, border-color .22s ease;
+    }
+
+    body.app button,
+    body.admin button,
+    body.auth button,
+    body.app .btn,
+    body.admin .btn,
+    body.auth .btn {
+        transition: transform .18s ease, box-shadow .18s ease, background-color .18s ease;
+    }
+
+    body.app input,
+    body.app select,
+    body.app textarea,
+    body.admin input,
+    body.admin select,
+    body.admin textarea,
+    body.auth input {
+        transition: border-color .18s ease, box-shadow .18s ease, background-color .18s ease;
+    }
+}
+
+@keyframes ui-fade-up {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes ui-slide-down {
+    from { opacity: 0; transform: translateY(-8px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes ui-slide-up {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+    body.app .card-soft:hover,
+    body.app .panel:hover,
+    body.admin .panel:hover,
+    body.app .stat-card:hover,
+    body.admin .stat-card:hover,
+    body.app .review-card:hover,
+    body.admin .review-card:hover,
+    body.app .catalogue-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 16px 36px rgba(43,54,116,.12);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        scroll-behavior: auto !important;
+        animation-duration: .01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: .01ms !important;
+    }
 }

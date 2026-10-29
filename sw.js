@@ -1,5 +1,5 @@
 /* Royal SMM — service worker for static PWA assets only */
-const VERSION = 'royal-v8';
+const VERSION = 'royal-v9';
 const SHELL = 'royal-shell-' + VERSION;
 const RUNTIME = 'royal-runtime-' + VERSION;
 const SHELL_ASSETS = [
@@ -8,10 +8,6 @@ const SHELL_ASSETS = [
   './assets/icon-192.png', './assets/icon-512.png',
   './assets/icon-192-maskable.png', './assets/icon-512-maskable.png',
   './assets/lazy-topup.js', './assets/payment-icons.svg'
-];
-const LIVE_PATHS = [
-  'ping.php', 'place-order.php', 'api-services.php', 'public-prices.php',
-  'logout.php', 'login.php', 'register.php', 'webhooks/'
 ];
 
 self.addEventListener('install', event => {
@@ -28,12 +24,34 @@ self.addEventListener('activate', event => {
   );
 });
 
+function matchCachedAsset(request, url) {
+  return caches.match(request).then(response =>
+    response || caches.match(new URL(url.pathname, self.registration.scope))
+  );
+}
+
 self.addEventListener('fetch', event => {
   const req = event.request;
   const url = new URL(req.url);
 
-  // Never intercept POST/AJAX, HTML navigations, or live service/order endpoints.
-  if (req.method !== 'GET' || req.mode === 'navigate' || LIVE_PATHS.some(path => url.pathname.includes(path))) return;
+  if (req.method !== 'GET' || url.origin !== self.location.origin) return;
+
+  // Never cache page responses; when a navigation fails, show the offline page.
+  if (req.mode === 'navigate') {
+    event.respondWith(
+      fetch(req).catch(() => caches.match(new URL('./offline.html', self.registration.scope))
+        .then(response => response || new Response('You are offline.', {
+          status: 503,
+          headers: { 'Content-Type': 'text/plain; charset=utf-8' }
+        })))
+    );
+    return;
+  }
+
+  // Cache only static files and the app manifests, never dynamic PHP/API data.
+  const isManifest = /(?:^|\/)manifest(?:\.webmanifest|\.json)$/i.test(url.pathname);
+  const isStaticAsset = /\.(?:avif|css|gif|ico|jpe?g|js|png|svg|webp|woff2?)$/i.test(url.pathname);
+  if (!isManifest && !isStaticAsset) return;
 
   // Static CSS uses network-first so deployed fixes arrive immediately.
   if (url.pathname.toLowerCase().endsWith('.css')) {
@@ -41,20 +59,29 @@ self.addEventListener('fetch', event => {
       fetch(req).then(response => {
         if (response && response.ok) {
           const copy = response.clone();
-          caches.open(RUNTIME).then(cache => cache.put(req, copy)).catch(() => {});
+          caches.open(RUNTIME).then(cache => cache.put(req, copy)).catch(error => {
+            console.warn('Unable to cache stylesheet:', error);
+          });
         }
         return response;
-      }).catch(() => caches.match(req))
+      }).catch(() => matchCachedAsset(req, url).then(response =>
+        response || new Response('', {
+          status: 503,
+          headers: { 'Content-Type': 'text/css; charset=utf-8' }
+        })
+      ))
     );
     return;
   }
 
   // Other static assets may use the versioned runtime cache.
   event.respondWith(
-    caches.match(req).then(hit => hit || fetch(req).then(response => {
+    matchCachedAsset(req, url).then(hit => hit || fetch(req).then(response => {
       if (response && (response.ok || response.type === 'opaque')) {
         const copy = response.clone();
-        caches.open(RUNTIME).then(cache => cache.put(req, copy)).catch(() => {});
+        caches.open(RUNTIME).then(cache => cache.put(req, copy)).catch(error => {
+          console.warn('Unable to cache static asset:', error);
+        });
       }
       return response;
     }))

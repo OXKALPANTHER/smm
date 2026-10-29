@@ -34,6 +34,7 @@ body {
 button, input { font: inherit; }
 
 .payment-panel {
+    position: relative;
     width: min(100%, 440px);
     padding: 27px 30px 20px;
     border: 1px solid var(--line);
@@ -41,6 +42,25 @@ button, input { font: inherit; }
     background: var(--paper);
     box-shadow: 0 8px 26px rgba(43, 54, 116, .06);
 }
+
+.topup-close {
+    position: absolute;
+    top: 10px;
+    right: 12px;
+    width: 40px;
+    min-height: 40px;
+    display: grid;
+    place-items: center;
+    border: 0;
+    border-radius: 12px;
+    background: var(--brand-soft);
+    color: var(--brand-dark);
+    cursor: pointer;
+    font: 400 26px/1 "Segoe UI", sans-serif;
+}
+
+.topup-close:hover { background: #e6e1ff; }
+.topup-close:focus-visible { outline: 3px solid #bcb2ff; outline-offset: 2px; }
 
 .payment-header { text-align: center; }
 

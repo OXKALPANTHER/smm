@@ -338,6 +338,18 @@ function ui_topup_modal()
   </div>
 </div>
 HTML;
+  echo <<<'HTML'
+<script>
+(function(){
+  var modal=document.getElementById('topUpModal');
+  var frame=modal&&modal.querySelector('iframe');
+  window.addEventListener('message',function(event){
+    if(event.origin!==window.location.origin||!frame||event.source!==frame.contentWindow||!event.data||event.data.type!=='royal-topup-minimize')return;
+    if(window.bootstrap&&window.bootstrap.Modal)window.bootstrap.Modal.getOrCreateInstance(modal).hide();
+  });
+})();
+</script>
+HTML;
   echo '<script src="assets/lazy-topup.js"></script>';
 }
 

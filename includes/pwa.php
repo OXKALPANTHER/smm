@@ -17,26 +17,27 @@ if (!function_exists('pwa_head')) {
     function pwa_head() {
         $app = htmlspecialchars(APP_NAME . ' SMM', ENT_QUOTES);
         echo <<<HTML
-<link rel="manifest" href="manifest.json?v=white-20261018">
+<link rel="manifest" href="manifest.webmanifest?v=royal-v9">
 <meta name="theme-color" content="#6c5ce7">
 <meta name="application-name" content="{$app}">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="{$app}">
-<link rel="apple-touch-icon" sizes="180x180" href="assets/apple-touch-icon.png?v=white-20261018">
-<link rel="icon" type="image/svg+xml" href="assets/icon.svg?v=white-20261018">
-<link rel="icon" type="image/png" sizes="192x192" href="assets/icon-192.png?v=white-20261018">
-<link rel="icon" type="image/x-icon" href="assets/favicon.ico?v=white-20261018">
+<link rel="apple-touch-icon" sizes="180x180" href="assets/apple-touch-icon.png?v=royal-v9">
+<link rel="icon" type="image/svg+xml" href="assets/icon.svg?v=royal-v9">
+<link rel="icon" type="image/png" sizes="192x192" href="assets/icon-192.png?v=royal-v9">
+<link rel="icon" type="image/x-icon" href="assets/favicon.ico?v=royal-v9">
 HTML;
     }
 }
 
 if (!function_exists('pwa_foot')) {
-    function pwa_foot() {
+    function pwa_foot($showInstallUi = true) {
         $phone = defined('WHATSAPP_SUPPORT_PHONE') ? preg_replace('/[^0-9]/', '', (string) WHATSAPP_SUPPORT_PHONE) : '255627417402';
-        echo <<<HTML
-<a class="royal-whatsapp" href="https://wa.me/{$phone}" target="_blank" rel="noopener" aria-label="WhatsApp support"><i class="bi bi-whatsapp" aria-hidden="true"></i><span data-i18n="support.button">Support</span></a>
+        $installUi = '';
+        if ($showInstallUi) {
+            $installUi = <<<'HTML'
 <div id="pwaInstallBanner" class="pwa-install-banner" role="region" aria-label="Install Royal SMM app">
   <button id="pwaInstallBtn" class="pwa-install-action" type="button"><i class="bi bi-download" aria-hidden="true"></i> Pakua app</button>
   <span class="pwa-install-copy">Add Royal SMM to your home screen for quick access.</span>
@@ -47,6 +48,11 @@ if (!function_exists('pwa_foot')) {
   <span class="pwa-ios-copy">Pakua app: bofya <b>Share</b> kisha <b>"Add to Home Screen"</b>.</span>
   <button id="pwaIosDismiss" type="button" aria-label="Dismiss installation instructions" class="pwa-install-dismiss">&times;</button>
 </div>
+HTML;
+        }
+        echo <<<HTML
+<a class="royal-whatsapp" href="https://wa.me/{$phone}" target="_blank" rel="noopener" aria-label="WhatsApp support"><i class="bi bi-whatsapp" aria-hidden="true"></i><span data-i18n="support.button">Support</span></a>
+{$installUi}
 <script>
 (function(){
   function dismissed(key){try{return localStorage.getItem(key)==='1';}catch(e){return false;}}
@@ -54,7 +60,9 @@ if (!function_exists('pwa_foot')) {
   // --- Service worker (offline + installable) ---
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', function(){
-      navigator.serviceWorker.register('sw.js', { scope: './' }).catch(function(){});
+      navigator.serviceWorker.register('./sw.js', { scope: './' }).catch(function(error){
+        console.error('Unable to register the Royal SMM service worker:', error);
+      });
     });
   }
 
@@ -80,8 +88,21 @@ if (!function_exists('pwa_foot')) {
   if (btn) {
     btn.addEventListener('click', function(){
       if (!deferred) return;
-      deferred.prompt();
-      deferred.userChoice.finally(function(){ deferred = null; if (banner) banner.style.display = 'none'; });
+      var installPrompt = deferred;
+      try {
+        installPrompt.prompt();
+      } catch (error) {
+        console.error('Unable to show the Royal SMM install prompt:', error);
+        return;
+      }
+      installPrompt.userChoice.then(function(){
+        deferred = null;
+        if (banner) banner.style.display = 'none';
+      }, function(error){
+        console.error('Unable to complete the Royal SMM install prompt:', error);
+        deferred = null;
+        if (banner) banner.style.display = 'none';
+      });
     });
   }
   if (close) {
@@ -102,7 +123,7 @@ if (!function_exists('pwa_foot')) {
 
   // --- iOS hint (Safari has no beforeinstallprompt) ---
   var ua = window.navigator.userAgent || '';
-  var isIos = /iphone|ipad|ipod/i.test(ua);
+  var isIos = /iphone|ipad|ipod/i.test(ua) || (/macintosh/i.test(ua) && window.navigator.maxTouchPoints > 1);
   var isSafari = /^((?!chrome|android|crios|fxios).)*safari/i.test(ua);
   var iosHint = document.getElementById('pwaIosHint');
   var iosClose = document.getElementById('pwaIosDismiss');

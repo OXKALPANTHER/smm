@@ -406,6 +406,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 <body>
     <main id="paymentForm" class="payment-panel">
+        <button type="button" class="topup-close" aria-label="Close top-up" title="Close top-up" onclick="closeTopup()">&times;</button>
         <header class="payment-header">
             <img class="brand-mark" src="assets/icon-192.png" alt="<?= htmlspecialchars(APP_NAME . ' Panel', ENT_QUOTES, 'UTF-8') ?>">
             <p class="eyebrow">SALIO LA AKAUNTI</p>
@@ -484,6 +485,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         let pollAttempts = 0;
         const MAX_ATTEMPTS = 40;
         let isPolling = false;
+
+        function closeTopup() {
+            if (window.parent !== window) {
+                window.parent.postMessage({ type: 'royal-topup-minimize' }, window.location.origin);
+                return;
+            }
+
+            window.close();
+            window.setTimeout(function () {
+                if (window.closed) return;
+                if (document.referrer && new URL(document.referrer).origin === window.location.origin && window.history.length > 1) {
+                    window.history.back();
+                    return;
+                }
+                window.location.assign('./index.php');
+            }, 100);
+        }
 
         async function handlePayment(e) {
             e.preventDefault();
@@ -604,4 +622,4 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             hideScreens();
         }
     </script>
-    <?php pwa_foot(); ?>
+    <?php pwa_foot(false); ?>
