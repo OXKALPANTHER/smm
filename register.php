@@ -85,54 +85,75 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-ui_head('Jisajili — ' . APP_NAME, 'auth');
+ui_head('Jisajili — ' . APP_NAME, 'auth register-page', '<meta name="theme-color" content="#151e3b"><link rel="stylesheet" href="assets/login.css">');
 ?>
-<div class="glass-card">
-    <div class="brand-icon"><?= ui_crown_svg(38) ?></div>
-    <h3 class="fw-bold text-center mb-1" style="color:var(--ink)">Tengeneza Akaunti</h3>
-    <p class="text-center text-muted mb-4" style="font-size:.9rem;">Jaza taarifa zako hapa chini</p>
+<main class="auth-shell">
+    <section class="auth-story" aria-labelledby="registerStoryHeadline">
+        <img class="auth-story-art" src="assets/og-image.png" alt="Royal Panel huduma za mitandao ya kijamii">
+        <div class="auth-story-copy">
+            <p class="auth-kicker">Karibu Royal SMM</p>
+            <h1 id="registerStoryHeadline">Anza safari yako hapa.</h1>
+            <p>Unda akaunti yako ili kuvinjari huduma, kuweka oda na kufuatilia maendeleo kutoka sehemu moja.</p>
+        </div>
+        <div class="auth-story-footer"><span aria-hidden="true"></span> Akaunti moja. Oda na taarifa zako zote.</div>
+    </section>
 
-    <?php if ($error): ?>
-        <div class="alert alert-danger rounded-4 border-0 py-2"><i
-                class="bi bi-exclamation-circle me-1"></i><?= htmlspecialchars($error) ?></div>
-    <?php endif; ?>
+    <section class="auth-panel" aria-labelledby="registerHeadline">
+        <div class="auth-panel-inner">
+            <p class="auth-kicker">Tengeneza akaunti</p>
+            <h2 id="registerHeadline">Jiunge nasi</h2>
+            <p class="auth-lede">Jaza taarifa zako ili kuanza kutumia dashboard yako.</p>
 
-    <form method="post">
-        <?= csrf_field() ?>
-        <div class="mb-3">
-            <label class="form-label">Jina la mtumiaji</label>
-            <input type="text" name="username" class="form-control" placeholder="royal"
-                value="<?= htmlspecialchars($_POST['username'] ?? '') ?>" required>
-        </div>
-        <div class="mb-3">
-            <label class="form-label">Barua pepe</label>
-            <input type="email" name="email" class="form-control" placeholder="royal@example.com"
-                value="<?= htmlspecialchars($_POST['email'] ?? '') ?>" required>
-        </div>
-        <div class="mb-3">
-            <label class="form-label">Namba ya simu</label>
-            <input type="tel" name="phone" class="form-control" placeholder="07XXXXXXXX"
-                value="<?= htmlspecialchars($_POST['phone'] ?? '') ?>">
-        </div>
-        <div class="mb-2">
-            <label class="form-label">Neno siri</label>
-            <input type="password" name="password" class="form-control" placeholder="••••••••" required>
-        </div>
-        <?php $refPrefill = trim($_POST['ref'] ?? $_GET['ref'] ?? '');
-        if ($refPrefill === '') {
-            $refPrefill = 'ROYA886';
-        } ?>
-        <div class="mb-2">
-            <label class="form-label">Referral code <span class="text-muted">(hiari, default: ROYA886)</span></label>
-            <input type="text" name="ref" class="form-control" placeholder="ROYA886"
-                value="<?= htmlspecialchars($refPrefill) ?>">
-        </div>
-        <?php captcha_widget(); ?>
-        <button type="submit" class="btn-grad mt-3"><i class="bi bi-check2-circle"></i> JISAJILI SASA</button>
-    </form>
+            <?php if ($error): ?>
+                <div class="login-error" role="alert"><i class="bi bi-exclamation-circle me-1" aria-hidden="true"></i><?= htmlspecialchars($error, ENT_QUOTES, 'UTF-8') ?></div>
+            <?php endif; ?>
 
-    <p class="text-center mt-4 mb-0" style="font-size:.9rem;">
-        Tayari una akaunti? <a href="login.php" class="fw-semibold" style="color:var(--primary)">Ingia</a>
-    </p>
-</div>
+            <?php
+            $refPrefill = trim($_POST['ref'] ?? $_GET['ref'] ?? '');
+            if ($refPrefill === '') $refPrefill = 'ROYA886';
+            ?>
+            <form method="post" class="register-form">
+                <?= csrf_field() ?>
+                <div class="register-field">
+                    <label for="username">Jina la mtumiaji</label>
+                    <input type="text" id="username" name="username" placeholder="Mfano: Amina" value="<?= htmlspecialchars($_POST['username'] ?? '', ENT_QUOTES, 'UTF-8') ?>" autocomplete="username" required>
+                </div>
+                <div class="register-field">
+                    <label for="email">Barua pepe</label>
+                    <input type="email" id="email" name="email" placeholder="jina@example.com" value="<?= htmlspecialchars($_POST['email'] ?? '', ENT_QUOTES, 'UTF-8') ?>" autocomplete="email" required>
+                </div>
+                <div class="register-field">
+                    <label for="phone">Namba ya simu <span class="register-hint">(hiari)</span></label>
+                    <input type="tel" id="phone" name="phone" placeholder="07XXXXXXXX" value="<?= htmlspecialchars($_POST['phone'] ?? '', ENT_QUOTES, 'UTF-8') ?>" autocomplete="tel" inputmode="tel">
+                </div>
+                <div class="register-field">
+                    <label for="password">Neno siri</label>
+                    <div class="login-password-control">
+                        <input type="password" id="password" name="password" placeholder="Unda neno siri" autocomplete="new-password" minlength="<?= (int) PASSWORD_MIN_LENGTH ?>" required>
+                        <button type="button" class="password-toggle" id="passwordToggle" aria-label="Onyesha neno siri" aria-pressed="false"><i class="bi bi-eye" aria-hidden="true"></i></button>
+                    </div>
+                    <p class="register-hint">Angalau <?= (int) PASSWORD_MIN_LENGTH ?> herufi.</p>
+                </div>
+                <div class="register-field register-field-wide">
+                    <label for="ref">Msimbo wa rufaa <span class="register-hint">(hiari)</span></label>
+                    <input type="text" id="ref" name="ref" placeholder="ROYA886" value="<?= htmlspecialchars($refPrefill, ENT_QUOTES, 'UTF-8') ?>" autocomplete="off">
+                </div>
+                <?php captcha_widget(); ?>
+                <button type="submit" class="login-submit"><span>Tengeneza akaunti</span><i class="bi bi-arrow-right" aria-hidden="true"></i></button>
+            </form>
+
+            <p class="login-signup">Tayari una akaunti? <a href="login.php">Ingia</a></p>
+        </div>
+    </section>
+</main>
+<script>
+document.getElementById('passwordToggle').addEventListener('click', function () {
+    const password = document.getElementById('password');
+    const showing = password.type === 'password';
+    password.type = showing ? 'text' : 'password';
+    this.setAttribute('aria-pressed', showing ? 'true' : 'false');
+    this.setAttribute('aria-label', showing ? 'Ficha neno siri' : 'Onyesha neno siri');
+    this.querySelector('i').className = showing ? 'bi bi-eye-slash' : 'bi bi-eye';
+});
+</script>
 <?php ui_foot();

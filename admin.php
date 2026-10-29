@@ -311,8 +311,7 @@ function ubadge($status)
     return $status === 'active' ? 'badge-success' : ($status === 'suspended' ? 'badge-warning' : 'badge-danger');
 }
 
-$extraHead = '<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>';
-ui_head(APP_NAME . ' — Admin', 'admin', $extraHead);
+ui_head(APP_NAME . ' — Admin', 'admin');
 ?>
 <style>
     body.admin {
@@ -1005,7 +1004,7 @@ ui_head(APP_NAME . ' — Admin', 'admin', $extraHead);
 </div>
 
 <?php
-$script = '<script>'
+$script = '<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script><script>'
     . 'const statusData=' . json_encode(array_values($statusCounts)) . ';'
     . 'const trendLabels=' . json_encode(array_map(fn($d) => date('D', strtotime($d)), array_keys($trend))) . ';'
     . 'const trendData=' . json_encode(array_values($trend)) . ';'

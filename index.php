@@ -63,9 +63,7 @@ if (!isset($_SESSION['user_id'])) {
 <script type="application/ld+json"><?= $faqStructuredData ?></script>
 <?php pwa_head(); ?>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preload" href="https://fonts.gstatic.com/s/manrope/v20/xn7_YHE41ni1AdIRqAuZuw1Bx9mbZk79FN_C-bk.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="preload" href="https://fonts.gstatic.com/s/poppins/v24/pxiEyp8kv8JHgFVrJJfecg.woff2" as="font" type="font/woff2" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
 <link rel="stylesheet" href="assets/style.css?v=<?= $siteStyleVersion ?>">
@@ -101,7 +99,7 @@ html{scroll-padding-top:18px}body{overflow-x:hidden}.btn,.navcta a,.navlinks a{m
 .shell{padding-left:16px;padding-right:16px}.section .shell{padding-left:16px;padding-right:16px}.price-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.price-details-cta{margin-top:20px!important}.testimonials-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.testimonial-card{min-width:0;overflow-wrap:anywhere}@media(max-width:650px){.price-grid,.testimonials-grid{grid-template-columns:1fr}.shell,.section .shell{padding-left:16px;padding-right:16px}}.royal-whatsapp{z-index:1300;right:16px;bottom:18px}.price-card.empty{grid-column:1/-1}
 </style>
 </head>
-<body>
+<body class="landing-page">
 <main>
 <header class="shell nav"><a class="brand" href="/" aria-label="<?= $publicBrand ?> home"><span class="brand-mark">R</span><span><?= $publicBrand ?> <em>SMM</em></span></a><nav class="navlinks"><a href="#services">Services</a><a href="#how-it-works">How it works</a><a href="#faq">FAQ</a></nav><div class="navcta"><a class="btn btn-plain" href="login.php">Log in</a><a class="btn btn-primary" href="register.php">Create account <span aria-hidden="true">↗</span></a></div></header>
 <section class="shell hero"><div class="hero-copy reveal"><span class="eyebrow"><i></i> YOUR SOCIAL GROWTH, IN ONE PLACE</span><h1>Grow your social media. Order in under a minute.</h1><p>Royal SMM Panel is a social media marketing panel for creators, businesses and resellers in Tanzania and worldwide. Choose from Instagram, TikTok, YouTube, Facebook and Telegram services, see the rate and limits up front, pay by mobile money, and track every order from your dashboard.</p><div class="hero-acts"><a class="btn btn-primary" href="register.php">Create your account <span aria-hidden="true">→</span></a></div><div class="trust"><span class="avatars"><i>R</i><i>◎</i><i>▶</i></span><span>Simple ordering · Clear order tracking · Mobile-ready</span></div></div><div class="visual" aria-label="Animated preview of the social media growth dashboard"><div class="orb"></div><div class="mock"><div class="mock-top"><span>Growth overview</span><span class="live">Illustrative overview</span></div><div class="mock-label">Campaign activity</div><div class="mock-num">Track every order</div><div class="mock-chart"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><div style="display:flex;justify-content:space-between;color:#9098ae;font-size:.61rem;margin-top:9px"><span>Explore services</span><span>Monitor progress</span></div></div><div class="float-tag tag-one">✦ <b>One dashboard</b></div><div class="float-tag tag-two">↗ Orders made simple</div><div class="float-tag tag-three">◎ Creator-friendly</div></div></section>
@@ -255,8 +253,6 @@ function statusBadge($status) {
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet">
     <script>(function(){var choice='system';try{choice=localStorage.getItem('royal-theme')||'system'}catch(e){}var dark=!!(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.dataset.theme=choice==='dark'||(choice==='system'&&dark)?'dark':'light'})();</script>
     <link rel="stylesheet" href="assets/style.css?v=<?= $siteStyleVersion ?>">
 
@@ -450,9 +446,6 @@ function statusBadge($status) {
         .drawer-link.danger .di{background:#fdeee9;color:#c0392b;}
         .drawer-foot{padding:.9rem 1.3rem;border-top:1px solid #f0f2f8;font-size:.7rem;color:var(--muted);text-align:center;}
 
-        /* Select2 tweaks */
-        .select2-container--bootstrap-5 .select2-selection { border-radius: 15px !important; border: 1.5px solid #e9edf7 !important; min-height: 48px; padding: .35rem .6rem; background:#fafbff; }
-        .select2-results__option { font-size: .85rem; }
         .service-results { margin-top: .85rem; border: 1px solid #e9edf7; border-radius: 18px; background: #fbfcff; padding: .75rem; }
         .service-results[hidden] { display: none; }
         .service-results-head { display:flex; align-items:center; justify-content:space-between; gap:.75rem; margin-bottom:.6rem; color:var(--muted); font-size:.72rem; font-weight:700; text-transform:uppercase; letter-spacing:.35px; }
@@ -590,7 +583,6 @@ function statusBadge($status) {
 
     <!-- Top bar -->
     <div class="topbar">
-        <div class="brand"><?= ui_logo(true, 40) ?></div>
         <div class="text-muted" style="font-size:.74rem;"><span data-i18n="common.greeting">Habari,</span> <?= htmlspecialchars($username) ?> <?= verifiedBadge($isVerified) ?> 👋<?php if ($isVerified): ?> <span class="badge rounded-pill" style="background:#e8f4ff;color:#1475c7;font-size:.65rem;"><i class="bi bi-patch-check-fill me-1"></i><span data-i18n="verification.pricing">Verified pricing</span></span><?php endif; ?></div>
     </div>
 
@@ -769,9 +761,7 @@ function statusBadge($status) {
     </div>
 </div>
 
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script src="assets/lazy-topup.js"></script>
 <script>
 // Refresh the parent dashboard after a successful embedded top-up. If this top-up
@@ -887,10 +877,8 @@ const serviceResultsLauncher = document.getElementById('serviceResultsLauncher')
 const serviceDialogSearch = document.getElementById('serviceDialogSearch');
 const serviceDialogSearchClear = document.getElementById('serviceDialogSearchClear');
 
-// The order form must still work if a CDN library is slow or unavailable.
-// Keep the jQuery path when available, with a native fallback for the order API.
 const serviceElement = document.getElementById('serviceSelect');
-const $service = window.jQuery ? window.jQuery(serviceElement) : {
+const $service = {
     0: serviceElement,
     prop(name, value) { if (arguments.length > 1) serviceElement[name] = value; return this; },
     empty() { serviceElement.replaceChildren(); return this; },

@@ -78,11 +78,12 @@ function palmPesaProviderMessage($response)
         if (!isset($payload[$key]) || !is_scalar($payload[$key])) continue;
         $message = trim(strip_tags((string) $payload[$key]));
         $message = preg_replace('/\s+/', ' ', $message);
+        $message = str_ireplace('PalmPesa', APP_NAME . ' Panel', $message);
         if ($message !== '') return substr($message, 0, 220);
     }
-    if (!empty($response['_transport_error'])) return 'Could not connect to PalmPesa. Please check your connection and try again.';
+    if (!empty($response['_transport_error'])) return 'Could not connect to the mobile-money provider. Please check your connection and try again.';
     $code = (int) ($response['_http_status'] ?? 0);
-    return $code >= 400 ? 'PalmPesa rejected the request (HTTP ' . $code . '). Please check payment configuration and try again.' : '';
+    return $code >= 400 ? 'The mobile-money provider rejected the request (HTTP ' . $code . '). Please try again or contact support.' : '';
 }
 function palmPesaPaymentStatus($response)
 {
@@ -273,7 +274,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $response = callAPI('POST', PALMPESA_API_URL . '/pay-via-mobile', $payload);
             $providerOrderId = palmPesaOrderId($response);
             if ($providerOrderId === '') {
-                verificationReply(false, palmPesaProviderMessage($response) ?: 'PalmPesa did not return a payment reference. Check the number and try again.', ['provider_status' => (int) ($response['_http_status'] ?? 0)]);
+                verificationReply(false, palmPesaProviderMessage($response) ?: 'No payment reference was returned. Check the number and try again.', ['provider_status' => (int) ($response['_http_status'] ?? 0)]);
             }
             $description = VERIFICATION_PAYMENT_DESCRIPTION;
             $amount = VERIFICATION_FEE_TZS;
@@ -302,7 +303,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (strtolower((string) $transaction['status']) === 'failed') verificationReply(true, 'Payment failed.', ['status' => 'FAILED']);
             $response = callAPI('POST', PALMPESA_API_URL . '/order-status', ['order_id' => $orderId]);
             if (palmPesaRequestFailed($response)) {
-                verificationReply(false, palmPesaProviderMessage($response) ?: 'Could not check the PalmPesa payment yet. Your payment remains pending; try checking again shortly.', ['status' => 'ERROR', 'retryable' => true]);
+                verificationReply(false, palmPesaProviderMessage($response) ?: 'Could not check the mobile-money payment yet. Your payment remains pending; try again shortly.', ['status' => 'ERROR', 'retryable' => true]);
             }
             $status = palmPesaPaymentStatus($response);
             if ($status === 'COMPLETED') {
@@ -348,12 +349,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $orderId = palmPesaOrderId($response);
         if ($orderId !== '') {
             $stmt = $conn->prepare("INSERT INTO transactions (user_id, amount, type, payment_method, gateway, description, external_ref, status) VALUES (?, ?, 'credit', 'mobile_money', 'palmpesa', ?, ?, 'pending')");
-            $description = 'Top-up via PalmPesa';
+            $description = 'Top-up via mobile money';
             $stmt->bind_param('idss', $currentUserId, $amount, $description, $orderId);
             if (!$stmt->execute()) verificationReply(false, 'Payment was started but could not be recorded. Contact support before trying again.');
             verificationReply(true, 'Payment prompt sent to your phone.', ['order_id' => $orderId, 'message' => 'Ombi la malipo limetumwa kwenye simu yako.']);
         }
-        verificationReply(false, palmPesaProviderMessage($response) ?: 'PalmPesa did not return a payment reference. Please try again.', ['provider_status' => (int) ($response['_http_status'] ?? 0)]);
+        verificationReply(false, palmPesaProviderMessage($response) ?: 'No payment reference was returned. Please try again.', ['provider_status' => (int) ($response['_http_status'] ?? 0)]);
     }
 
     if ($action === 'check_status') {
@@ -365,7 +366,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!$stmt->get_result()->fetch_assoc()) verificationReply(false, 'Top-up payment was not found for this account.');
         $response = callAPI('POST', PALMPESA_API_URL . '/order-status', ['order_id' => $orderId]);
         if (palmPesaRequestFailed($response)) {
-            verificationReply(false, palmPesaProviderMessage($response) ?: 'Could not check the PalmPesa payment yet. Your top-up remains pending; check again shortly.', ['status' => 'ERROR', 'retryable' => true]);
+            verificationReply(false, palmPesaProviderMessage($response) ?: 'Could not check the mobile-money payment yet. Your top-up remains pending; check again shortly.', ['status' => 'ERROR', 'retryable' => true]);
         }
         $status = palmPesaPaymentStatus($response);
         if ($status === 'COMPLETED') {
@@ -400,200 +401,89 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <meta name="twitter:title" content="Account Top-Up | Royal SMM Panel"><meta name="twitter:description" content="Top up your Royal SMM Panel balance using the payment options available to your account. Tanzanian customers can use TZS mobile money."><meta name="twitter:image" content="<?= htmlspecialchars(rtrim(APP_URL, '/') . '/assets/og-image.png', ENT_QUOTES, 'UTF-8') ?>">
     <?php pwa_head(); ?>
     <title>Account Top-Up | Royal SMM Panel</title>
-    <link rel="stylesheet" href="assets/topup-tailwind.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
-    <style>
-        body {
-            font-family: 'Poppins', sans-serif;
-            background-color: #f3f4f6;
-        }
-        body.min-h-screen { min-height: 100vh; background: radial-gradient(900px 500px at 8% -5%, #dceafe 0, transparent 55%), radial-gradient(760px 500px at 100% 100%, #e3e7ff 0, transparent 55%), #f4f6fb; }
-        #paymentForm { max-width: 470px; border: 1px solid rgba(108,92,231,.12); border-radius: 28px; padding: 2rem; box-shadow: 0 24px 70px rgba(43,54,116,.14); }
-        #paymentForm input { min-height: 50px; border-color: #e4e8f2; border-radius: 14px; }
-        #paymentForm input:focus { box-shadow: 0 0 0 4px rgba(59,130,246,.12); }
-        #submitBtn { border-radius: 15px; min-height: 54px; letter-spacing: .01em; }
-        .payment-note { border: 1px solid #e7eaff; background: linear-gradient(135deg,#f7f8ff,#f2fbff); border-radius: 16px; padding: .8rem .9rem; color: #526174; font-size: .76rem; line-height: 1.55; }
-        @media(max-width:480px) { #paymentForm { padding: 1.45rem 1.2rem; border-radius: 23px; } }
-
-        .glass-card {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
-        }
-
-        .loader {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #3b82f6;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-            0% {
-                transform: rotate(0deg);
-            }
-
-            100% {
-                transform: rotate(360deg);
-            }
-        }
-
-        .success-checkmark {
-            color: #10b981;
-            font-size: 5rem;
-            animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-
-        .error-cross {
-            color: #ef4444;
-            font-size: 5rem;
-            animation: popIn 0.5s;
-        }
-
-        @keyframes popIn {
-            0% {
-                transform: scale(0);
-                opacity: 0;
-            }
-
-            100% {
-                transform: scale(1);
-                opacity: 1;
-            }
-        }
-        @media (prefers-color-scheme: dark) {
-            html { color-scheme: dark; }
-            body { background: #0e1430 !important; color: #edf0ff !important; }
-            #paymentForm.glass-card { background: #182044 !important; color: #edf0ff; border: 1px solid #303b64; }
-            #paymentForm h1, #paymentForm h2, #paymentForm strong, #paymentForm label { color: #edf0ff !important; }
-            #paymentForm .text-gray-800, #paymentForm .text-gray-700 { color: #e6ecff !important; }
-            #paymentForm .text-gray-500, #paymentForm .text-gray-400 { color: #b9c4de !important; }
-            #paymentForm .bg-gray-50, #paymentForm input, #paymentForm select { background: #141c38 !important; color: #f1f4ff !important; border-color: #35416c !important; }
-            #paymentForm input::placeholder { color: #b3bfd9 !important; opacity: 1; }
-            #paymentForm .payment-note { background: #172443; color: #d8e5ff; border-color: #35416c; }
-        }
-    </style>
+    <link rel="stylesheet" href="assets/topup.css">
 </head>
 
-<body class="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+<body>
+    <main id="paymentForm" class="payment-panel">
+        <header class="payment-header">
+            <img class="brand-mark" src="assets/icon-192.png" alt="<?= htmlspecialchars(APP_NAME . ' Panel', ENT_QUOTES, 'UTF-8') ?>">
+            <p class="eyebrow">SALIO LA AKAUNTI</p>
+            <h1><?= htmlspecialchars(APP_NAME . ' Panel', ENT_QUOTES, 'UTF-8') ?></h1>
+            <p class="intro">Ongeza salio lako kwa malipo ya simu yaliyo salama.</p>
+        </header>
 
-    <div id="paymentForm" class="glass-card w-full max-w-md rounded-2xl p-8 relative overflow-hidden">
-        <div class="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-blue-500 to-indigo-600"></div>
-
-        <div class="text-center mb-8">
-            <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4 text-blue-600">
-                <i class="fas fa-wallet text-2xl"></i>
-            </div>
-            <h1 class="text-2xl font-bold text-gray-800 tracking-tight"><?php echo APP_NAME; ?></h1>
-            <p class="text-gray-500 text-sm">Salama, rahisi na ya haraka kwa simu yako</p>
-        </div>
-
-        <div class="payment-note mb-5"><i class="fas fa-shield-alt text-blue-600 mr-1"></i> Lipa kupitia mobile money. Hakikisha namba yako inapokea ombi la malipo kabla ya kuendelea.</div>
-        <form id="payForm" onsubmit="handlePayment(event)" class="space-y-5">
-
-            <div>
-                <label class="block text-xs font-semibold text-gray-500 uppercase mb-1">Kiasi (TZS)</label>
-                <div class="relative">
-                    <span class="absolute left-4 top-3.5 text-gray-400 font-bold">TSh</span>
-                    <input type="number" id="amount" name="amount" required placeholder="1000" min="<?= (int) MINIMUM_TOPUP ?>" max="<?= (int) MAXIMUM_TOPUP ?>"
-                        class="w-full pl-14 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all font-bold text-gray-700 text-lg">
+        <div class="payment-note"><span class="status-dot" aria-hidden="true"></span> <?= htmlspecialchars(APP_NAME, ENT_QUOTES, 'UTF-8') ?> Panel <span class="note-divider">/</span> Mobile money</div>
+        <form id="payForm" onsubmit="handlePayment(event)" class="payment-form">
+            <div class="field-group">
+                <label for="amount">Kiasi cha kuongeza</label>
+                <div class="amount-field">
+                    <span aria-hidden="true">TSh</span>
+                    <input type="number" id="amount" name="amount" required placeholder="1,000" min="<?= (int) MINIMUM_TOPUP ?>" max="<?= (int) MAXIMUM_TOPUP ?>" inputmode="numeric">
                 </div>
+                <p class="field-hint">Kiasi cha chini: TSh <?= number_format((int) MINIMUM_TOPUP) ?></p>
             </div>
 
-            <div>
-                <label class="block text-xs font-semibold text-gray-500 uppercase mb-1">Jina Kamili</label>
-                <div class="relative">
-                    <span class="absolute left-4 top-3.5 text-gray-400"><i class="fas fa-user"></i></span>
-                    <input type="text" id="name" name="name" required placeholder="Mfano: Royal"
-                        class="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-gray-700">
-                </div>
+            <div class="field-group">
+                <label for="name">Jina kamili</label>
+                <input type="text" id="name" name="name" required placeholder="Mfano: Amina Juma" autocomplete="name">
             </div>
 
-            <div>
-                <label class="block text-xs font-semibold text-gray-500 uppercase mb-1">Barua Pepe</label>
-                <div class="relative">
-                    <span class="absolute left-4 top-3.5 text-gray-400"><i class="fas fa-envelope"></i></span>
-                    <input type="email" id="email" name="email" required placeholder="royal@example.com"
-                        class="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-gray-700">
-                </div>
+            <div class="field-group">
+                <label for="email">Barua pepe</label>
+                <input type="email" id="email" name="email" required placeholder="jina@example.com" autocomplete="email">
             </div>
 
-            <div>
-                <label class="block text-xs font-semibold text-gray-500 uppercase mb-1">Namba ya Simu
-                    (PalmPesa mobile money)</label>
-                <div class="relative">
-                    <span class="absolute left-4 top-3.5 text-gray-400"><i class="fas fa-mobile-alt"></i></span>
-                    <input type="tel" id="phone" name="phone" required placeholder="0744000000"
-                        class="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-gray-700 font-medium">
-                </div>
-                <p class="text-xs text-gray-400 mt-1 ml-1">Ingiza namba inayoanza na 06 au 07.</p>
+            <div class="field-group">
+                <label for="phone">Namba ya simu</label>
+                <input type="tel" id="phone" name="phone" required placeholder="0744 000 000" autocomplete="tel" inputmode="tel">
+                <p class="field-hint">Ingiza namba ya Tanzania inayoanza na 06 au 07.</p>
             </div>
 
-            <button type="submit" id="submitBtn"
-                class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200 flex items-center justify-center gap-2">
-                <span>Lipa Sasa</span>
-                <i class="fas fa-arrow-right"></i>
+            <button type="submit" id="submitBtn" class="primary-button">
+                <span>Lipa sasa</span><span aria-hidden="true">&rarr;</span>
             </button>
         </form>
+        <footer class="payment-footer">Muamala wako unalindwa na <?php echo APP_NAME; ?>.</footer>
+    </main>
 
-        <div class="mt-6 text-center">
-            <p class="text-xs text-gray-400">Imelindwa na <?php echo APP_NAME; ?> Technology</p>
-        </div>
+    <div id="processingScreen" class="screen-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="processingTitle">
+        <section class="status-panel">
+            <div class="loader" aria-hidden="true"></div>
+            <p class="eyebrow">MALIPO YANASUBIRI</p>
+            <h2 id="processingTitle">Angalia simu yako</h2>
+            <p class="status-copy">Ombi la malipo limetumwa. Weka namba yako ya siri kwenye simu ili kukamilisha muamala.</p>
+            <p class="status-hint"><span class="status-dot" aria-hidden="true"></span> Tunasubiri uthibitisho wa malipo ya simu</p>
+            <p class="field-hint">Usifunge ukurasa huu.</p>
+        </section>
     </div>
 
-    <div id="processingScreen"
-        class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl p-8 max-w-sm w-full text-center shadow-2xl animate-bounce-in">
-            <div class="loader mx-auto mb-6"></div>
-            <h2 class="text-xl font-bold text-gray-800 mb-2">Angalia Simu Yako</h2>
-            <p class="text-gray-600 mb-6">Ombi la malipo limetumwa. Tafadhali weka namba ya siri kwenye simu yako
-                kukamilisha muamala.</p>
-            <div class="bg-yellow-50 text-yellow-800 text-sm py-2 px-4 rounded-lg mb-4">
-                <i class="fas fa-spinner fa-spin mr-2"></i> Tunasubiri malipo...
-            </div>
-            <p class="text-xs text-gray-400">Usi-refresh ukurasa huu.</p>
-        </div>
+    <div id="successScreen" class="screen-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="successTitle">
+        <section class="status-panel">
+            <div class="status-symbol success-symbol" aria-hidden="true">&#10003;</div>
+            <p class="eyebrow">MUAMALA UMEKAMILIKA</p>
+            <h2 id="successTitle">Malipo yamekamilika</h2>
+            <p class="status-copy">Asante kwa kutumia <?php echo APP_NAME; ?>. Salio lako limeongezwa.</p>
+            <p id="successBalance" class="success-balance" aria-live="polite"></p>
+            <button type="button" onclick="resetForm()" class="primary-button success-button">Fanya malipo mengine</button>
+        </section>
     </div>
 
-    <div id="successScreen"
-        class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl p-8 max-w-sm w-full text-center shadow-2xl">
-            <div class="mb-4 flex justify-center">
-                <i class="fas fa-check-circle success-checkmark"></i>
-            </div>
-            <h2 class="text-2xl font-bold text-gray-800 mb-2">Malipo Yamekamilika!</h2>
-            <p class="text-gray-600 mb-2">Asante kwa kutumia <?php echo APP_NAME; ?>. Muamala wako umefanikiwa.</p>
-            <p id="successBalance" class="text-indigo-700 font-bold mb-6" aria-live="polite"></p>
-            <button onclick="resetForm()"
-                class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 rounded-xl shadow transition-all">
-                Fanya Malipo Mengine
-            </button>
-        </div>
-    </div>
-
-    <div id="errorScreen"
-        class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl p-8 max-w-sm w-full text-center shadow-2xl">
-            <div class="mb-4 flex justify-center">
-                <i class="fas fa-times-circle error-cross"></i>
-            </div>
-            <h2 class="text-2xl font-bold text-gray-800 mb-2">Malipo Yameshindikana</h2>
-            <p id="errorMsg" class="text-gray-600 mb-6">Kuna tatizo limejitokeza au muda umekwisha.</p>
-            <button onclick="hideScreens()"
-                class="w-full bg-gray-800 hover:bg-gray-900 text-white font-bold py-3 rounded-xl shadow transition-all">
-                Jaribu Tena
-            </button>
-        </div>
+    <div id="errorScreen" class="screen-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="errorTitle">
+        <section class="status-panel">
+            <div class="status-symbol error-symbol" aria-hidden="true">!</div>
+            <p class="eyebrow">MUAMALA HAUJAKAMILIKA</p>
+            <h2 id="errorTitle">Malipo yameshindikana</h2>
+            <p id="errorMsg" class="status-copy">Kuna tatizo limejitokeza au muda umekwisha.</p>
+            <button type="button" onclick="hideScreens()" class="primary-button retry-button">Jaribu tena</button>
+        </section>
     </div>
 
     <script>
         let pollingInterval;
         let pollAttempts = 0;
         const MAX_ATTEMPTS = 40;
+        let isPolling = false;
 
         async function handlePayment(e) {
             e.preventDefault();
@@ -602,7 +492,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             const originalText = btn.innerHTML;
 
             btn.disabled = true;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Inachakata...';
+            btn.textContent = 'Inachakata...';
 
             const formData = {
                 action: 'initiate_payment',
@@ -640,7 +530,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         function startPolling(orderId) {
             pollAttempts = 0;
             pollingInterval = setInterval(async () => {
+                if (isPolling) return;
                 pollAttempts++;
+                isPolling = true;
                 try {
                     const response = await fetch('topup.php', {   // <-- changed to topup.php
                         method: 'POST',
@@ -659,7 +551,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         }
                     } else if (result.status === 'ERROR') {
                         stopPolling();
-                        showError(result.message || 'PalmPesa status could not be checked. Your payment may still be pending.');
+                        showError(result.message || 'Payment status could not be checked. Your payment may still be pending.');
                     }
 
                     if (pollAttempts >= MAX_ATTEMPTS) {
@@ -669,6 +561,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 } catch (err) {
                     console.error("Polling error", err);
+                } finally {
+                    isPolling = false;
                 }
             }, 3000);
         }
