@@ -17,7 +17,7 @@ body.auth {
     overflow-x: hidden;
     color: var(--login-ink);
     background: linear-gradient(135deg, #e8edf5 0%, #f6f7fa 56%, #e7eef6 100%);
-    font-family: Poppins, sans-serif;
+    font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
 }
 
 .auth-shell {
@@ -193,7 +193,7 @@ body.auth {
     background: linear-gradient(135deg, var(--login-blue), var(--login-navy));
     color: #fff;
     cursor: pointer;
-    font: 700 14px/1 Poppins, sans-serif;
+    font: 700 14px/1 "Segoe UI", "Helvetica Neue", Arial, sans-serif;
     transition: background-color .16s ease, transform .16s ease;
 }
 

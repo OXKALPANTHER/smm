@@ -1010,7 +1010,7 @@ $script = '<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.u
     . 'const trendData=' . json_encode(array_values($trend)) . ';'
     . <<<'JS'
 // Charts
-new Chart(document.getElementById('statusChart'),{type:'doughnut',data:{labels:['Completed','Pending','Failed'],datasets:[{data:statusData,backgroundColor:['#00b894','#fdcb6e','#e17055'],borderWidth:0,hoverOffset:6}]},options:{plugins:{legend:{position:'bottom',labels:{usePointStyle:true,font:{family:'Poppins'}}}},cutout:'70%',maintainAspectRatio:false}});
+new Chart(document.getElementById('statusChart'),{type:'doughnut',data:{labels:['Completed','Pending','Failed'],datasets:[{data:statusData,backgroundColor:['#00b894','#fdcb6e','#e17055'],borderWidth:0,hoverOffset:6}]},options:{plugins:{legend:{position:'bottom',labels:{usePointStyle:true,font:{family:'Segoe UI, Arial, sans-serif'}}}},cutout:'70%',maintainAspectRatio:false}});
 new Chart(document.getElementById('trendChart'),{type:'bar',data:{labels:trendLabels,datasets:[{label:'Orders',data:trendData,backgroundColor:'#6c5ce7',borderRadius:8,maxBarThickness:34}]},options:{plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{precision:0}}},maintainAspectRatio:false}});
 
 // Table search

@@ -94,10 +94,10 @@ function ui_logo($wordmark = true, $size = 46)
   $wsize = round($size * 0.5, 1);
   $tsize = round($size * 0.205, 1);
   $word = "<span style=\"display:inline-flex;flex-direction:column;justify-content:center;line-height:1;\">"
-    . "<span style=\"font-family:'Poppins',sans-serif;font-weight:800;font-size:{$wsize}px;letter-spacing:-.5px;"
+    . "<span style=\"font-family:'Segoe UI','Helvetica Neue',Arial,sans-serif;font-weight:800;font-size:{$wsize}px;letter-spacing:-.5px;"
     . "background:linear-gradient(90deg,#3a2a8c,#6c5ce7);-webkit-background-clip:text;background-clip:text;"
     . "-webkit-text-fill-color:transparent;color:#3a2a8c;\">{$app}</span>"
-    . "<span style=\"font-family:'Poppins',sans-serif;font-weight:700;font-size:{$tsize}px;letter-spacing:3px;"
+    . "<span style=\"font-family:'Segoe UI','Helvetica Neue',Arial,sans-serif;font-weight:700;font-size:{$tsize}px;letter-spacing:3px;"
     . "text-transform:uppercase;color:#b8860b;margin-top:2px;\">SMM Panel</span>"
     . "</span>";
   return "<span class=\"royal-brand-lockup\" aria-label=\"" . htmlspecialchars(APP_NAME . ' SMM') . "\" style=\"display:inline-flex;align-items:center;gap:.6rem;position:static;\">{$badge}{$word}</span>";
@@ -177,13 +177,9 @@ function ui_head($title, $bodyClass = 'app', $extraHead = '')
 <meta name="twitter:image" content="{$ogImage}">
 <meta name="robots" content="{$robots}">
 <meta name="csrf-token" content="{$csrf}">
+<meta name="color-scheme" content="light dark">
 <link rel="canonical" href="{$canonical}">
 {$breadcrumbScript}
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
-<link rel="preload" href="https://fonts.gstatic.com/s/poppins/v24/pxiEyp8kv8JHgFVrJJfecg.woff2" as="font" type="font/woff2" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
 <script>(function(){var choice='system';try{choice=localStorage.getItem('royal-theme')||'system'}catch(e){}var dark=!!(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.dataset.theme=choice==='dark'||(choice==='system'&&dark)?'dark':'light'})();</script>

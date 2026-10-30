@@ -246,11 +246,7 @@ function statusBadge($status) {
     <meta property="og:type" content="website"><meta property="og:title" content="Dashboard | Royal SMM Panel"><meta property="og:description" content="Your Royal SMM Panel dashboard for managing account balance, social media orders, order tracking and support."><meta property="og:url" content="<?= htmlspecialchars(rtrim(APP_URL, '/') . '/index.php', ENT_QUOTES, 'UTF-8') ?>"><meta property="og:image" content="<?= htmlspecialchars(rtrim(APP_URL, '/') . '/assets/og-image.png', ENT_QUOTES, 'UTF-8') ?>">
     <meta name="twitter:title" content="Dashboard | Royal SMM Panel"><meta name="twitter:description" content="Your Royal SMM Panel dashboard for managing account balance, social media orders, order tracking and support."><meta name="twitter:image" content="<?= htmlspecialchars(rtrim(APP_URL, '/') . '/assets/og-image.png', ENT_QUOTES, 'UTF-8') ?>">
 
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
-    <link rel="preload" href="https://fonts.gstatic.com/s/poppins/v24/pxiEyp8kv8JHgFVrJJfecg.woff2" as="font" type="font/woff2" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <meta name="color-scheme" content="light dark">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
     <script>(function(){var choice='system';try{choice=localStorage.getItem('royal-theme')||'system'}catch(e){}var dark=!!(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.dataset.theme=choice==='dark'||(choice==='system'&&dark)?'dark':'light'})();</script>
@@ -270,7 +266,7 @@ function statusBadge($status) {
         }
         * { -webkit-tap-highlight-color: transparent; }
         body {
-            font-family: 'Poppins', sans-serif;
+            font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
             background: radial-gradient(1200px 600px at 100% -10%, #e8ecff 0%, transparent 60%),
                         radial-gradient(900px 500px at -10% 10%, #e6fbfa 0%, transparent 55%),
                         var(--bg);
