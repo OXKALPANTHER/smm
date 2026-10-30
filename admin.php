@@ -558,6 +558,101 @@ ui_head(APP_NAME . ' — Admin', 'admin');
     .admin-menu-toggle { width:42px;height:42px;border:0;border-radius:13px;background:#f0f2fb;color:var(--ink);display:inline-flex;align-items:center;justify-content:center;font-size:1.2rem;box-shadow:0 4px 14px rgba(43,54,116,.08); }
     .admin-menu-toggle:hover { background:#e7eaff;color:var(--primary-2); }
     @media(prefers-reduced-motion:reduce){.sidebar,.main,.sidebar-backdrop{transition:none!important;}}
+
+    body.admin {
+        --ink: #1f2937;
+        --muted: #667085;
+        --primary: #5145cd;
+        --primary-2: #4338a9;
+        --line: #e5e7eb;
+        background: #f7f8fc;
+        color: var(--ink);
+    }
+
+    body.admin .sidebar {
+        border-right: 1px solid #e5e7eb;
+        background: #fff;
+        color: var(--ink);
+    }
+
+    body.admin .sidebar-brand { color: var(--ink); }
+    body.admin .sidebar-brand span { color: var(--primary); }
+
+    body.admin .sidebar a.nav-link {
+        border-radius: 9px;
+        color: #667085;
+        font-size: .88rem;
+        transition: background-color .15s, color .15s;
+    }
+
+    body.admin .sidebar a.nav-link:hover,
+    body.admin .sidebar a.nav-link.active {
+        background: #f1efff;
+        color: var(--primary-2);
+    }
+
+    body.admin .main { min-height: 100vh; padding: 24px; }
+
+    body.admin .admin-topbar {
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        box-shadow: 0 2px 6px rgba(16, 24, 40, .035);
+    }
+
+    body.admin .admin-menu-toggle {
+        border-radius: 9px;
+        background: #f3f4f6;
+        box-shadow: none;
+    }
+
+    body.admin .stat-card,
+    body.admin .panel {
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        box-shadow: 0 2px 6px rgba(16, 24, 40, .035);
+    }
+
+    body.admin .stat-card { padding: 1.1rem; }
+    body.admin .stat-card .lbl { color: #667085; font-size: .7rem; }
+    body.admin .stat-card .val { color: #1f2937; font-size: 1.45rem; }
+    body.admin .panel { padding: 1.2rem; }
+
+    body.admin .table thead th {
+        background: #f9fafb;
+        color: #667085;
+        font-size: .7rem;
+    }
+
+    body.admin .table tbody tr:hover { background: #fafaff; }
+
+    body.admin .search-box,
+    body.admin .form-control,
+    body.admin .form-select {
+        border-color: #d0d5dd;
+        border-radius: 9px;
+        background: #fff;
+        box-shadow: none;
+    }
+
+    body.admin .search-box:focus,
+    body.admin .form-control:focus,
+    body.admin .form-select:focus {
+        border-color: #8b80e8;
+        box-shadow: 0 0 0 3px rgba(81, 69, 205, .12);
+    }
+
+    body.admin .admin-callout {
+        border: 1px solid #dfe3f3;
+        border-left: 3px solid var(--primary);
+        border-radius: 10px;
+        background: #fff;
+        box-shadow: none;
+    }
+
+    @media (max-width: 991px) {
+        body.admin .main { padding: 14px; }
+        body.admin .sidebar { box-shadow: 12px 0 32px rgba(16, 24, 40, .12); }
+    }
 </style>
 
 <div class="sidebar" id="sidebar">
