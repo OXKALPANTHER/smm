@@ -24,7 +24,6 @@ body.app{
   padding-top:env(safe-area-inset-top);
   min-height:100dvh;display:flex;flex-direction:column;
 }
-body.app .container{max-width:540px;}
 body.app>.site-footer,body.auth>.site-footer{margin-top:auto;}
 .site-footer{width:100%;max-width:none!important;margin:0;padding:14px 18px calc(14px + env(safe-area-inset-bottom));display:flex;flex-direction:column;align-items:center;gap:8px;background:#171431;border-top:1px solid rgba(255,255,255,.14);color:#e8e4ff;text-align:center;}
 .site-footer nav{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:8px 14px;}
@@ -609,7 +608,6 @@ button,a,input,select,textarea{font-size:16px}
 button,a{min-height:44px}
 :focus-visible{outline:3px solid #00876a!important;outline-offset:3px!important}
 body.app{background:var(--bg);margin:0;padding-top:calc(72px + env(safe-area-inset-top));padding-bottom:calc(140px + env(safe-area-inset-bottom));min-height:100dvh;display:flex;flex-direction:column}
-body.app .container{max-width:540px}
 body.app>.site-footer,body.auth>.site-footer{margin-top:auto}
 .app-header{position:fixed;inset:0 0 auto;z-index:var(--z-header);display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;padding:calc(9px + env(safe-area-inset-top)) 14px 9px;background:rgba(255,255,255,.96);backdrop-filter:blur(16px);border-bottom:1px solid rgba(108,92,231,.13);box-shadow:0 8px 24px rgba(43,54,116,.08)}
 .app-header-heading{order:1;flex:1 1 180px;min-width:0}
@@ -829,4 +827,74 @@ body:not(.app):not(.auth) .hero-copy>p,body:not(.app):not(.auth) .trust{color:va
         animation-iteration-count: 1 !important;
         transition-duration: .01ms !important;
     }
+}
+
+/* Responsive content width shared by app pages and dashboards. */
+body.app .container {
+    width: calc(100% - 24px);
+    max-width: 100%;
+    margin-inline: auto;
+}
+
+@media (min-width: 768px) {
+    body.app .container {
+        width: calc(100% - 48px);
+        max-width: 960px;
+    }
+}
+
+@media (min-width: 992px) {
+    body.app .container { max-width: 1120px; }
+}
+
+@media (min-width: 1200px) {
+    body.app .container { max-width: 1280px; }
+}
+
+@media (min-width: 1600px) {
+    body.app .container { max-width: 1400px; }
+}
+
+body.app .table-responsive,
+body.app .table-wrap,
+body.admin .table-responsive {
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+body.app img,
+body.app canvas,
+body.admin img,
+body.admin canvas {
+    max-width: 100%;
+}
+
+body.app input,
+body.app select,
+body.app textarea,
+body.admin input,
+body.admin select,
+body.admin textarea {
+    max-width: 100%;
+}
+
+@media (max-width: 575px) {
+    body.app .container { width: calc(100% - 20px); }
+
+    body.app .card-soft,
+    body.app .panel {
+        padding: 1rem;
+        border-radius: 16px;
+    }
+
+    body.app .table-wrap,
+    body.app .table-responsive {
+        margin-inline: -1rem;
+        padding-inline: 1rem;
+        width: calc(100% + 2rem);
+    }
+
+    body.admin .main { padding: 12px; }
+    body.admin .panel { padding: 1rem; }
 }
