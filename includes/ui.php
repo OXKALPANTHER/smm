@@ -286,7 +286,7 @@ function ui_nav($active = 'home', $opts = [])
   <div class="app-header-controls"><a href="notifications.php" class="nav-bell" aria-label="Notifications" title="Notifications"><i class="bi bi-bell-fill"></i>{$bellBadge}</a><button class="hamburger" id="navToggle" type="button" aria-label="Menu" aria-controls="appDrawer" aria-expanded="false"><span></span><span></span><span></span></button></div>
 </header>
 <div class="nav-backdrop" id="navBackdrop"></div>
-<aside class="drawer" id="appDrawer" aria-label="Main menu">
+<aside class="drawer desktop-sidebar" id="appDrawer" aria-label="Main menu">
   <div class="drawer-head"><button class="dclose" id="navClose" type="button" aria-label="Close menu"><i class="bi bi-x-lg"></i></button><div class="d-flex align-items-center gap-3"><div class="drawer-ava">{$initial}</div><div><div class="fw-bold" style="font-size:1.05rem;line-height:1.15;">{$username}</div><div style="font-size:.72rem;opacity:.8;">{$appName} Member</div></div></div><div class="drawer-bal"><span style="font-size:.72rem;opacity:.85;"><i class="bi bi-wallet2 me-1"></i><span data-i18n="common.balance">Balance</span></span><strong>{$balanceFormatted} TZS</strong></div></div>
   <nav class="drawer-nav">{$linksHtml}{$supportHtml}<a href="profile.php#help-legal" class="drawer-link"><span class="di"><i class="bi bi-life-preserver"></i></span><span data-i18n="nav.helpLegal">Help &amp; legal</span></a></nav>
   <a href="logout.php" class="drawer-link danger js-nav-link" style="margin:0 .8rem .5rem;"><span class="di"><i class="bi bi-box-arrow-right"></i></span><span data-i18n="nav.logout">Log out</span></a>

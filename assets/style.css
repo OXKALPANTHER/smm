@@ -898,3 +898,53 @@ body.admin textarea {
     body.admin .main { padding: 12px; }
     body.admin .panel { padding: 1rem; }
 }
+
+/* Desktop application shell: keep the existing shared drawer open as the sidebar. */
+@media (min-width: 1024px) {
+    body.app:not(.public-page) {
+        padding-left: 272px;
+        padding-bottom: 32px !important;
+    }
+
+    body.app:not(.public-page) .app-header {
+        left: 272px !important;
+        right: 0 !important;
+        width: auto !important;
+        padding-inline: 28px;
+    }
+
+    body.app:not(.public-page) .app-header .hamburger {
+        display: none !important;
+    }
+
+    body.app:not(.public-page) .desktop-sidebar.drawer {
+        position: fixed;
+        inset: 0 auto 0 0 !important;
+        width: 272px;
+        max-width: none;
+        height: 100vh;
+        height: 100dvh;
+        transform: none !important;
+        transition: none;
+        border-radius: 0;
+        box-shadow: 8px 0 32px rgba(24, 26, 60, .12);
+    }
+
+    body.app:not(.public-page) .desktop-sidebar .dclose {
+        display: none;
+    }
+
+    body.app:not(.public-page) .desktop-sidebar .drawer-nav {
+        padding: 1.1rem .85rem;
+        overscroll-behavior: contain;
+    }
+
+    body.app:not(.public-page) .nav-backdrop,
+    body.app:not(.public-page) .mobile-tabbar {
+        display: none !important;
+    }
+
+    body.app:not(.public-page) > .site-footer {
+        padding-bottom: 20px;
+    }
+}
