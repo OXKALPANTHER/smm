@@ -1,7 +1,8 @@
 /* Royal SMM — service worker for static PWA assets only */
-const VERSION = 'royal-v9';
+const VERSION = 'royal-v10';
 const SHELL = 'royal-shell-' + VERSION;
 const RUNTIME = 'royal-runtime-' + VERSION;
+const CACHE_PREFIX = 'royal-';
 const SHELL_ASSETS = [
   './favicon.ico', './offline.html', './assets/style.css',
   './manifest.json', './manifest.webmanifest', './assets/icon.svg',
@@ -12,21 +13,28 @@ const SHELL_ASSETS = [
 
 self.addEventListener('install', event => {
   event.waitUntil(
-    caches.open(SHELL).then(cache => cache.addAll(SHELL_ASSETS)).then(() => self.skipWaiting())
+    caches.open(SHELL)
+      .then(cache => cache.addAll(SHELL_ASSETS))
+      .then(() => self.skipWaiting())
   );
 });
 
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys().then(keys => Promise.all(
-      keys.filter(key => key !== SHELL && key !== RUNTIME).map(key => caches.delete(key))
+      keys.filter(key => key.startsWith(CACHE_PREFIX) && key !== SHELL && key !== RUNTIME)
+        .map(key => caches.delete(key))
     )).then(() => self.clients.claim())
   );
 });
 
 function matchCachedAsset(request, url) {
-  return caches.match(request).then(response =>
-    response || caches.match(new URL(url.pathname, self.registration.scope))
+  return Promise.all([caches.open(SHELL), caches.open(RUNTIME)]).then(([shellCache, runtimeCache]) =>
+    shellCache.match(request).then(response => response || runtimeCache.match(request)).then(response => {
+      if (response) return response;
+      const normalizedUrl = new URL(url.pathname, self.registration.scope);
+      return shellCache.match(normalizedUrl).then(shellResponse => shellResponse || runtimeCache.match(normalizedUrl));
+    })
   );
 }
 
@@ -39,7 +47,9 @@ self.addEventListener('fetch', event => {
   // Never cache page responses; when a navigation fails, show the offline page.
   if (req.mode === 'navigate') {
     event.respondWith(
-      fetch(req).catch(() => caches.match(new URL('./offline.html', self.registration.scope))
+      fetch(req).catch(() => caches.open(SHELL).then(cache =>
+        cache.match(new URL('./offline.html', self.registration.scope))
+      )
         .then(response => response || new Response('You are offline.', {
           status: 503,
           headers: { 'Content-Type': 'text/plain; charset=utf-8' }
@@ -74,7 +84,7 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // Other static assets may use the versioned runtime cache.
+  // Other static assets use the app-owned caches and are stored after a successful fetch.
   event.respondWith(
     matchCachedAsset(req, url).then(hit => hit || fetch(req).then(response => {
       if (response && (response.ok || response.type === 'opaque')) {
