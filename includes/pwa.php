@@ -39,7 +39,7 @@ if (!function_exists('pwa_foot')) {
         if ($showInstallUi) {
             $installUi = <<<'HTML'
 <div id="pwaInstallBanner" class="pwa-install-banner" role="region" aria-label="Install Royal SMM app">
-  <button id="pwaInstallBtn" class="pwa-install-action" type="button"><i class="bi bi-download" aria-hidden="true"></i> Pakua app</button>
+  <button id="pwaInstallBtn" class="pwa-install-action" type="button"><i class="bi bi-download" aria-hidden="true"></i> Install app</button>
   <span class="pwa-install-copy">Add Royal SMM to your home screen for quick access.</span>
   <button id="pwaInstallDismiss" class="pwa-install-dismiss" type="button" aria-label="Dismiss app install banner">&times;</button>
 </div>
@@ -57,6 +57,17 @@ HTML;
 (function(){
   function dismissed(key){try{return localStorage.getItem(key)==='1';}catch(e){return false;}}
   function remember(key){try{localStorage.setItem(key,'1');}catch(e){}}
+  function installSnoozed(){
+    try {
+      var until=parseInt(localStorage.getItem('pwaInstallPromptSnoozedUntil')||'0',10);
+      if(until>Date.now()) return true;
+      if(until) localStorage.removeItem('pwaInstallPromptSnoozedUntil');
+    } catch(e) {}
+    return false;
+  }
+  function snoozeInstall(days){
+    try{localStorage.setItem('pwaInstallPromptSnoozedUntil',String(Date.now()+days*24*60*60*1000));}catch(e){}
+  }
   // --- Service worker (offline + installable) ---
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', function(){
@@ -70,45 +81,71 @@ HTML;
   var deferred = null;
   var banner = document.getElementById('pwaInstallBanner');
   var btn = document.getElementById('pwaInstallBtn');
+  var copy = banner ? banner.querySelector('.pwa-install-copy') : null;
   var close = document.getElementById('pwaInstallDismiss');
-  var isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
-  var installDismissed = dismissed('pwaInstallDismissed');
-  if (window.top !== window.self || isStandalone || installDismissed) {
-    if (banner) banner.style.display = 'none';
+  var isStandalone = !!(window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone === true;
+  var ua = window.navigator.userAgent || '';
+  var isIos = /iphone|ipad|ipod/i.test(ua) || (/macintosh/i.test(ua) && window.navigator.maxTouchPoints > 1);
+  var embedded = window.top !== window.self;
+  var installDismissed = installSnoozed() || dismissed('pwaInstallComplete');
+  var manualInstructionsShown = false;
+  var defaultInstallCopy = 'Add Royal SMM to your home screen for quick access.';
+  function showManualInstructions(){
+    if (copy) copy.textContent = 'Open your browser menu and choose “Install app” or “Add to Home Screen.”';
+    if (btn) btn.innerHTML = 'Got it';
+    manualInstructionsShown = true;
+    installDismissed = true;
   }
+  if (banner) banner.style.display = !embedded && !isStandalone && !installDismissed && !isIos ? 'flex' : 'none';
 
   window.addEventListener('beforeinstallprompt', function(e){
     e.preventDefault();
     deferred = e;
-    if (banner && btn && !isStandalone && !installDismissed && window.top === window.self) {
+    if (banner && btn && !isStandalone && !installDismissed && !embedded && !isIos) {
+      if (copy) copy.textContent = defaultInstallCopy;
+      btn.innerHTML = '<i class="bi bi-download" aria-hidden="true"></i> Install app';
+      manualInstructionsShown = false;
       banner.style.display = 'flex';
     }
   });
 
   if (btn) {
     btn.addEventListener('click', function(){
-      if (!deferred) return;
+      if (!deferred) {
+        if (manualInstructionsShown) {
+          if (banner) banner.style.display = 'none';
+          snoozeInstall(7);
+        } else {
+          showManualInstructions();
+        }
+        return;
+      }
       var installPrompt = deferred;
       try {
         installPrompt.prompt();
       } catch (error) {
         console.error('Unable to show the Royal SMM install prompt:', error);
+        deferred = null;
+        showManualInstructions();
         return;
       }
-      installPrompt.userChoice.then(function(){
+      installPrompt.userChoice.then(function(choice){
         deferred = null;
+        installDismissed = true;
+        if (choice && choice.outcome === 'accepted') remember('pwaInstallComplete');
+        else snoozeInstall(7);
         if (banner) banner.style.display = 'none';
       }, function(error){
         console.error('Unable to complete the Royal SMM install prompt:', error);
         deferred = null;
-        if (banner) banner.style.display = 'none';
+        showManualInstructions();
       });
     });
   }
   if (close) {
     close.addEventListener('click', function(){
       installDismissed = true;
-      remember('pwaInstallDismissed');
+      snoozeInstall(7);
       if (banner) banner.style.display = 'none';
     });
   }
@@ -116,18 +153,15 @@ HTML;
   window.addEventListener('appinstalled', function(){
     isStandalone = true;
     installDismissed = true;
-    remember('pwaInstallDismissed');
+    remember('pwaInstallComplete');
     if (banner) banner.style.display = 'none';
     deferred = null;
   });
 
   // --- iOS hint (Safari has no beforeinstallprompt) ---
-  var ua = window.navigator.userAgent || '';
-  var isIos = /iphone|ipad|ipod/i.test(ua) || (/macintosh/i.test(ua) && window.navigator.maxTouchPoints > 1);
-  var isSafari = /^((?!chrome|android|crios|fxios).)*safari/i.test(ua);
   var iosHint = document.getElementById('pwaIosHint');
   var iosClose = document.getElementById('pwaIosDismiss');
-  if (isIos && isSafari && !isStandalone && !dismissed('pwaIosHintDismissed') && iosHint && window.top === window.self) {
+  if (isIos && !isStandalone && !dismissed('pwaIosHintDismissed') && iosHint && !embedded) {
     iosHint.style.display = 'flex';
   }
   if (iosClose) {

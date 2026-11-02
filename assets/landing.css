@@ -135,10 +135,15 @@ body.landing-page {
     border: 1px solid var(--landing-line);
     border-radius: 14px;
     box-shadow: 0 18px 38px rgba(16, 24, 40, .09);
-    animation: none;
+    animation: landing-float 6s ease-in-out infinite;
 }
 
-.landing-page .mock-chart i { animation: none; }
+.landing-page .mock-chart i {
+    animation: landing-bars 2.6s ease-in-out infinite alternate;
+    transform-origin: bottom;
+}
+.landing-page .mock-chart i:nth-child(2n) { animation-delay: .25s; }
+.landing-page .mock-chart i:nth-child(3n) { animation-delay: .5s; }
 .landing-page .mock-num { font-family: inherit; font-size: 1.7rem; }
 .landing-page .live { border-radius: 6px; }
 
@@ -180,11 +185,11 @@ body.landing-page {
 
 .landing-page .platform {
     padding: 18px 10px;
-    transition: border-color .15s, box-shadow .15s;
+    transition: transform .2s ease, border-color .15s, box-shadow .15s;
 }
 
 .landing-page .platform:hover {
-    transform: none;
+    transform: translateY(-3px);
     border-color: #c7c2ef;
     box-shadow: 0 5px 14px rgba(16, 24, 40, .07);
 }
@@ -195,6 +200,19 @@ body.landing-page {
     background: #f2f0ff;
     color: var(--landing-accent);
 }
+
+.landing-page .feature-icon {
+    width: 48px;
+    height: 48px;
+    color: transparent;
+    background-color: transparent;
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: contain;
+}
+.landing-page .feature:nth-child(1) .feature-icon { background-image: url("visuals/analytics-illustration.webp"); }
+.landing-page .feature:nth-child(2) .feature-icon { background-image: url("visuals/audience-illustration.webp"); }
+.landing-page .feature:nth-child(3) .feature-icon { background-image: url("visuals/campaign-illustration.webp"); }
 
 .landing-page .feature,
 .landing-page .step { padding: 22px; }
@@ -255,10 +273,45 @@ body.landing-page {
     border-top: 1px solid var(--landing-line);
 }
 
-.landing-page .reveal { animation: none; }
+.landing-page .reveal { animation: landing-rise .65s ease-out both; }
+.landing-page .hero-copy > * { animation: landing-rise .62s ease-out both; }
+.landing-page .hero-copy > :nth-child(2) { animation-delay: .08s; }
+.landing-page .hero-copy > :nth-child(3) { animation-delay: .16s; }
+.landing-page .hero-copy > :nth-child(4) { animation-delay: .24s; }
+.landing-page .hero-copy > :nth-child(5) { animation-delay: .32s; }
+.landing-page .feature,
+.landing-page .step,
+.landing-page .platform,
+.landing-page .price-card,
+.landing-page .trust-grid article {
+    animation: landing-rise .58s ease-out both;
+}
+.landing-page .feature:nth-child(2),
+.landing-page .step:nth-child(2),
+.landing-page .platform:nth-child(2),
+.landing-page .price-card:nth-child(2),
+.landing-page .trust-grid article:nth-child(2) { animation-delay: .1s; }
+.landing-page .feature:nth-child(3),
+.landing-page .step:nth-child(3),
+.landing-page .platform:nth-child(3),
+.landing-page .price-card:nth-child(3),
+.landing-page .trust-grid article:nth-child(3) { animation-delay: .2s; }
 
-@media (prefers-color-scheme: dark) {
-    body.landing-page {
+@keyframes landing-rise {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+@keyframes landing-float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-5px); }
+}
+@keyframes landing-bars {
+    from { transform: scaleY(.9); filter: saturate(.9); }
+    to { transform: scaleY(1); filter: saturate(1.08); }
+}
+
+
+    :root[data-theme="dark"] body.landing-page {
         --landing-ink: #edf1ff;
         --landing-muted: #b5c0d9;
         --landing-line: #303958;
@@ -267,31 +320,21 @@ body.landing-page {
         --landing-accent: #a99bff;
     }
 
-    .landing-page .navlinks a,
-    .landing-page .footer a { color: #c5cee3; }
-    .landing-page .btn-plain { background: var(--landing-paper); color: var(--landing-ink); }
-    .landing-page .btn-primary,
-    .landing-page .btn-primary:hover,
-    .landing-page .cta .btn {
+    :root[data-theme="dark"] .landing-page .navlinks a, :root[data-theme="dark"] .landing-page .footer a { color: #c5cee3; }
+    :root[data-theme="dark"] .landing-page .btn-plain { background: var(--landing-paper); color: var(--landing-ink); }
+    :root[data-theme="dark"] .landing-page .btn-primary, :root[data-theme="dark"] .landing-page .btn-primary:hover, :root[data-theme="dark"] .landing-page .cta .btn {
         border-color: #6554c0;
         background: #6554c0;
         color: #fff;
     }
-    .landing-page .eyebrow { border-color: #423a70; background: #252144; color: #e0dbff; }
-    .landing-page .section[style*="#fff"] { background: var(--landing-canvas) !important; }
-    .landing-page .platform,
-    .landing-page .feature,
-    .landing-page .step,
-    .landing-page .price-card,
-    .landing-page .faq details,
-    .landing-page .mock { background: var(--landing-paper); color: var(--landing-ink); }
-    .landing-page .pico,
-    .landing-page .feature-icon,
-    .landing-page .global-note .pico { background: #29234f; color: #d2caff; }
-    .landing-page .mock-label,
-    .landing-page .mock-top div[style] { color: #c5cee3 !important; }
-    .landing-page .cta { border-color: var(--landing-line); background: #171d36; }
-}
+    :root[data-theme="dark"] .landing-page .eyebrow { border-color: #423a70; background: #252144; color: #e0dbff; }
+    :root[data-theme="dark"] .landing-page .section[style*="#fff"] { background: var(--landing-canvas) !important; }
+    :root[data-theme="dark"] .landing-page .platform, :root[data-theme="dark"] .landing-page .feature, :root[data-theme="dark"] .landing-page .step, :root[data-theme="dark"] .landing-page .price-card, :root[data-theme="dark"] .landing-page .faq details, :root[data-theme="dark"] .landing-page .mock { background: var(--landing-paper); color: var(--landing-ink); }
+    :root[data-theme="dark"] .landing-page .pico, :root[data-theme="dark"] .landing-page .global-note .pico { background: #29234f; color: #d2caff; }
+    :root[data-theme="dark"] .landing-page .feature-icon { background-color: transparent; color: transparent; }
+    :root[data-theme="dark"] .landing-page .mock-label, :root[data-theme="dark"] .landing-page .mock-top div[style] { color: #c5cee3 !important; }
+    :root[data-theme="dark"] .landing-page .cta { border-color: var(--landing-line); background: #171d36; }
+
 
 @media (max-width: 760px) {
     .landing-page .shell { width: calc(100% - 36px); }
@@ -333,5 +376,47 @@ body.landing-page {
         animation-duration: .01ms !important;
         animation-iteration-count: 1 !important;
         transition-duration: .01ms !important;
+    }
+}
+
+
+/* Scroll-triggered section reveals are enabled only after the observer initializes. */
+.landing-page.landing-reveal-ready .landing-section-reveal:not(.landing-is-visible),
+.landing-page.landing-reveal-ready .landing-reveal-item:not(.landing-is-visible) {
+    opacity: 0;
+    transform: translate3d(0, 24px, 0) scale(.992);
+    filter: blur(2px);
+}
+.landing-page.landing-reveal-ready .landing-section-reveal.landing-is-visible {
+    animation: landing-section-enter .78s cubic-bezier(.2, .75, .25, 1) backwards;
+}
+.landing-page.landing-reveal-ready .landing-reveal-item.landing-is-visible {
+    animation: landing-item-enter .66s cubic-bezier(.2, .75, .25, 1) var(--landing-item-delay, 0ms) backwards;
+}
+.landing-page.landing-reveal-ready .hero-copy > *,
+.landing-page.landing-reveal-ready .feature,
+.landing-page.landing-reveal-ready .step,
+.landing-page.landing-reveal-ready .platform,
+.landing-page.landing-reveal-ready .price-card,
+.landing-page.landing-reveal-ready .trust-grid article {
+    animation: none;
+}
+@keyframes landing-section-enter {
+    from { opacity: 0; transform: translate3d(0, 28px, 0) scale(.992); filter: blur(2px); }
+    to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); filter: blur(0); }
+}
+@keyframes landing-item-enter {
+    from { opacity: 0; transform: translate3d(0, 18px, 0) scale(.99); filter: blur(1.5px); }
+    to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); filter: blur(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+    .landing-page.landing-reveal-ready .landing-section-reveal,
+    .landing-page.landing-reveal-ready .landing-reveal-item,
+    .landing-page.landing-reveal-ready .landing-section-reveal:not(.landing-is-visible),
+    .landing-page.landing-reveal-ready .landing-reveal-item:not(.landing-is-visible) {
+        animation: none !important;
+        opacity: 1 !important;
+        transform: none !important;
+        filter: none !important;
     }
 }

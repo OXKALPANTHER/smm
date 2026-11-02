@@ -171,18 +171,16 @@
     try { localStorage.setItem('royal-language', lang); } catch (_) {}
   }
 
-  let themeChoice = 'system';
-  try { themeChoice = localStorage.getItem('royal-theme') || 'system'; } catch (_) {}
-  const systemThemeMedia = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
+  let themeChoice = 'light';
+  try { themeChoice = localStorage.getItem('royal-theme') || 'light'; } catch (_) {}
 
   function applyTheme(choice) {
     const root = document.documentElement;
-    const selected = ['light', 'dark'].includes(choice) ? choice : 'system';
+    const selected = choice === 'dark' ? 'dark' : 'light';
     themeChoice = selected;
-    root.dataset.theme = selected === 'system' ? (systemThemeMedia && systemThemeMedia.matches ? 'dark' : 'light') : selected;
+    root.dataset.theme = selected;
     try {
-      if (selected === 'system') localStorage.removeItem('royal-theme');
-      else localStorage.setItem('royal-theme', selected);
+      localStorage.setItem('royal-theme', selected);
     } catch (_) {}
     const button = document.querySelector('[data-toggle-theme]');
     if (button) button.dataset.i18n = 'theme.' + selected;
@@ -195,14 +193,9 @@
     const themeButton = event.target.closest('[data-toggle-theme]');
     if (themeButton) {
       const current = themeChoice;
-      applyTheme(current === 'system' ? 'dark' : current === 'dark' ? 'light' : 'system');
+      applyTheme(current === 'dark' ? 'light' : 'dark');
     }
   });
-  if (systemThemeMedia) {
-    const handleSystemThemeChange = () => { if (themeChoice === 'system') applyTheme('system'); };
-    if (systemThemeMedia.addEventListener) systemThemeMedia.addEventListener('change', handleSystemThemeChange);
-    else if (systemThemeMedia.addListener) systemThemeMedia.addListener(handleSystemThemeChange);
-  }
   applyTheme(themeChoice);
   window.royalSetLanguage = applyLanguage;
   applyLanguage(currentLanguage());

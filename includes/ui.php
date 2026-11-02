@@ -182,7 +182,7 @@ function ui_head($title, $bodyClass = 'app', $extraHead = '')
 {$breadcrumbScript}
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
-<script>(function(){var choice='system';try{choice=localStorage.getItem('royal-theme')||'system'}catch(e){}var dark=!!(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.dataset.theme=choice==='dark'||(choice==='system'&&dark)?'dark':'light'})();</script>
+<script>(function(){var choice='light';try{choice=localStorage.getItem('royal-theme')||'light'}catch(e){}document.documentElement.dataset.theme=choice==='dark'?'dark':'light'})();</script>
 <link rel="stylesheet" href="assets/style.css?v={$styleVersion}">
 {$extraHead}
 HTML;
@@ -290,7 +290,7 @@ function ui_nav($active = 'home', $opts = [])
   <div class="drawer-head"><button class="dclose" id="navClose" type="button" aria-label="Close menu"><i class="bi bi-x-lg"></i></button><div class="d-flex align-items-center gap-3"><div class="drawer-ava">{$initial}</div><div><div class="fw-bold" style="font-size:1.05rem;line-height:1.15;">{$username}</div><div style="font-size:.72rem;opacity:.8;">{$appName} Member</div></div></div><div class="drawer-bal"><span style="font-size:.72rem;opacity:.85;"><i class="bi bi-wallet2 me-1"></i><span data-i18n="common.balance">Balance</span></span><strong>{$balanceFormatted} TZS</strong></div></div>
   <nav class="drawer-nav">{$linksHtml}{$supportHtml}<a href="profile.php#help-legal" class="drawer-link"><span class="di"><i class="bi bi-life-preserver"></i></span><span data-i18n="nav.helpLegal">Help &amp; legal</span></a></nav>
   <a href="logout.php" class="drawer-link danger js-nav-link" style="margin:0 .8rem .5rem;"><span class="di"><i class="bi bi-box-arrow-right"></i></span><span data-i18n="nav.logout">Log out</span></a>
-  <div class="drawer-foot"><div>{$appName} SMM Panel &middot; v2.0</div><div class="drawer-preferences"><div class="language-toggle" role="group" aria-label="Language"><button type="button" data-set-language="en" aria-pressed="false">EN</button><button type="button" data-set-language="sw" aria-pressed="false">SW</button></div><button type="button" class="theme-toggle" data-toggle-theme data-i18n="theme.system" aria-label="Toggle color theme">Theme: System</button></div></div>
+  <div class="drawer-foot"><div>{$appName} SMM Panel &middot; v2.0</div><div class="drawer-preferences"><div class="language-toggle" role="group" aria-label="Language"><button type="button" data-set-language="en" aria-pressed="false">EN</button><button type="button" data-set-language="sw" aria-pressed="false">SW</button></div><button type="button" class="theme-toggle" data-toggle-theme data-i18n="theme.light" aria-label="Toggle color theme">Theme: Light</button></div></div>
 </aside>
 <nav class="mobile-tabbar" data-default-tab="{$defaultTab}" aria-label="Quick navigation">{$mobileHtml}</nav>
 <script>

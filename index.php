@@ -7,6 +7,8 @@ $siteStyleVersion = is_file($siteCssFile) ? substr((string) hash_file('sha256', 
 if (!isset($_SESSION['user_id'])) {
     $landingCssFile = __DIR__ . '/assets/landing.css';
     $landingStyleVersion = is_file($landingCssFile) ? substr((string) hash_file('sha256', $landingCssFile), 0, 12) : '1';
+    $landingMotionFile = __DIR__ . '/assets/landing-animations.js';
+    $landingMotionVersion = is_file($landingMotionFile) ? substr((string) hash_file('sha256', $landingMotionFile), 0, 12) : '1';
     require_once 'includes/public-prices-cache.php';
     require_once 'includes/testimonials.php';
     $homepagePriceData = royalPublicPriceSnapshot();
@@ -56,6 +58,7 @@ if (!isset($_SESSION['user_id'])) {
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Royal SMM Panel | Instagram, TikTok &amp; YouTube Growth</title>
+<script defer src="assets/landing-animations.js?v=<?= $landingMotionVersion ?>"></script>
 <meta name="description" content="<?= htmlspecialchars($publicDescription, ENT_QUOTES, 'UTF-8') ?>">
 
 <meta name="robots" content="index,follow,max-image-preview:large"><link rel="canonical" href="<?= $publicCanonical ?>">
@@ -64,6 +67,7 @@ if (!isset($_SESSION['user_id'])) {
 <script type="application/ld+json"><?= $structuredData ?></script>
 <script type="application/ld+json"><?= $faqStructuredData ?></script>
 <?php pwa_head(); ?>
+<script>(function(){var choice='light';try{choice=localStorage.getItem('royal-theme')||'light'}catch(e){}document.documentElement.dataset.theme=choice==='dark'?'dark':'light'})();</script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
 <link rel="stylesheet" href="assets/style.css?v=<?= $siteStyleVersion ?>">
 <link rel="stylesheet" href="assets/landing.css?v=<?= $landingStyleVersion ?>">
@@ -77,24 +81,24 @@ html{scroll-padding-top:18px}body{overflow-x:hidden}.btn,.navcta a,.navlinks a{m
 @media(max-width:360px){.navcta .btn{font-size:.7rem;padding:8px}.hero h1{font-size:2.05rem}.price-grid{grid-template-columns:1fr}}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
 
-@media(prefers-color-scheme:dark){
- :root{color-scheme:dark;--ink:#edf1ff;--muted:#b5c0d9;--line:#303958;--bg:#0d1428;--white:#18213c}
- body{background:#0d1428;color:#edf1ff}
- .section[style*="#fff"]{background:#0d1428!important}
- .navlinks a,.footer a{color:#c5cee3}
- .btn-plain{background:#18213c;color:#edf1ff;border-color:#303958}
- .eyebrow{background:#252144;color:#e0dbff;border-color:#423a70}
- .trust{color:#c1cae0}.avatars i{border-color:#0d1428}
- .platform,.feature,.step,.price-card,.faq details,.trust-grid article{background:#18213c;color:#edf1ff;border-color:#303958}
- .platform .pico,.feature-icon,.trust-mark{background:#29234f;color:#d2caff}
- .section-head p,.section-copy,.feature p,.step p,.price-card span,.faq details p,.trust-grid p{color:#b5c0d9}
- .price-card b,.price-card small{color:#c8bfff}
- .global-note{background:#111a30;color:#f1f4ff}.global-note p{color:#c5cee3}
- .mock,.float-tag{background:#18213c;color:#edf1ff;border-color:#303958}
- .mock-label,.mock-top div,.mock>div[style]{color:#c5cee3!important}
- .mock-num{color:#f1f4ff}.float-tag b{color:#c8bfff}
- .payments{background:#090f20;color:#f1f4ff}
-}
+
+ :root[data-theme="dark"] {color-scheme:dark;--ink:#edf1ff;--muted:#b5c0d9;--line:#303958;--bg:#0d1428;--white:#18213c}
+ :root[data-theme="dark"] body {background:#0d1428;color:#edf1ff}
+ :root[data-theme="dark"] .section[style*="#fff"] {background:#0d1428!important}
+ :root[data-theme="dark"] .navlinks a, :root[data-theme="dark"] .footer a {color:#c5cee3}
+ :root[data-theme="dark"] .btn-plain {background:#18213c;color:#edf1ff;border-color:#303958}
+ :root[data-theme="dark"] .eyebrow {background:#252144;color:#e0dbff;border-color:#423a70}
+ :root[data-theme="dark"] .trust {color:#c1cae0}:root[data-theme="dark"] .avatars i {border-color:#0d1428}
+ :root[data-theme="dark"] .platform, :root[data-theme="dark"] .feature, :root[data-theme="dark"] .step, :root[data-theme="dark"] .price-card, :root[data-theme="dark"] .faq details, :root[data-theme="dark"] .trust-grid article {background:#18213c;color:#edf1ff;border-color:#303958}
+ :root[data-theme="dark"] .platform .pico, :root[data-theme="dark"] .feature-icon, :root[data-theme="dark"] .trust-mark {background:#29234f;color:#d2caff}
+ :root[data-theme="dark"] .section-head p, :root[data-theme="dark"] .section-copy, :root[data-theme="dark"] .feature p, :root[data-theme="dark"] .step p, :root[data-theme="dark"] .price-card span, :root[data-theme="dark"] .faq details p, :root[data-theme="dark"] .trust-grid p {color:#b5c0d9}
+ :root[data-theme="dark"] .price-card b, :root[data-theme="dark"] .price-card small {color:#c8bfff}
+ :root[data-theme="dark"] .global-note {background:#111a30;color:#f1f4ff}:root[data-theme="dark"] .global-note p {color:#c5cee3}
+ :root[data-theme="dark"] .mock, :root[data-theme="dark"] .float-tag {background:#18213c;color:#edf1ff;border-color:#303958}
+ :root[data-theme="dark"] .mock-label, :root[data-theme="dark"] .mock-top div, :root[data-theme="dark"] .mock>div[style] {color:#c5cee3!important}
+ :root[data-theme="dark"] .mock-num {color:#f1f4ff}:root[data-theme="dark"] .float-tag b {color:#c8bfff}
+ :root[data-theme="dark"] .payments {background:#090f20;color:#f1f4ff}
+
 
 .shell{padding-left:16px;padding-right:16px}.section .shell{padding-left:16px;padding-right:16px}.price-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.price-details-cta{margin-top:20px!important}.testimonials-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.testimonial-card{min-width:0;overflow-wrap:anywhere}@media(max-width:650px){.price-grid,.testimonials-grid{grid-template-columns:1fr}.shell,.section .shell{padding-left:16px;padding-right:16px}}.royal-whatsapp{z-index:1300;right:16px;bottom:18px}.price-card.empty{grid-column:1/-1}
 </style>
@@ -249,7 +253,7 @@ function statusBadge($status) {
     <meta name="color-scheme" content="light dark">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
-    <script>(function(){var choice='system';try{choice=localStorage.getItem('royal-theme')||'system'}catch(e){}var dark=!!(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.dataset.theme=choice==='dark'||(choice==='system'&&dark)?'dark':'light'})();</script>
+    <script>(function(){var choice='light';try{choice=localStorage.getItem('royal-theme')||'light'}catch(e){}document.documentElement.dataset.theme=choice==='dark'?'dark':'light'})();</script>
     <link rel="stylesheet" href="assets/style.css?v=<?= $siteStyleVersion ?>">
 
     <style>
